@@ -2,7 +2,8 @@ import { prisma } from "@/lib/prisma";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 
 import { DEFAULT_SLOT_PRICE } from "@/features/pricing/config/pricing.defaults";
-import type { PricingRule, PricingRuleType } from "@/features/pricing/types/pricing.types";
+import { parseBands } from "@/features/pricing/services/pricing-engine.service";
+import type { PricingBand, PricingRule, PricingRuleType } from "@/features/pricing/types/pricing.types";
 
 type PricingRuleRow = {
   id: string;
@@ -10,6 +11,8 @@ type PricingRuleRow = {
   version: number;
   type: PricingRuleType;
   price: number;
+  name: string | null;
+  bands: unknown;
   start_minute: number | null;
   end_minute: number | null;
   date_start: string | null;
@@ -29,6 +32,8 @@ function mapPricingRule(row: PricingRuleRow): PricingRule {
     version: row.version,
     type: row.type,
     price: row.price,
+    name: row.name ?? null,
+    bands: parseBands(row.bands),
     startMinute: row.start_minute,
     endMinute: row.end_minute,
     dateStart: row.date_start,
@@ -42,6 +47,46 @@ function mapPricingRule(row: PricingRuleRow): PricingRule {
   };
 }
 
+function mapPrismaRule(row: {
+  id: string;
+  groupId: string;
+  version: number;
+  type: string;
+  price: number;
+  name: string | null;
+  bands: unknown;
+  startMinute: number | null;
+  endMinute: number | null;
+  dateStart: string | null;
+  dateEnd: string | null;
+  weekdays: number[];
+  priority: number;
+  active: boolean;
+  archivedAt: Date | null;
+  createdBy: string | null;
+  createdAt: Date;
+}): PricingRule {
+  return {
+    id: row.id,
+    groupId: row.groupId,
+    version: row.version,
+    type: row.type as PricingRuleType,
+    price: row.price,
+    name: row.name ?? null,
+    bands: parseBands(row.bands),
+    startMinute: row.startMinute ?? null,
+    endMinute: row.endMinute ?? null,
+    dateStart: row.dateStart ?? null,
+    dateEnd: row.dateEnd ?? null,
+    weekdays: row.weekdays ?? [],
+    priority: row.priority,
+    active: row.active,
+    archivedAt: row.archivedAt ?? null,
+    createdBy: row.createdBy ?? null,
+    createdAt: row.createdAt,
+  };
+}
+
 async function fetchActivePricingRulesFromStore(): Promise<PricingRule[]> {
   const supabase = createServiceRoleClient();
   if (supabase) {
@@ -49,7 +94,6 @@ async function fetchActivePricingRulesFromStore(): Promise<PricingRule[]> {
       .from("pricing_rules")
       .select("*")
       .eq("active", true)
-      .order("priority", { ascending: false })
       .order("created_at", { ascending: false });
     if (!error && data) return (data as PricingRuleRow[]).map(mapPricingRule);
   }
@@ -57,25 +101,9 @@ async function fetchActivePricingRulesFromStore(): Promise<PricingRule[]> {
   try {
     const rows = await prisma.pricingRule.findMany({
       where: { active: true },
-      orderBy: [{ priority: "desc" }, { createdAt: "desc" }],
+      orderBy: { createdAt: "desc" },
     });
-    return rows.map((row) => ({
-      id: row.id,
-      groupId: row.groupId,
-      version: row.version,
-      type: row.type as PricingRuleType,
-      price: row.price,
-      startMinute: row.startMinute ?? null,
-      endMinute: row.endMinute ?? null,
-      dateStart: row.dateStart ?? null,
-      dateEnd: row.dateEnd ?? null,
-      weekdays: row.weekdays ?? [],
-      priority: row.priority,
-      active: row.active,
-      archivedAt: row.archivedAt ?? null,
-      createdBy: row.createdBy ?? null,
-      createdAt: row.createdAt,
-    }));
+    return rows.map(mapPrismaRule);
   } catch {
     return [];
   }
@@ -125,23 +153,7 @@ export async function listAllPricingRules(): Promise<PricingRule[]> {
     const rows = await prisma.pricingRule.findMany({
       orderBy: { createdAt: "desc" },
     });
-    return rows.map((row) => ({
-      id: row.id,
-      groupId: row.groupId,
-      version: row.version,
-      type: row.type as PricingRuleType,
-      price: row.price,
-      startMinute: row.startMinute ?? null,
-      endMinute: row.endMinute ?? null,
-      dateStart: row.dateStart ?? null,
-      dateEnd: row.dateEnd ?? null,
-      weekdays: row.weekdays ?? [],
-      priority: row.priority,
-      active: row.active,
-      archivedAt: row.archivedAt ?? null,
-      createdBy: row.createdBy ?? null,
-      createdAt: row.createdAt,
-    }));
+    return rows.map(mapPrismaRule);
   } catch {
     return [];
   }
@@ -150,6 +162,8 @@ export async function listAllPricingRules(): Promise<PricingRule[]> {
 export async function createPricingRule(data: {
   type: PricingRuleType;
   price: number;
+  name?: string | null;
+  bands?: PricingBand[] | null;
   startMinute?: number | null;
   endMinute?: number | null;
   dateStart?: string | null;
@@ -159,12 +173,14 @@ export async function createPricingRule(data: {
   createdBy?: string | null;
   groupId?: string;
   version?: number;
+  active?: boolean;
 }): Promise<PricingRule> {
   const { randomUUID } = await import("crypto");
   const id = randomUUID();
   const now = new Date().toISOString();
   const groupId = data.groupId ?? randomUUID();
   const version = data.version ?? 1;
+  const bands = data.bands ?? [];
 
   const supabase = createServiceRoleClient();
   if (supabase) {
@@ -174,13 +190,15 @@ export async function createPricingRule(data: {
       version,
       type: data.type,
       price: data.price,
+      name: data.name ?? null,
+      bands: bands.length > 0 ? bands : null,
       start_minute: data.startMinute ?? null,
       end_minute: data.endMinute ?? null,
       date_start: data.dateStart ?? null,
       date_end: data.dateEnd ?? null,
       weekdays: (data.weekdays ?? []) as number[],
       priority: data.priority ?? 0,
-      active: true,
+      active: data.active ?? true,
       archived_at: null,
       created_by: data.createdBy ?? null,
       created_at: now,
@@ -197,36 +215,48 @@ export async function createPricingRule(data: {
       version,
       type: data.type,
       price: data.price,
+      name: data.name ?? null,
+      bands: bands.length > 0 ? bands : undefined,
       startMinute: data.startMinute ?? null,
       endMinute: data.endMinute ?? null,
       dateStart: data.dateStart ?? null,
       dateEnd: data.dateEnd ?? null,
       weekdays: data.weekdays ?? [],
       priority: data.priority ?? 0,
-      active: true,
+      active: data.active ?? true,
       archivedAt: null,
       createdBy: data.createdBy ?? null,
       createdAt: new Date(now),
     },
   });
 
-  return {
-    id: row.id,
-    groupId: row.groupId,
-    version: row.version,
-    type: row.type as PricingRuleType,
-    price: row.price,
-    startMinute: row.startMinute ?? null,
-    endMinute: row.endMinute ?? null,
-    dateStart: row.dateStart ?? null,
-    dateEnd: row.dateEnd ?? null,
-    weekdays: row.weekdays ?? [],
-    priority: row.priority,
-    active: row.active,
-    archivedAt: row.archivedAt ?? null,
-    createdBy: row.createdBy ?? null,
-    createdAt: row.createdAt,
-  };
+  return mapPrismaRule(row);
+}
+
+export async function createOverrideRule(data: {
+  name: string;
+  dateStart: string;
+  dateEnd?: string | null;
+  bands: PricingBand[];
+  createdBy?: string | null;
+}): Promise<PricingRule> {
+  const primaryPrice = data.bands[0]?.price;
+  if (!primaryPrice || primaryPrice <= 0) {
+    throw new Error("At least one valid price band is required.");
+  }
+
+  return createPricingRule({
+    type: "override",
+    name: data.name.trim(),
+    price: primaryPrice,
+    bands: data.bands,
+    dateStart: data.dateStart,
+    dateEnd: data.dateEnd ?? null,
+    weekdays: [],
+    priority: 0,
+    active: true,
+    createdBy: data.createdBy,
+  });
 }
 
 export async function deactivatePricingRule(ruleId: string): Promise<void> {
@@ -246,4 +276,3 @@ export async function deactivatePricingRule(ruleId: string): Promise<void> {
     data: { active: false, archivedAt: new Date(now) },
   });
 }
-

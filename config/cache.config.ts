@@ -12,7 +12,7 @@ export const CACHE_TTL = {
 
 /** HTTP cache max-age (seconds) for public API routes. */
 export const API_CACHE_SECONDS = {
-  pricing: 300,
+  pricing: 60,
   media: 120,
   slots: 30,
   businessSettings: 120,

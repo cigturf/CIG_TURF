@@ -4,6 +4,7 @@ import type { PricingSnapshot } from "@/features/pricing/types/pricing.types";
 import {
   createDateAtMinutes,
   formatMinutesAsTime,
+  formatSlotTimeRange,
   getOperatingWindow,
   getTodayIso,
   isPastSlotEnd,
@@ -76,7 +77,8 @@ export function generateSlots({
       startTime: startDate.toISOString(),
       endTime: endDate.toISOString(),
       duration: config.slotDurationMinutes,
-      timeLabel: formatMinutesAsTime(startMinute),
+      timeLabel: formatSlotTimeRange(startMinute, endMinute),
+      startTimeLabel: formatMinutesAsTime(startMinute),
       endTimeLabel: formatMinutesAsTime(endMinute % (24 * 60)),
       price,
       status,

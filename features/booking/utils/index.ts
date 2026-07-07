@@ -33,6 +33,7 @@ export {
   createDateAtMinutes,
   formatDurationLabel,
   formatMinutesAsTime,
+  formatSlotTimeRange,
   getOperatingWindow,
   getTodayIso,
   isPastSlot,

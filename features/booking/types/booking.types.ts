@@ -22,6 +22,7 @@ export type BookingSlot = {
   endTime: string;
   duration: number;
   timeLabel: string;
+  startTimeLabel: string;
   endTimeLabel: string;
   price: number;
   status: SlotStatus;

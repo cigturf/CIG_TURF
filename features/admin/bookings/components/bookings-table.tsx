@@ -21,7 +21,7 @@ import {
   TableShell,
   Text,
 } from "@/components/design-system";
-import { formatCurrency } from "@/utils";
+import { formatCurrency, formatPhoneNumber } from "@/utils";
 
 type BookingsTableProps = {
   bookings: AdminBookingRecord[];
@@ -29,68 +29,103 @@ type BookingsTableProps = {
   onAction: (action: "view" | "edit" | "cancel" | "duplicate" | "print", booking: AdminBookingRecord) => void;
 };
 
+/** Wide layout so headers and INR amounts stay fully visible; scroll horizontally on smaller screens. */
 const BOOKINGS_GRID =
-  "min-w-[80rem] grid-cols-[10rem_7rem_6.5rem_6.5rem_4.5rem_4.75rem_4.25rem_4.25rem_4.75rem_6.5rem_5.5rem_5.5rem_3rem]";
+  "min-w-[94rem] grid-cols-[11rem_8.5rem_7.5rem_9.5rem_6.5rem_7.5rem_6.75rem_6.75rem_6.75rem_9rem_7.5rem_5.75rem_3.5rem]";
+
+const HEADER_CLASS = `${BOOKINGS_GRID} normal-case tracking-normal`;
 
 export function BookingsTable({ bookings, onSelect, onAction }: BookingsTableProps) {
   return (
-    <TableShell className="hidden lg:block">
-      <TableHeader className={BOOKINGS_GRID}>
-        <TableCell header>Booking ID</TableCell>
-        <TableCell header>Customer</TableCell>
-        <TableCell header>Phone</TableCell>
-        <TableCell header>Date</TableCell>
-        <TableCell header>Time</TableCell>
-        <TableCell header>Duration</TableCell>
-        <TableCell header>Total</TableCell>
-        <TableCell header>Advance</TableCell>
-        <TableCell header>Remaining</TableCell>
-        <TableCell header>Payment</TableCell>
-        <TableCell header>Status</TableCell>
-        <TableCell header>Created</TableCell>
-        <TableCell header align="right">
+    <TableShell className="hidden lg:block [&>div]:overflow-x-auto">
+      <TableHeader className={HEADER_CLASS}>
+        <TableCell header truncate={false}>
+          Booking ID
+        </TableCell>
+        <TableCell header truncate={false}>
+          Customer
+        </TableCell>
+        <TableCell header truncate={false}>
+          Phone
+        </TableCell>
+        <TableCell header truncate={false}>
+          Date
+        </TableCell>
+        <TableCell header truncate={false}>
+          Time
+        </TableCell>
+        <TableCell header truncate={false}>
+          Duration
+        </TableCell>
+        <TableCell header truncate={false} align="right">
+          Total
+        </TableCell>
+        <TableCell header truncate={false} align="right">
+          Advance
+        </TableCell>
+        <TableCell header truncate={false} align="right">
+          Remaining
+        </TableCell>
+        <TableCell header truncate={false}>
+          Payment
+        </TableCell>
+        <TableCell header truncate={false}>
+          Status
+        </TableCell>
+        <TableCell header truncate={false}>
+          Created
+        </TableCell>
+        <TableCell header truncate={false} align="right">
           Actions
         </TableCell>
       </TableHeader>
       {bookings.map((booking) => (
         <div key={booking.id} onClick={() => onSelect(booking.id)} className="cursor-pointer">
           <TableRow className={`${BOOKINGS_GRID} items-center`}>
-            <TableCell>
-              <Text size="sm" className="truncate font-medium">
+            <TableCell truncate={false}>
+              <Text size="sm" className="font-medium whitespace-nowrap">
                 {booking.bookingReference}
               </Text>
             </TableCell>
-            <TableCell>
-              <Text size="sm" className="truncate">
+            <TableCell truncate={false}>
+              <Text size="sm" className="whitespace-nowrap">
                 {booking.customerName}
               </Text>
             </TableCell>
-            <TableCell>
-              <Text size="sm" className="truncate">
-                {booking.customerPhone}
+            <TableCell truncate={false}>
+              <Text size="sm" className="whitespace-nowrap tabular-nums">
+                {formatPhoneNumber(booking.customerPhone)}
               </Text>
             </TableCell>
-            <TableCell>
-              <Text size="sm" className="truncate">
+            <TableCell truncate={false}>
+              <Text size="sm" className="whitespace-nowrap">
                 {formatBookingDateLabel(booking.bookingDate)}
               </Text>
             </TableCell>
-            <TableCell>
-              <Text size="sm" className="truncate">
+            <TableCell truncate={false}>
+              <Text size="sm" className="whitespace-nowrap">
                 {booking.startTime}
               </Text>
             </TableCell>
-            <TableCell>
-              <Text size="sm">{formatDurationLabel(booking.durationMinutes)}</Text>
+            <TableCell truncate={false}>
+              <Text size="sm" className="whitespace-nowrap">
+                {formatDurationLabel(booking.durationMinutes)}
+              </Text>
             </TableCell>
-            <TableCell>
-              <Text size="sm">{formatCurrency(booking.totalPrice)}</Text>
+            <TableCell truncate={false} align="right">
+              <Text size="sm" className="whitespace-nowrap tabular-nums">
+                {formatCurrency(booking.totalPrice)}
+              </Text>
             </TableCell>
-            <TableCell>
-              <Text size="sm">{formatCurrency(booking.advancePaid)}</Text>
+            <TableCell truncate={false} align="right">
+              <Text size="sm" className="whitespace-nowrap tabular-nums">
+                {formatCurrency(booking.advancePaid)}
+              </Text>
             </TableCell>
-            <TableCell>
-              <Text size="sm">{formatCurrency(booking.remainingAmount)}</Text>
+            <TableCell truncate={false} align="right">
+              <Text size="sm" className="whitespace-nowrap tabular-nums">
+                {formatCurrency(booking.remainingAmount)}
+              </Text>
             </TableCell>
             <TableCell truncate={false}>
               <StatusBadge {...resolvePaymentStatusBadge(booking.paymentStatus)} />
@@ -98,8 +133,8 @@ export function BookingsTable({ bookings, onSelect, onAction }: BookingsTablePro
             <TableCell truncate={false}>
               <StatusBadge {...resolveBookingStatusBadge(booking.status)} />
             </TableCell>
-            <TableCell>
-              <Text size="sm" className="text-muted-foreground truncate">
+            <TableCell truncate={false}>
+              <Text size="sm" className="text-muted-foreground whitespace-nowrap tabular-nums">
                 {formatBookingTimestamp(booking.createdAt)}
               </Text>
             </TableCell>

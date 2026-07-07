@@ -11,6 +11,7 @@ export const QUERY_KEYS = {
   },
   pricing: {
     active: ["pricing", "active"] as const,
+    admin: ["pricing", "admin"] as const,
   },
   slots: {
     availability: (dateIso: string) => ["slots", "availability", dateIso] as const,

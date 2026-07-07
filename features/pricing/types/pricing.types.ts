@@ -1,4 +1,10 @@
-export type PricingRuleType = "default" | "range";
+export type PricingRuleType = "default" | "range" | "override";
+
+export type PricingBand = {
+  startMinute: number;
+  endMinute: number;
+  price: number;
+};
 
 export type PricingRule = {
   id: string;
@@ -6,11 +12,13 @@ export type PricingRule = {
   version: number;
   type: PricingRuleType;
   price: number;
+  name: string | null;
+  bands: PricingBand[];
   startMinute: number | null;
   endMinute: number | null;
   dateStart: string | null; // YYYY-MM-DD
-  dateEnd: string | null; // YYYY-MM-DD
-  weekdays: number[]; // 0..6 (Sun..Sat), empty means "all"
+  dateEnd: string | null; // YYYY-MM-DD, null = no end (forever)
+  weekdays: number[]; // legacy range rules only
   priority: number;
   active: boolean;
   archivedAt: Date | null;
@@ -18,6 +26,14 @@ export type PricingRule = {
   createdAt: Date;
 };
 
+export type PricingOverrideInput = {
+  name: string;
+  dateStart: string;
+  dateEnd?: string | null;
+  bands: PricingBand[];
+};
+
+/** @deprecated Legacy single-band preview input */
 export type PricingPreviewInput = {
   type: PricingRuleType;
   price: number;
@@ -29,8 +45,17 @@ export type PricingPreviewInput = {
   priority?: number;
 };
 
-export type PricingSnapshot = {
-  defaultPrice: number;
-  rules: PricingRule[];
+export type PricingOverrideRule = {
+  id: string;
+  name: string;
+  dateStart: string;
+  dateEnd: string | null;
+  bands: PricingBand[];
+  active: boolean;
+  createdAt: Date;
 };
 
+export type PricingSnapshot = {
+  defaultPrice: number;
+  overrides: PricingOverrideRule[];
+};

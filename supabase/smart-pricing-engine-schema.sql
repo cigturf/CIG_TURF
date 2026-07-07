@@ -2,7 +2,7 @@
 -- Run in Supabase Dashboard → SQL Editor
 
 DO $$ BEGIN
-  CREATE TYPE "PricingRuleType" AS ENUM ('default', 'range');
+  CREATE TYPE "PricingRuleType" AS ENUM ('default', 'range', 'override');
 EXCEPTION
   WHEN duplicate_object THEN NULL;
 END $$;
@@ -13,6 +13,8 @@ CREATE TABLE IF NOT EXISTS public.pricing_rules (
   version      INTEGER NOT NULL DEFAULT 1,
   type         "PricingRuleType" NOT NULL,
   price        INTEGER NOT NULL,
+  name         TEXT,
+  bands        JSONB,
   start_minute INTEGER,
   end_minute   INTEGER,
   date_start   TEXT,

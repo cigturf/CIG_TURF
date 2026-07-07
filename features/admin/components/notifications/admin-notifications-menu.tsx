@@ -12,6 +12,7 @@ import type { LucideIcon } from "lucide-react";
 
 import { useRealtimeNotifications } from "@/features/realtime/hooks/use-realtime-notifications";
 import type { AdminNotificationType } from "@/features/admin/types/admin.types";
+import { RelativeTime } from "@/components/common/relative-time";
 import { Badge, Button, Text } from "@/components/design-system";
 import { cn } from "@/lib/utils";
 
@@ -22,15 +23,6 @@ const NOTIFICATION_ICONS: Record<AdminNotificationType, LucideIcon> = {
   event_reminder: Megaphone,
   admin_message: MessageSquare,
 };
-
-function formatRelativeTime(timestamp: string) {
-  const diffMs = Date.now() - new Date(timestamp).getTime();
-  const minutes = Math.max(1, Math.round(diffMs / 60000));
-  if (minutes < 60) return `${minutes}m ago`;
-  const hours = Math.round(minutes / 60);
-  if (hours < 24) return `${hours}h ago`;
-  return `${Math.round(hours / 24)}d ago`;
-}
 
 export function AdminNotificationsMenu() {
   const { notifications, unreadCount, markAllRead, markRead } = useRealtimeNotifications();
@@ -93,7 +85,7 @@ export function AdminNotificationsMenu() {
                       {notification.message}
                     </Text>
                     <Text size="sm" className="text-muted-foreground mt-1">
-                      {formatRelativeTime(notification.createdAt)}
+                      <RelativeTime timestamp={notification.createdAt} />
                     </Text>
                   </div>
                 </div>

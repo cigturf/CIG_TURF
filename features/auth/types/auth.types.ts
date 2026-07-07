@@ -9,7 +9,8 @@ export type AuthUser = {
 
 export type LoginMode =
   | "choose"
-  | "email-signin"
+  | "admin-signin"
+  | "email-otp"
   | "forgot-password"
   | "onboarding";
 

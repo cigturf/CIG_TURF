@@ -7,6 +7,7 @@ import { ChevronLeft, Mail } from "lucide-react";
 import { toast } from "sonner";
 
 import { submitCompleteProfile } from "@/features/auth/lib/auth-client-api";
+import { isAdminLoginEmail } from "@/features/auth/config/auth.config";
 import { useAuthSession } from "@/features/auth/hooks";
 import { AUTH_ROUTES, type LoginMode } from "@/features/auth/types";
 import { buildAuthContinueUrl } from "@/features/auth/utils/redirect";
@@ -77,6 +78,33 @@ export function AuthPage() {
     }
   };
 
+  const sendOtp = async (targetEmail = email) => {
+    const parsed = emailSchema.safeParse(targetEmail);
+    if (!parsed.success) {
+      toast.error("Enter a valid email");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const supabase = createClient();
+      const { error } = await supabase.auth.signInWithOtp({
+        email: parsed.data,
+        options: { shouldCreateUser: true },
+      });
+
+      if (error) {
+        toast.error(error.message ?? "Failed to send OTP");
+        return;
+      }
+
+      setOtpSent(true);
+      toast.success("OTP sent to your email");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleEmailContinue = async () => {
     const parsed = emailSchema.safeParse(email);
     if (!parsed.success) {
@@ -84,7 +112,19 @@ export function AuthPage() {
       return;
     }
 
-    setMode("email-signin");
+    const normalizedEmail = parsed.data.toLowerCase();
+    setEmail(normalizedEmail);
+    setPassword("");
+    setOtp("");
+    setOtpSent(false);
+
+    if (isAdminLoginEmail(normalizedEmail)) {
+      setMode("admin-signin");
+      return;
+    }
+
+    setMode("email-otp");
+    await sendOtp(normalizedEmail);
   };
 
   const handlePasswordSignIn = async () => {
@@ -92,6 +132,12 @@ export function AuthPage() {
     const parsedPassword = passwordSchema.safeParse(password);
     if (!parsedEmail.success) {
       toast.error("Invalid email");
+      return;
+    }
+    if (!isAdminLoginEmail(parsedEmail.data)) {
+      toast.error("Password sign-in is only available for admin accounts.");
+      setMode("email-otp");
+      await sendOtp(parsedEmail.data);
       return;
     }
     if (!parsedPassword.success) {
@@ -126,30 +172,7 @@ export function AuthPage() {
   };
 
   const handleSendOtp = async () => {
-    const parsed = emailSchema.safeParse(email);
-    if (!parsed.success) {
-      toast.error("Enter a valid email");
-      return;
-    }
-
-    setLoading(true);
-    try {
-      const supabase = createClient();
-      const { error } = await supabase.auth.signInWithOtp({
-        email: parsed.data,
-        options: { shouldCreateUser: true },
-      });
-
-      if (error) {
-        toast.error(error.message ?? "Failed to send OTP");
-        return;
-      }
-
-      setOtpSent(true);
-      toast.success("OTP sent to your email");
-    } finally {
-      setLoading(false);
-    }
+    await sendOtp();
   };
 
   const handleVerifyOtp = async () => {
@@ -305,8 +328,12 @@ export function AuthPage() {
             </div>
           )}
 
-          {mode === "email-signin" && (
+          {mode === "admin-signin" && (
             <div className="space-y-4">
+              <Text size="sm" className="text-muted-foreground">
+                Admin sign-in
+              </Text>
+
               <FormField label="Email" htmlFor="signin-email">
                 <FormInput id="signin-email" type="email" value={email} readOnly />
               </FormField>
@@ -327,7 +354,7 @@ export function AuthPage() {
                 onClick={handlePasswordSignIn}
                 disabled={loading}
               >
-                Sign in with password
+                Sign in
               </Button>
 
               <button
@@ -338,18 +365,32 @@ export function AuthPage() {
                 Forgot password?
               </button>
 
-              <div className="relative py-2">
-                <div className="border-border/60 absolute inset-0 flex items-center">
-                  <div className="w-full border-t" />
-                </div>
-                <div className="relative flex justify-center text-xs uppercase">
-                  <span className="bg-card text-muted-foreground px-2">or</span>
-                </div>
-              </div>
+              <Button
+                variant="ghost"
+                className="w-full"
+                onClick={() => {
+                  setMode("choose");
+                  setPassword("");
+                }}
+              >
+                Back
+              </Button>
+            </div>
+          )}
+
+          {mode === "email-otp" && (
+            <div className="space-y-4">
+              <Text size="sm" className="text-muted-foreground">
+                We sent a one-time code to your email. Enter it below to sign in.
+              </Text>
+
+              <FormField label="Email" htmlFor="otp-email">
+                <FormInput id="otp-email" type="email" value={email} readOnly />
+              </FormField>
 
               {!otpSent ? (
                 <Button
-                  variant="outline"
+                  variant="booking"
                   className="touch-target min-h-12 w-full"
                   onClick={handleSendOtp}
                   disabled={loading}
@@ -376,10 +417,26 @@ export function AuthPage() {
                   >
                     Verify &amp; Sign In
                   </Button>
+                  <Button
+                    variant="outline"
+                    className="w-full"
+                    onClick={handleSendOtp}
+                    disabled={loading}
+                  >
+                    Resend OTP
+                  </Button>
                 </>
               )}
 
-              <Button variant="ghost" className="w-full" onClick={() => setMode("choose")}>
+              <Button
+                variant="ghost"
+                className="w-full"
+                onClick={() => {
+                  setMode("choose");
+                  setOtp("");
+                  setOtpSent(false);
+                }}
+              >
                 Back
               </Button>
             </div>
@@ -409,7 +466,7 @@ export function AuthPage() {
                 </Text>
               )}
 
-              <Button variant="ghost" className="w-full" onClick={() => setMode("email-signin")}>
+              <Button variant="ghost" className="w-full" onClick={() => setMode("admin-signin")}>
                 Back to sign in
               </Button>
             </div>

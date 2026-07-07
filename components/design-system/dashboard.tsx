@@ -115,7 +115,7 @@ export function TableShell({ children, className, ...props }: TableShellProps) {
       )}
       {...props}
     >
-      <div className="scrollbar-hide overflow-x-auto">{children}</div>
+      <div className="overflow-x-auto">{children}</div>
     </div>
   );
 }
@@ -124,7 +124,7 @@ export function TableHeader({ children, className }: { children: ReactNode; clas
   return (
     <div
       className={cn(
-        "border-border/60 bg-muted/30 text-muted-foreground grid min-w-[48rem] gap-0 border-b text-xs font-medium tracking-wide uppercase",
+        "border-border/60 bg-muted/30 text-muted-foreground grid gap-0 border-b text-xs font-medium tracking-wide uppercase",
         className,
       )}
     >
@@ -167,7 +167,7 @@ export function TableRow({ children, className }: { children: ReactNode; classNa
   return (
     <div
       className={cn(
-        "border-border/40 hover:bg-muted/20 grid min-w-[48rem] gap-0 border-b text-sm last:border-0",
+        "border-border/40 hover:bg-muted/20 grid gap-0 border-b text-sm last:border-0",
         className,
       )}
     >

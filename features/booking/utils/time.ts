@@ -20,6 +20,12 @@ export function formatMinutesAsTime(minutes: number): string {
   });
 }
 
+/** Display label for a single slot, e.g. "12:00 am to 12:30 am" */
+export function formatSlotTimeRange(startMinute: number, endMinute: number): string {
+  const normalizedEnd = endMinute % (24 * 60);
+  return `${formatMinutesAsTime(startMinute)} to ${formatMinutesAsTime(normalizedEnd)}`;
+}
+
 export function createDateAtMinutes(dateIso: string, minutes: number): Date {
   const [year, month, day] = dateIso.split("-").map(Number);
   const date = new Date(year, month - 1, day, 0, 0, 0, 0);

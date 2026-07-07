@@ -33,7 +33,8 @@ function buildTestSlot(overrides: Partial<BookingSlot> & Pick<BookingSlot, "id" 
     startTime: "2026-07-10T18:00:00.000Z",
     endTime: "2026-07-10T18:30:00.000Z",
     duration: 30,
-    timeLabel: "6:00 pm",
+    timeLabel: "6:00 pm to 6:30 pm",
+    startTimeLabel: "6:00 pm",
     endTimeLabel: "6:30 pm",
     price: 600,
     status: "available",
@@ -45,13 +46,14 @@ function buildTestSlot(overrides: Partial<BookingSlot> & Pick<BookingSlot, "id" 
 }
 
 const slots = [
-  buildTestSlot({ id: "a", sortOrder: 0, timeLabel: "6:00 pm", endTimeLabel: "6:30 pm" }),
-  buildTestSlot({ id: "b", sortOrder: 1, timeLabel: "6:30 pm", endTimeLabel: "7:00 pm" }),
-  buildTestSlot({ id: "c", sortOrder: 2, timeLabel: "7:00 pm", endTimeLabel: "7:30 pm" }),
+  buildTestSlot({ id: "a", sortOrder: 0, timeLabel: "6:00 pm to 6:30 pm", startTimeLabel: "6:00 pm", endTimeLabel: "6:30 pm" }),
+  buildTestSlot({ id: "b", sortOrder: 1, timeLabel: "6:30 pm to 7:00 pm", startTimeLabel: "6:30 pm", endTimeLabel: "7:00 pm" }),
+  buildTestSlot({ id: "c", sortOrder: 2, timeLabel: "7:00 pm to 7:30 pm", startTimeLabel: "7:00 pm", endTimeLabel: "7:30 pm" }),
   buildTestSlot({
     id: "d",
     sortOrder: 3,
-    timeLabel: "7:30 pm",
+    timeLabel: "7:30 pm to 8:00 pm",
+    startTimeLabel: "7:30 pm",
     endTimeLabel: "8:00 pm",
     status: "booked",
     isSelectable: false,
@@ -101,8 +103,8 @@ describe("consecutive slot validation", () => {
 
 describe("booking summary calculations", () => {
   it("merges consecutive slots into a time range", () => {
-    expect(formatTimeRange(slots, ["a", "b", "c", "d"])).toBe("6:00 pm – 8:00 pm");
-    expect(formatTimeRange(slots, ["a", "b"])).toBe("6:00 pm – 7:00 pm");
+    expect(formatTimeRange(slots, ["a", "b", "c", "d"])).toBe("6:00 pm to 8:00 pm");
+    expect(formatTimeRange(slots, ["a", "b"])).toBe("6:00 pm to 7:00 pm");
   });
 
   it("calculates summary with fixed advance", () => {
@@ -144,8 +146,8 @@ describe("slot generation engine", () => {
     const expectedCount = countSlotsInWindow(config.slotDurationMinutes, config.businessHours);
 
     expect(generated.length).toBe(expectedCount);
-    expect(generated[0]?.timeLabel).toMatch(/12:00 am/i);
-    expect(generated.at(-1)?.timeLabel).toMatch(/11:30 pm/i);
+    expect(generated[0]?.timeLabel).toMatch(/12:00 am to 12:30 am/i);
+    expect(generated.at(-1)?.timeLabel).toMatch(/11:30 pm to/i);
     expect(generated.every((slot) => slot.duration === config.slotDurationMinutes)).toBe(true);
   });
 

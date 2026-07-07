@@ -17,7 +17,7 @@ export function formatTimeRange(
 
   const first = selected[0]!;
   const last = selected[selected.length - 1]!;
-  return `${first.timeLabel} – ${last.endTimeLabel}`;
+  return `${first.startTimeLabel} to ${last.endTimeLabel}`;
 }
 
 /** @deprecated Use formatTimeRange */
