@@ -1,0 +1,12 @@
+export { LandingPage } from "@/components/landing/landing-page";
+export { LandingNavbar } from "@/components/landing/landing-navbar";
+export { LandingHero } from "@/components/landing/landing-hero";
+export { LandingStory } from "@/components/landing/landing-story";
+export { LandingFacilities } from "@/components/landing/landing-facilities";
+export { LandingGallery } from "@/components/landing/landing-gallery";
+export { LandingPricing } from "@/components/landing/landing-pricing";
+export { LandingStats } from "@/components/landing/landing-stats";
+export { LandingBookingCta } from "@/components/landing/landing-booking-cta";
+export { LandingLocation } from "@/components/landing/landing-location";
+export { LandingFaq } from "@/components/landing/landing-faq";
+export { LandingFooter } from "@/components/landing/landing-footer";

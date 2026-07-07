@@ -1,0 +1,468 @@
+// CIG Turf Booking System — Database Schema
+// https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client"
+  output   = "../app/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ─── Application profiles (auth lives in Supabase Auth) ──────────────────────
+
+model Profile {
+  id        String   @id
+  email     String
+  name      String
+  phone     String
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("profiles")
+}
+
+enum AdminRole {
+  owner
+  admin
+  manager
+  staff
+}
+
+model Admin {
+  id        String    @id @default(cuid())
+  userId    String    @unique @map("user_id")
+  role      AdminRole @default(admin)
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  @@map("admins")
+}
+
+// ─── Business Settings (configuration-driven) ─────────────────────────────────
+
+model BusinessSettings {
+  id        String   @id @default("default")
+  data      Json
+  version   Int      @default(1)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("business_settings")
+}
+
+// ─── Booking sessions (pre-payment hold) ─────────────────────────────────────
+
+enum BookingSessionStatus {
+  pending
+  payment_started
+  payment_completed
+  failed
+  expired
+}
+
+model BookingSessionRecord {
+  id                   String               @id @default(cuid())
+  userId               String               @map("user_id")
+  selectedDate         String               @map("selected_date")
+  selectedSlots        Json                 @map("selected_slots")
+  timeRange            String?              @map("time_range")
+  slotCount            Int                  @map("slot_count")
+  totalDurationMinutes Int                  @map("total_duration_minutes")
+  totalDurationLabel   String               @map("total_duration_label")
+  totalPrice           Int                  @map("total_price")
+  advanceAmount        Int                  @map("advance_amount")
+  remainingAmount      Int                  @map("remaining_amount")
+  profileName          String?              @map("profile_name")
+  profilePhone         String?              @map("profile_phone")
+  profileEmail         String?              @map("profile_email")
+  status               BookingSessionStatus @default(pending)
+  createdAt            DateTime             @default(now()) @map("created_at")
+  updatedAt            DateTime             @updatedAt @map("updated_at")
+  payments             Payment[]
+
+  @@map("booking_sessions")
+}
+
+// ─── Payments (Razorpay) ─────────────────────────────────────────────────────
+
+enum PaymentStatus {
+  created
+  paid
+  failed
+  cancelled
+}
+
+model Payment {
+  id                String               @id @default(cuid())
+  bookingSessionId  String               @map("booking_session_id")
+  bookingSession    BookingSessionRecord @relation(fields: [bookingSessionId], references: [id], onDelete: Cascade)
+  userId            String               @map("user_id")
+  razorpayOrderId   String               @unique @map("razorpay_order_id")
+  razorpayPaymentId String?              @unique @map("razorpay_payment_id")
+  amount            Int
+  currency          String               @default("INR")
+  status            PaymentStatus        @default(created)
+  paymentMethod     String?              @map("payment_method")
+  createdAt         DateTime             @default(now()) @map("created_at")
+  updatedAt         DateTime             @updatedAt @map("updated_at")
+
+  @@map("payments")
+}
+
+// ─── Confirmed bookings ──────────────────────────────────────────────────────
+
+enum BookingStatus {
+  confirmed
+  arrived
+  in_progress
+  cancelled
+  completed
+  expired
+}
+
+enum BookingSource {
+  online
+  manual
+}
+
+enum BookingPaymentRecordType {
+  advance
+  remaining
+  refund
+  adjustment
+}
+
+enum OfflinePaymentMethod {
+  cash
+  upi
+  card
+  bank_transfer
+  other
+  online
+}
+
+model Booking {
+  id                 String        @id @default(cuid())
+  bookingReference   String        @unique @map("booking_reference")
+  userId             String        @map("user_id")
+  bookingSessionId   String        @unique @map("booking_session_id")
+  paymentId          String        @map("payment_id")
+  bookingDate        String        @map("booking_date")
+  startTime          String        @map("start_time")
+  endTime            String        @map("end_time")
+  selectedSlots      Json          @map("selected_slots")
+  durationMinutes    Int           @map("duration_minutes")
+  totalPrice         Int           @map("total_price")
+  advancePaid        Int           @map("advance_paid")
+  remainingAmount    Int           @map("remaining_amount")
+  status             BookingStatus @default(confirmed)
+  source             BookingSource @default(online)
+  notes              String?
+  cancellationReason String?       @map("cancellation_reason")
+  arrivedAt          DateTime?     @map("arrived_at")
+  matchStartedAt     DateTime?     @map("match_started_at")
+  matchCompletedAt   DateTime?     @map("match_completed_at")
+  customerName       String        @map("customer_name")
+  customerPhone      String        @map("customer_phone")
+  customerEmail      String        @map("customer_email")
+  createdAt          DateTime      @default(now()) @map("created_at")
+  updatedAt          DateTime      @updatedAt @map("updated_at")
+  bookedSlots        BookedSlot[]
+  paymentRecords     BookingPaymentRecord[]
+  auditLogs          BookingAuditLog[]
+
+  @@index([userId])
+  @@index([bookingDate])
+  @@index([source])
+  @@map("bookings")
+}
+
+model BookingPaymentRecord {
+  id          String                   @id @default(cuid())
+  bookingId   String                   @map("booking_id")
+  booking     Booking                  @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  type        BookingPaymentRecordType
+  amount      Int
+  method      OfflinePaymentMethod     @default(cash)
+  collectedBy String?                  @map("collected_by")
+  notes       String?
+  referenceNumber String?              @map("reference_number")
+  createdAt   DateTime                 @default(now()) @map("created_at")
+
+  @@index([bookingId])
+  @@map("booking_payment_records")
+}
+
+model BookingAuditLog {
+  id         String   @id @default(cuid())
+  bookingId  String   @map("booking_id")
+  booking    Booking  @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  actorId    String?  @map("actor_id")
+  actorEmail String?  @map("actor_email")
+  action     String
+  fieldName  String?  @map("field_name")
+  oldValue   String?  @map("old_value")
+  newValue   String?  @map("new_value")
+  metadata   Json?
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  @@index([bookingId])
+  @@index([createdAt])
+  @@map("booking_audit_logs")
+}
+
+model BookedSlot {
+  id          String   @id @default(cuid())
+  slotId      String   @unique @map("slot_id")
+  bookingId   String   @map("booking_id")
+  booking     Booking  @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  bookingDate String   @map("booking_date")
+  startMinute Int      @map("start_minute")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@index([bookingDate])
+  @@map("booked_slots")
+}
+
+// ─── Smart Slot Management ───────────────────────────────────────────────────
+
+enum SlotBlockState {
+  blocked
+  maintenance
+}
+
+model SlotBlock {
+  id          String         @id @default(cuid())
+  bookingDate String         @map("booking_date")
+  slotId      String         @map("slot_id")
+  state       SlotBlockState
+  reason      String?
+  createdBy   String?        @map("created_by")
+  createdAt   DateTime       @default(now()) @map("created_at")
+
+  @@unique([bookingDate, slotId])
+  @@index([bookingDate])
+  @@map("slot_blocks")
+}
+
+model SlotHoliday {
+  id          String   @id @default(cuid())
+  bookingDate String   @unique @map("booking_date")
+  label       String?
+  createdBy   String?  @map("created_by")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@index([bookingDate])
+  @@map("slot_holidays")
+}
+
+// ─── Smart Pricing Engine ────────────────────────────────────────────────────
+
+enum PricingRuleType {
+  default
+  range
+}
+
+model PricingRule {
+  id                String          @id @default(cuid())
+  groupId           String          @map("group_id")
+  version           Int             @default(1)
+  type              PricingRuleType
+  price             Int
+  startMinute       Int?            @map("start_minute")
+  endMinute         Int?            @map("end_minute")
+  dateStart         String?         @map("date_start")
+  dateEnd           String?         @map("date_end")
+  weekdays          Int[]
+  priority          Int             @default(0)
+  active            Boolean         @default(true)
+  archivedAt        DateTime?       @map("archived_at")
+  createdBy         String?         @map("created_by")
+  createdAt         DateTime        @default(now()) @map("created_at")
+
+  @@index([active, priority])
+  @@index([dateStart, dateEnd])
+  @@map("pricing_rules")
+}
+
+// ─── Media Management ─────────────────────────────────────────────────────────
+
+enum MediaAssetType {
+  image
+  video
+  svg
+  logo
+  icon
+  other
+}
+
+enum MediaVisibility {
+  public
+  private
+  hidden
+}
+
+enum MediaCategory {
+  landing_hero
+  gallery
+  facilities
+  tournament
+  branding
+  logos
+  seo_images
+  promotional_banners
+  misc
+}
+
+model MediaAsset {
+  id              String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  bucket          String          @default("media")
+  objectPath      String          @map("object_path")
+  filename        String
+  type            MediaAssetType
+  category        MediaCategory   @default(misc)
+  visibility      MediaVisibility @default(public)
+  altText         String?         @map("alt_text")
+  caption         String?
+  sortOrder       Int             @default(0) @map("sort_order")
+  mimeType        String?         @map("mime_type")
+  sizeBytes       BigInt?         @map("size_bytes")
+  width           Int?
+  height          Int?
+  durationSeconds Decimal?        @map("duration_seconds") @db.Decimal(10, 2)
+  checksumSha256  String?         @map("checksum_sha256")
+  uploadedBy      String?         @map("uploaded_by") @db.Uuid
+  createdAt       DateTime        @default(now()) @map("created_at")
+  updatedAt       DateTime        @updatedAt @map("updated_at")
+  deletedAt       DateTime?       @map("deleted_at")
+
+  @@unique([bucket, objectPath])
+  @@index([category, sortOrder])
+  @@index([visibility])
+  @@index([deletedAt])
+  @@map("media_assets")
+}
+
+// ─── Promotions & Website Content ─────────────────────────────────────────────
+
+enum PromotionContentType {
+  tournament
+  coaching_camp
+  practice_session
+  special_offer
+  announcement
+  homepage_banner
+  festival_offer
+  general_promotion
+}
+
+enum PromotionStatus {
+  draft
+  scheduled
+  published
+  expired
+  archived
+}
+
+enum PromotionDisplayLocation {
+  landing_hero
+  homepage_section
+  popup
+  announcement_bar
+  events_section
+  booking_page_banner
+}
+
+model PromotionalContent {
+  id                  String                     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  title               String
+  shortDescription    String?                    @map("short_description")
+  fullDescription     String?                    @map("full_description")
+  contentType         PromotionContentType       @default(general_promotion) @map("content_type")
+  status              PromotionStatus            @default(draft)
+  bannerMediaId       String?                    @map("banner_media_id") @db.Uuid
+  galleryMediaIds     String[]                   @default([]) @map("gallery_media_ids") @db.Uuid
+  ctaText             String?                    @map("cta_text")
+  ctaLink             String?                    @map("cta_link")
+  startAt             DateTime?                  @map("start_at")
+  endAt               DateTime?                  @map("end_at")
+  priority            Int                        @default(0)
+  displayLocations    PromotionDisplayLocation[] @default([]) @map("display_locations")
+  venue               String?
+  organizer           String?
+  contactNumber       String?                    @map("contact_number")
+  registrationLink    String?                    @map("registration_link")
+  maxParticipants     Int?                       @map("max_participants")
+  entryFee            Int?                       @map("entry_fee")
+  announcementEnabled Boolean                    @default(false) @map("announcement_enabled")
+  createdBy           String?                    @map("created_by") @db.Uuid
+  updatedBy           String?                    @map("updated_by") @db.Uuid
+  createdAt           DateTime                   @default(now()) @map("created_at")
+  updatedAt           DateTime                   @updatedAt @map("updated_at")
+
+  @@index([status])
+  @@index([contentType])
+  @@index([priority, updatedAt])
+  @@map("promotional_content")
+}
+
+// ─── Customer Directory ───────────────────────────────────────────────────────
+
+model CustomerDirectoryNote {
+  customerKey String   @id @map("customer_key")
+  notes       String?
+  updatedBy   String?  @map("updated_by")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@map("customer_directory_notes")
+}
+
+// ─── System Audit Logs ────────────────────────────────────────────────────────
+
+model SystemAuditLog {
+  id            String   @id
+  eventId       String   @unique @map("event_id")
+  action        String
+  category      String
+  module        String
+  entityId      String?  @map("entity_id")
+  description   String
+  performedBy   String?  @map("performed_by")
+  performedById String?  @map("performed_by_id")
+  oldValue      String?  @map("old_value")
+  newValue      String?  @map("new_value")
+  metadata      Json?
+  bookingId     String?  @map("booking_id")
+  customerName  String?  @map("customer_name")
+  ipAddress     String?  @map("ip_address")
+  browser       String?  @map("browser")
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  @@index([createdAt])
+  @@index([category])
+  @@index([action])
+  @@index([bookingId])
+  @@map("system_audit_logs")
+}
+
+model EmailLog {
+  id           String    @id
+  recipient    String
+  template     String
+  subject      String
+  status       String    @default("queued")
+  retries      Int       @default(0)
+  maxRetries   Int       @default(3) @map("max_retries")
+  errorMessage String?   @map("error_message")
+  bookingId    String?   @map("booking_id")
+  metadata     Json?
+  sentAt       DateTime? @map("sent_at")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+
+  @@index([status])
+  @@index([createdAt])
+  @@index([bookingId])
+  @@map("email_logs")
+}
