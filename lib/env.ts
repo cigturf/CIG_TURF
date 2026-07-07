@@ -70,7 +70,11 @@ function validateDeployedEnvironment(environment: AppEnvironment): void {
 
 function createEnv() {
   const environment = getAppEnvironment();
-  validateDeployedEnvironment(environment);
+
+  // Server secrets are not available in the browser bundle — validate only on the server.
+  if (typeof window === "undefined") {
+    validateDeployedEnvironment(environment);
+  }
 
   const server = serverEnvSchema.safeParse(process.env);
   const client = clientEnvSchema.safeParse({
