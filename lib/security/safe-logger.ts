@@ -1,5 +1,7 @@
+import { getAppEnvironment } from "@/config/runtime.config";
+
 const SENSITIVE_KEY_PATTERN =
-  /password|passwd|secret|token|otp|authorization|api[_-]?key|razorpay|signature|cookie/i;
+  /password|passwd|secret|token|otp|authorization|api[_-]?key|razorpay|signature|cookie|dsn/i;
 
 function redactValue(value: unknown): unknown {
   if (value === null || value === undefined) return value;
@@ -20,11 +22,49 @@ function redactObject(input: Record<string, unknown>): Record<string, unknown> {
   return output;
 }
 
-export function safeLogError(context: string, error: unknown, metadata?: Record<string, unknown>) {
-  const payload = metadata ? redactObject(metadata) : undefined;
-  if (error instanceof Error) {
-    console.error(`[${context}]`, error.message, payload ?? "");
+type LogLevel = "info" | "warn" | "error";
+
+function writeStructuredLog(
+  level: LogLevel,
+  context: string,
+  message: string,
+  metadata?: Record<string, unknown>,
+) {
+  const payload = {
+    level,
+    context,
+    message,
+    environment: getAppEnvironment(),
+    timestamp: new Date().toISOString(),
+    ...(metadata ? { metadata: redactObject(metadata) } : {}),
+  };
+
+  const line = JSON.stringify(payload);
+  if (level === "error") {
+    console.error(line);
     return;
   }
-  console.error(`[${context}]`, redactValue(error), payload ?? "");
+  if (level === "warn") {
+    console.warn(line);
+    return;
+  }
+  console.info(line);
 }
+
+export function safeLogError(context: string, error: unknown, metadata?: Record<string, unknown>) {
+  const message = error instanceof Error ? error.message : String(error);
+  writeStructuredLog("error", context, message, {
+    ...metadata,
+    errorName: error instanceof Error ? error.name : "UnknownError",
+  });
+}
+
+export function safeLogWarn(context: string, message: string, metadata?: Record<string, unknown>) {
+  writeStructuredLog("warn", context, message, metadata);
+}
+
+export function safeLogInfo(context: string, message: string, metadata?: Record<string, unknown>) {
+  writeStructuredLog("info", context, message, metadata);
+}
+
+export { redactObject, redactValue };

@@ -5,9 +5,11 @@ import {
   PAYMENT_CURRENCY,
 } from "@/features/payments/constants";
 
+import { env, getRazorpayWebhookSecret } from "@/lib/env";
+
 function getRazorpayCredentials() {
-  const keyId = process.env.RAZORPAY_KEY_ID;
-  const keySecret = process.env.RAZORPAY_KEY_SECRET;
+  const keyId = env.server.RAZORPAY_KEY_ID;
+  const keySecret = env.server.RAZORPAY_KEY_SECRET;
 
   if (!keyId || !keySecret) {
     throw new Error("Razorpay credentials are not configured");
@@ -17,12 +19,18 @@ function getRazorpayCredentials() {
 }
 
 export function getPublicRazorpayKeyId(): string {
-  const keyId = process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID ?? process.env.RAZORPAY_KEY_ID;
+  const keyId = env.NEXT_PUBLIC_RAZORPAY_KEY_ID ?? env.server.RAZORPAY_KEY_ID;
   if (!keyId) {
     throw new Error("Razorpay public key is not configured");
   }
   return keyId;
 }
+
+export function isRazorpayLiveMode(): boolean {
+  return env.razorpayMode === "live";
+}
+
+export { getRazorpayWebhookSecret };
 
 function getRazorpayClient(): Razorpay {
   const { keyId, keySecret } = getRazorpayCredentials();

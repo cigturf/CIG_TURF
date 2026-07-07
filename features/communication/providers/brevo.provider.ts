@@ -1,50 +1,71 @@
 import type { EmailProvider } from "@/features/communication/providers/email-provider";
 import type { EmailProviderResult, SendEmailInput } from "@/features/communication/types/email.types";
 
+const MAX_ATTEMPTS = 3;
+const BASE_DELAY_MS = 400;
+
+function isRetryableStatus(status: number): boolean {
+  return status === 408 || status === 429 || status >= 500;
+}
+
+function wait(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 export class BrevoEmailProvider implements EmailProvider {
   readonly name = "brevo";
 
   constructor(
     private readonly apiKey: string,
     private readonly senderEmail: string,
+    private readonly defaultSenderName: string,
   ) {}
 
   async send(input: SendEmailInput): Promise<EmailProviderResult> {
-    const fromName = input.fromName?.trim() || "CIG Turf Booking";
-    const senderEmail = this.senderEmail;
+    const fromName = input.fromName?.trim() || this.defaultSenderName;
+    const body = JSON.stringify({
+      sender: { name: fromName, email: this.senderEmail },
+      to: [{ email: input.to }],
+      subject: input.subject,
+      htmlContent: input.html,
+      replyTo: input.replyTo ? { email: input.replyTo } : undefined,
+    });
 
-    try {
-      const response = await fetch("https://api.brevo.com/v3/smtp/email", {
-        method: "POST",
-        headers: {
-          "api-key": this.apiKey,
-          "Content-Type": "application/json",
-          Accept: "application/json",
-        },
-        body: JSON.stringify({
-          sender: { name: fromName, email: senderEmail },
-          to: [{ email: input.to }],
-          subject: input.subject,
-          htmlContent: input.html,
-          replyTo: input.replyTo ? { email: input.replyTo } : undefined,
-        }),
-      });
+    let lastError = "Brevo request failed";
 
-      if (!response.ok) {
-        const body = (await response.json().catch(() => ({}))) as { message?: string };
-        return {
-          success: false,
-          error: body.message ?? `Brevo API error (${response.status})`,
-        };
+    for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt += 1) {
+      try {
+        const response = await fetch("https://api.brevo.com/v3/smtp/email", {
+          method: "POST",
+          headers: {
+            "api-key": this.apiKey,
+            "Content-Type": "application/json",
+            Accept: "application/json",
+          },
+          body,
+        });
+
+        if (response.ok) {
+          const data = (await response.json()) as { messageId?: string };
+          return { success: true, messageId: data.messageId };
+        }
+
+        const errorBody = (await response.json().catch(() => ({}))) as { message?: string };
+        lastError = errorBody.message ?? `Brevo API error (${response.status})`;
+
+        if (!isRetryableStatus(response.status) || attempt === MAX_ATTEMPTS) {
+          return { success: false, error: lastError };
+        }
+      } catch (error) {
+        lastError = error instanceof Error ? error.message : "Brevo request failed";
+        if (attempt === MAX_ATTEMPTS) {
+          return { success: false, error: lastError };
+        }
       }
 
-      const data = (await response.json()) as { messageId?: string };
-      return { success: true, messageId: data.messageId };
-    } catch (error) {
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : "Brevo request failed",
-      };
+      await wait(BASE_DELAY_MS * attempt);
     }
+
+    return { success: false, error: lastError };
   }
 }

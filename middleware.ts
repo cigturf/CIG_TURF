@@ -13,6 +13,7 @@ import {
   resolveRateLimitScope,
   shouldRateLimitRequest,
   verifyCsrfOrigin,
+  shouldBypassRateLimit,
 } from "@/lib/security";
 
 const isProduction = process.env.NODE_ENV === "production";
@@ -25,7 +26,7 @@ export async function middleware(request: NextRequest) {
       return applySecurityHeaders(csrfRejectedResponse(), isProduction);
     }
 
-    if (isRateLimitEnabled() && shouldRateLimitRequest(request.method)) {
+    if (isRateLimitEnabled() && shouldRateLimitRequest(request.method) && !shouldBypassRateLimit(pathname)) {
       const scope = resolveRateLimitScope(pathname);
       const rateLimit = checkRateLimit(
         buildRateLimitKey(scope, getClientIp(request)),

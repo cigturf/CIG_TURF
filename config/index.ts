@@ -4,6 +4,13 @@
  */
 
 export { getAppConfig, type AppConfig } from "@/config/app.config";
+export {
+  getAppEnvironment,
+  isDeployedEnvironment,
+  isProductionEnvironment,
+  type AppEnvironment,
+} from "@/config/runtime.config";
+export { APP_VERSION } from "@/config/version.config";
 export { BREAKPOINTS, type Breakpoint } from "@/config/breakpoints.config";
 export { QUERY_KEYS } from "@/config/query-keys.config";
 export {

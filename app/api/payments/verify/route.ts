@@ -18,6 +18,8 @@ import { parseJsonBody } from "@/lib/api/parse-request";
 import { apiErrorResponse } from "@/lib/security/safe-error";
 import { createClient } from "@/lib/supabase/server";
 
+export const runtime = "nodejs";
+
 export async function POST(request: Request) {
   const parsed = await parseJsonBody(request, verifyPaymentSchema);
   if (!parsed.success) return parsed.response;

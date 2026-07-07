@@ -54,6 +54,8 @@ jobs:
           RAZORPAY_KEY_ID: rzp_test_placeholder
           RAZORPAY_KEY_SECRET: placeholder-secret
           NEXT_PUBLIC_RAZORPAY_KEY_ID: rzp_test_placeholder
+          BREVO_API_KEY: placeholder-brevo-key
+          BREVO_SENDER_EMAIL: ci@example.com
 
   e2e:
     name: E2E Tests
@@ -90,4 +92,6 @@ jobs:
           RAZORPAY_KEY_ID: rzp_test_placeholder
           RAZORPAY_KEY_SECRET: placeholder-secret
           NEXT_PUBLIC_RAZORPAY_KEY_ID: rzp_test_placeholder
+          BREVO_API_KEY: placeholder-brevo-key
+          BREVO_SENDER_EMAIL: ci@example.com
           CI: true

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 
+import { captureError } from "@/lib/monitoring/capture-error";
 import { safeLogError } from "@/lib/security/safe-logger";
 
 export function apiErrorResponse(
@@ -10,6 +11,7 @@ export function apiErrorResponse(
 ): NextResponse {
   if (cause) {
     safeLogError(context ?? "api", cause);
+    captureError(cause, { context: context ?? "api" });
   }
 
   return NextResponse.json({ error: message }, { status });

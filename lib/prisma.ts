@@ -15,7 +15,13 @@ function createPrismaClient() {
     throw new Error("DATABASE_URL is not defined");
   }
 
-  const pool = globalForPrisma.pool ?? new Pool({ connectionString });
+  const pool =
+    globalForPrisma.pool ??
+    new Pool({
+      connectionString,
+      // Serverless: keep pool small (Supabase pooler recommended in production)
+      max: process.env.VERCEL ? 1 : 10,
+    });
   const adapter = new PrismaPg(pool);
 
   if (process.env.NODE_ENV !== "production") {

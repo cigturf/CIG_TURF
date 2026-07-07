@@ -36,6 +36,8 @@ export function verifyCsrfOrigin(request: NextRequest): boolean {
   const pathname = request.nextUrl.pathname;
   if (!pathname.startsWith("/api/")) return true;
 
+  if (pathname === "/api/payments/webhook") return true;
+
   const origin = request.headers.get("origin");
   const referer = request.headers.get("referer");
   const allowed = allowedOrigins(request);

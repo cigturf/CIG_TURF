@@ -33,9 +33,11 @@ describe("cross-midnight slot selection", () => {
 
   it("allows selecting consecutive slots across midnight", () => {
     const config = buildConfig();
+    const bookingDay = new Date("2026-07-07T12:00:00");
     const { slots } = buildBookingViewSlots({
       dateIso: "2026-07-07",
       config,
+      now: bookingDay,
       primaryAvailability: {},
       bridgeAvailability: {},
     });

@@ -38,6 +38,10 @@ export function shouldRateLimitRequest(method: string): boolean {
   return isCsrfProtectedMethod(method);
 }
 
+export function shouldBypassRateLimit(pathname: string): boolean {
+  return pathname === "/api/health" || pathname === "/api/payments/webhook";
+}
+
 export function isRateLimitEnabled(): boolean {
   return process.env.NODE_ENV === "production";
 }

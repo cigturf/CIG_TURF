@@ -1,36 +1,43 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# CIG Turf Booking System
 
-## Getting Started
+Booking platform for **Chandna Indoor Ground** — customer booking, payments, and admin operations.
 
-First, run the development server:
+## Local development
 
 ```bash
+cp .env.example .env
+# Fill in Supabase, Razorpay, and Brevo values
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+App runs at [http://localhost:3001](http://localhost:3001).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Scripts
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+| Command | Description |
+|---------|-------------|
+| `npm run dev` | Development server |
+| `npm run build` | Production build |
+| `npm run start` | Start production server |
+| `npm run typecheck` | TypeScript |
+| `npm run lint` | ESLint |
+| `npm run test` | Unit tests |
+| `npm run test:e2e` | Playwright e2e |
 
-## Learn More
+## Production deployment
 
-To learn more about Next.js, take a look at the following resources:
+See **[docs/DEPLOYMENT.md](docs/DEPLOYMENT.md)** for Vercel, Supabase, Razorpay, Brevo, OAuth, and custom domain setup.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+- **Production URL:** `https://chandnaindoorground.in`
+- **Health check:** `GET /api/health`
+- **Checklist:** [docs/PRODUCTION_CHECKLIST.md](docs/PRODUCTION_CHECKLIST.md)
+- **Backups:** [docs/BACKUP.md](docs/BACKUP.md)
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Environment variables
 
-## Deploy on Vercel
+All configuration is via environment variables. See [.env.example](.env.example).
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## CI
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+GitHub Actions runs typecheck, lint, tests, build, and Playwright on every push/PR.
