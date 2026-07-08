@@ -1,6 +1,7 @@
 import Razorpay from "razorpay";
 
 import { env, getRazorpayWebhookSecret } from "@/lib/env";
+import { serializeUnknownError } from "@/lib/errors/serialize-error";
 
 function getRazorpayCredentials() {
   const keyId = env.server.RAZORPAY_KEY_ID;
@@ -54,14 +55,17 @@ export async function createRazorpayOrder(input: {
     ...(notes ? { notes } : {}),
   };
 
-  // Note: handler is responsible for validating amount/receipt constraints.
-  const order = await razorpay.orders.create({
-    ...payload,
-  });
+  try {
+    const order = await razorpay.orders.create({
+      ...payload,
+    });
 
-  return {
-    orderId: order.id,
-    amount: Number(order.amount),
-    currency: order.currency,
-  };
+    return {
+      orderId: order.id,
+      amount: Number(order.amount),
+      currency: order.currency,
+    };
+  } catch (error) {
+    throw new Error(`Razorpay order creation failed: ${serializeUnknownError(error)}`);
+  }
 }

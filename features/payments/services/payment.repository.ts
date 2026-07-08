@@ -113,34 +113,44 @@ export async function createPaymentRecord(data: {
     }
 
     if (error) {
-      console.error("[Payment] Supabase insert failed:", error.message);
+      console.error("[Payment] Supabase insert failed:", error);
+      throw new Error(
+        `Supabase payment insert failed: ${error.message} (code: ${error.code ?? "unknown"})`,
+      );
     }
+
+    throw new Error("Supabase payment insert failed: no row returned");
   }
 
-  const row = await prisma.payment.create({
-    data: {
-      bookingSessionId: data.bookingSessionId,
-      userId: data.userId,
-      razorpayOrderId: data.razorpayOrderId,
-      amount: data.amount,
-      currency: data.currency,
-      status: "created",
-    },
-  });
+  try {
+    const row = await prisma.payment.create({
+      data: {
+        bookingSessionId: data.bookingSessionId,
+        userId: data.userId,
+        razorpayOrderId: data.razorpayOrderId,
+        amount: data.amount,
+        currency: data.currency,
+        status: "created",
+      },
+    });
 
-  return {
-    id: row.id,
-    bookingSessionId: row.bookingSessionId,
-    userId: row.userId,
-    razorpayOrderId: row.razorpayOrderId,
-    razorpayPaymentId: row.razorpayPaymentId,
-    amount: row.amount,
-    currency: row.currency,
-    status: row.status,
-    paymentMethod: row.paymentMethod,
-    createdAt: row.createdAt,
-    updatedAt: row.updatedAt,
-  };
+    return {
+      id: row.id,
+      bookingSessionId: row.bookingSessionId,
+      userId: row.userId,
+      razorpayOrderId: row.razorpayOrderId,
+      razorpayPaymentId: row.razorpayPaymentId,
+      amount: row.amount,
+      currency: row.currency,
+      status: row.status,
+      paymentMethod: row.paymentMethod,
+      createdAt: row.createdAt,
+      updatedAt: row.updatedAt,
+    };
+  } catch (error) {
+    console.error("[Payment] Prisma insert failed:", error);
+    throw error;
+  }
 }
 
 export async function getPaymentByRazorpayPaymentId(

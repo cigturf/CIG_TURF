@@ -20,6 +20,10 @@ import {
   getPublicRazorpayKeyId,
 } from "@/features/payments/services/razorpay.service";
 import { parseJsonBody } from "@/lib/api/parse-request";
+import {
+  serializeUnknownError,
+  serializeUnknownErrorDetails,
+} from "@/lib/errors/serialize-error";
 import { sanitizePlainText } from "@/lib/security/sanitize";
 import { createClient } from "@/lib/supabase/server";
 
@@ -173,10 +177,12 @@ export async function POST(request: Request) {
     });
   } catch (error) {
     console.error(error);
+    console.error("Error details:", serializeUnknownErrorDetails(error));
     return NextResponse.json(
       {
         success: false,
-        message: error instanceof Error ? error.message : String(error),
+        message: serializeUnknownError(error),
+        details: serializeUnknownErrorDetails(error),
         stack: process.env.NODE_ENV === "development" ? (error instanceof Error ? error.stack : undefined) : undefined,
       },
       { status: 500 },
