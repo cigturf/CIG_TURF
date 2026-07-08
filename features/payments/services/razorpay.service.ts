@@ -1,10 +1,5 @@
 import Razorpay from "razorpay";
 
-import {
-  PAYMENT_ADVANCE_AMOUNT_PAISE,
-  PAYMENT_CURRENCY,
-} from "@/features/payments/constants";
-
 import { env, getRazorpayWebhookSecret } from "@/lib/env";
 
 function getRazorpayCredentials() {
@@ -37,12 +32,31 @@ function getRazorpayClient(): Razorpay {
   return new Razorpay({ key_id: keyId, key_secret: keySecret });
 }
 
-export async function createRazorpayOrder(receipt: string) {
+export async function createRazorpayOrder(input: {
+  amount: number;
+  currency: string;
+  receipt: string;
+  notes?: Record<string, unknown>;
+}) {
   const razorpay = getRazorpayClient();
+
+  const notes =
+    input.notes && Object.keys(input.notes).length > 0
+      ? Object.fromEntries(
+          Object.entries(input.notes).map(([k, v]) => [k, String(v)]),
+        )
+      : undefined;
+
+  const payload: Parameters<Razorpay["orders"]["create"]>[0] = {
+    amount: input.amount,
+    currency: input.currency,
+    receipt: input.receipt,
+    ...(notes ? { notes } : {}),
+  };
+
+  // Note: handler is responsible for validating amount/receipt constraints.
   const order = await razorpay.orders.create({
-    amount: PAYMENT_ADVANCE_AMOUNT_PAISE,
-    currency: PAYMENT_CURRENCY,
-    receipt,
+    ...payload,
   });
 
   return {
