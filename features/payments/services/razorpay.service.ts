@@ -4,8 +4,8 @@ import { env, getRazorpayWebhookSecret } from "@/lib/env";
 import { serializeUnknownError } from "@/lib/errors/serialize-error";
 
 function getRazorpayCredentials() {
-  const keyId = env.server.RAZORPAY_KEY_ID;
-  const keySecret = env.server.RAZORPAY_KEY_SECRET;
+  const keyId = env.server.RAZORPAY_KEY_ID?.trim();
+  const keySecret = env.server.RAZORPAY_KEY_SECRET?.trim();
 
   if (!keyId || !keySecret) {
     throw new Error("Razorpay credentials are not configured");
@@ -15,7 +15,9 @@ function getRazorpayCredentials() {
 }
 
 export function getPublicRazorpayKeyId(): string {
-  const keyId = env.NEXT_PUBLIC_RAZORPAY_KEY_ID ?? env.server.RAZORPAY_KEY_ID;
+  const keyId = (
+    env.NEXT_PUBLIC_RAZORPAY_KEY_ID ?? env.server.RAZORPAY_KEY_ID
+  )?.trim();
   if (!keyId) {
     throw new Error("Razorpay public key is not configured");
   }

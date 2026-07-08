@@ -1,9 +1,8 @@
 import { getAppConfig } from "@/config/app.config";
 import { normalizeAppMediaUrl } from "@/features/media/lib/normalize-media-url";
-import { resolvePublicLogoUrl } from "@/features/media/services/resolve-public-media";
 
-/** PNG mark on white email cards — SVG is poorly supported in email clients. */
-const DEFAULT_EMAIL_LOGO_PATH = "/branding/logo-dark.png";
+/** Light mark on black email header — JPG for broad client support. */
+const DEFAULT_EMAIL_LOGO_PATH = "/branding/cig-light.jpg";
 
 function getAppOrigin(): string {
   return getAppConfig().url.replace(/\/$/, "");
@@ -28,25 +27,12 @@ export function toAbsoluteAppUrl(pathOrUrl: string): string {
   return trimmed;
 }
 
-function isUnsupportedEmailImage(url: string): boolean {
-  const lower = url.toLowerCase();
-  return lower.endsWith(".svg") || lower.includes(".svg?");
-}
-
 /**
- * Email clients require absolute HTTPS URLs. Relative `/api/media/*` paths and SVG
- * assets used on the site do not render in Gmail, Apple Mail, etc.
+ * Transactional emails use the light mark on a black header (see email-layout.ts).
+ * Admin-uploaded SVG/remote logos are not used — JPG at a stable public path is required
+ * for Gmail, Apple Mail, etc.
  */
-export async function resolveEmailLogoUrl(logoUrl: string | null): Promise<string> {
-  let candidate = logoUrl ? (normalizeAppMediaUrl(logoUrl) ?? logoUrl.trim()) : null;
-
-  if (!candidate) {
-    candidate = await resolvePublicLogoUrl();
-  }
-
-  if (candidate && !isUnsupportedEmailImage(candidate)) {
-    return toAbsoluteAppUrl(candidate);
-  }
-
+export async function resolveEmailLogoUrl(_logoUrl?: string | null): Promise<string> {
+  void _logoUrl;
   return toAbsoluteAppUrl(DEFAULT_EMAIL_LOGO_PATH);
 }

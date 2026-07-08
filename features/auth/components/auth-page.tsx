@@ -9,8 +9,12 @@ import { toast } from "sonner";
 import { submitCompleteProfile } from "@/features/auth/lib/auth-client-api";
 import { isAdminLoginEmail } from "@/features/auth/config/auth.config";
 import { useAuthSession } from "@/features/auth/hooks";
-import { AUTH_ROUTES, type LoginMode } from "@/features/auth/types";
+import { AUTH_ROUTES, isBookingFlowReturn, type LoginMode } from "@/features/auth/types";
 import { buildAuthContinueUrl } from "@/features/auth/utils/redirect";
+import {
+  persistAuthReturnTo,
+  resolveAuthReturnTo,
+} from "@/features/auth/utils/auth-return-to.client";
 import { APP_EVENT_TYPES } from "@/features/events/constants/event-types";
 import { useAppEventPublisher } from "@/features/events/hooks/use-app-event-publisher";
 import {
@@ -28,7 +32,8 @@ import { cn } from "@/lib/utils";
 export function AuthPage() {
   const publish = useAppEventPublisher();
   const searchParams = useSearchParams();
-  const returnTo = searchParams.get("returnTo");
+  const returnToParam = searchParams.get("returnTo");
+  const returnTo = resolveAuthReturnTo(returnToParam);
   const { user, isPending, isAuthenticated } = useAuthSession();
 
   const [mode, setMode] = useState<LoginMode>("choose");
@@ -42,12 +47,21 @@ export function AuthPage() {
   const [resetLinkSent, setResetLinkSent] = useState(false);
 
   const continueAfterAuth = useCallback(() => {
-    window.location.assign(buildAuthContinueUrl(returnTo));
-  }, [returnTo]);
+    const next = resolveAuthReturnTo(returnToParam);
+    persistAuthReturnTo(next);
+    window.location.assign(buildAuthContinueUrl(next));
+  }, [returnToParam]);
+
+  useEffect(() => {
+    const next = resolveAuthReturnTo(returnToParam);
+    if (next) {
+      persistAuthReturnTo(next);
+    }
+  }, [returnToParam]);
 
   useEffect(() => {
     if (!isPending && isAuthenticated && user && mode !== "onboarding") {
-      if (!user.profileComplete && returnTo !== AUTH_ROUTES.bookingDetails) {
+      if (!user.profileComplete && !isBookingFlowReturn(returnTo)) {
         setMode("onboarding");
         return;
       }
@@ -60,8 +74,9 @@ export function AuthPage() {
     setLoading(true);
     try {
       const supabase = createClient();
-      const nextPath = returnTo ?? AUTH_ROUTES.customer;
-      const redirectTo = `${window.location.origin}/auth/callback?next=${encodeURIComponent(nextPath)}`;
+      const nextPath = resolveAuthReturnTo(returnToParam);
+      persistAuthReturnTo(nextPath);
+      const redirectTo = `${window.location.origin}/auth/callback`;
 
       const { error } = await supabase.auth.signInWithOAuth({
         provider: "google",

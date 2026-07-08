@@ -33,8 +33,16 @@ export function renderEmailLayout(options: EmailLayoutOptions): string {
   const { branding, title, bodyHtml, previewText, cta } = options;
   const accent = branding.accentColor || "#16a34a";
   const logo = branding.logoUrl
-    ? `<img src="${escapeHtml(branding.logoUrl)}" alt="${escapeHtml(branding.businessName)}" width="120" style="display:block;max-width:120px;height:auto;margin:0 auto 16px;" />`
-    : `<div style="font-size:22px;font-weight:700;color:${accent};text-align:center;margin-bottom:16px;">${escapeHtml(branding.businessName)}</div>`;
+    ? `<img src="${escapeHtml(branding.logoUrl)}" alt="${escapeHtml(branding.businessName)}" width="140" style="display:block;max-width:140px;height:auto;margin:0 auto;" />`
+    : `<div style="font-size:22px;font-weight:700;color:#ffffff;text-align:center;">${escapeHtml(branding.businessName)}</div>`;
+
+  const logoHeader = `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:-32px -32px 24px;border-radius:16px 16px 0 0;overflow:hidden;">
+    <tr>
+      <td align="center" style="background:#000000;padding:28px 24px;">
+        ${logo}
+      </td>
+    </tr>
+  </table>`;
 
   const ctaBlock = cta
     ? `<table role="presentation" cellpadding="0" cellspacing="0" style="margin:28px auto 0;">
@@ -75,7 +83,7 @@ export function renderEmailLayout(options: EmailLayoutOptions): string {
         <table role="presentation" class="email-container" width="600" cellpadding="0" cellspacing="0" style="width:600px;max-width:100%;">
           <tr>
             <td class="email-card" style="background:#ffffff;border-radius:16px;padding:32px;box-shadow:0 10px 30px rgba(15,23,42,0.08);">
-              ${logo}
+              ${logoHeader}
               <h1 style="margin:0 0 20px;font-size:24px;line-height:1.3;text-align:center;color:#0f172a;">${escapeHtml(title)}</h1>
               ${bodyHtml}
               ${ctaBlock}

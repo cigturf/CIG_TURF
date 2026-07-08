@@ -13,6 +13,7 @@ import { MobileNavSpacer } from "@/components/design-system/navigation-mobile";
 import { useAuthSession } from "@/features/auth/hooks";
 import { AUTH_ROUTES } from "@/features/auth/types";
 import { buildLoginUrl } from "@/features/auth/utils/redirect";
+import { resolveLoginReturnTo } from "@/features/auth/utils/auth-return-to.client";
 import { useColorMode } from "@/hooks/use-color-mode";
 import { cn } from "@/lib/utils";
 
@@ -46,7 +47,7 @@ export function SiteNavbar({ className }: SiteNavbarProps) {
 
   const logoUrl = publicSettings.branding.logoUrl;
   const navLinks = isLanding ? LANDING_LINKS : APP_LINKS;
-  const loginHref = buildLoginUrl(pathname || AUTH_ROUTES.customer);
+  const loginHref = buildLoginUrl(resolveLoginReturnTo(pathname));
 
   useEffect(() => {
     if (!isLanding) {

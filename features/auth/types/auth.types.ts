@@ -23,5 +23,10 @@ export const AUTH_ROUTES = {
   login: "/login",
   customer: "/customer",
   admin: "/admin",
+  book: "/book",
   bookingDetails: "/book/details",
 } as const;
+
+export function isBookingFlowReturn(returnTo: string): boolean {
+  return returnTo === AUTH_ROUTES.bookingDetails || returnTo === AUTH_ROUTES.book;
+}

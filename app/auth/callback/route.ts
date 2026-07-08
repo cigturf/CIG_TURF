@@ -4,12 +4,16 @@ import { resolvePostAuthDestination } from "@/features/auth/services/post-auth-r
 import { getProfileById } from "@/features/auth/services/profile.service";
 import { CommunicationService } from "@/features/communication/services/communication.service";
 import { AUTH_ROUTES } from "@/features/auth/types";
+import {
+  clearAuthReturnToOnResponse,
+  readAuthReturnToFromRequest,
+} from "@/features/auth/utils/auth-return-to.server";
 import { createClient } from "@/lib/supabase/server";
 
 export async function GET(request: NextRequest) {
   const { searchParams, origin } = new URL(request.url);
   const code = searchParams.get("code");
-  const next = searchParams.get("next") ?? AUTH_ROUTES.customer;
+  const next = readAuthReturnToFromRequest(request, searchParams.get("next"));
 
   if (!code) {
     return NextResponse.redirect(`${origin}${AUTH_ROUTES.login}?error=auth`);
@@ -45,9 +49,13 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    return NextResponse.redirect(`${origin}${destination}`);
+    return clearAuthReturnToOnResponse(
+      NextResponse.redirect(`${origin}${destination}`),
+    );
   } catch (error) {
     console.error("[Auth callback] Unexpected error:", error);
-    return NextResponse.redirect(`${origin}${AUTH_ROUTES.login}?error=auth`);
+    return clearAuthReturnToOnResponse(
+      NextResponse.redirect(`${origin}${AUTH_ROUTES.login}?error=auth`),
+    );
   }
 }

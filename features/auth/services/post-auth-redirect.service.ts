@@ -1,5 +1,5 @@
 import { checkIsAdminAction, getSessionUserAction } from "@/features/auth/actions/auth.actions";
-import { AUTH_ROUTES } from "@/features/auth/types";
+import { AUTH_ROUTES, isBookingFlowReturn } from "@/features/auth/types";
 import { buildLoginUrl } from "@/features/auth/utils/redirect";
 
 /**
@@ -18,7 +18,7 @@ export async function resolvePostAuthDestination(returnTo: string | null): Promi
 
   const next = returnTo ?? AUTH_ROUTES.customer;
 
-  if (!user.profileComplete && next !== AUTH_ROUTES.bookingDetails) {
+  if (!user.profileComplete && !isBookingFlowReturn(next)) {
     return buildLoginUrl(next);
   }
 

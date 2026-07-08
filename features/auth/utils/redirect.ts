@@ -1,4 +1,4 @@
-import { AUTH_ROUTES } from "@/features/auth/types";
+import { AUTH_ROUTES, isBookingFlowReturn } from "@/features/auth/types";
 
 export function resolvePostAuthRedirect(options: {
   isAdmin: boolean;
@@ -8,7 +8,7 @@ export function resolvePostAuthRedirect(options: {
 }): string | null {
   if (options.isOnboarding) return null;
   if (options.isAdmin) return AUTH_ROUTES.admin;
-  if (!options.profileComplete && options.returnTo !== AUTH_ROUTES.bookingDetails) {
+  if (!options.profileComplete && !isBookingFlowReturn(options.returnTo ?? "")) {
     return null;
   }
   return options.returnTo ?? AUTH_ROUTES.customer;

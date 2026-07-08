@@ -35,8 +35,8 @@ describe("toAbsoluteAppUrl", () => {
   });
 
   it("prefixes static branding assets", () => {
-    expect(toAbsoluteAppUrl("/branding/logo-dark.png")).toBe(
-      "https://book.chandanaindoor.com/branding/logo-dark.png",
+    expect(toAbsoluteAppUrl("/branding/cig-light.jpg")).toBe(
+      "https://book.chandanaindoor.com/branding/cig-light.jpg",
     );
   });
 });

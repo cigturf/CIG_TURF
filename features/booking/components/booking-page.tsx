@@ -15,6 +15,7 @@ import { BookingSlotGrid } from "@/features/booking/components/booking-slot-grid
 import { BookingSummaryPanel } from "@/features/booking/components/booking-summary-panel";
 import { useBookingSelection } from "@/features/booking/hooks";
 import { BOOKING_MESSAGES, saveBookingSession } from "@/features/booking/utils";
+import { persistAuthReturnTo } from "@/features/auth/utils/auth-return-to.client";
 import { cn } from "@/lib/utils";
 
 type BookingPageProps = {
@@ -34,6 +35,7 @@ export function BookingPage({ venueName }: BookingPageProps) {
     }
 
     saveBookingSession(selection, summary);
+    persistAuthReturnTo(AUTH_ROUTES.bookingDetails);
 
     if (isPending) return;
 
