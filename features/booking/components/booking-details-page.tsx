@@ -187,12 +187,24 @@ export function BookingDetailsPage({ venueName }: BookingDetailsPageProps) {
       });
 
       const orderData = (await orderResponse.json().catch(() => null)) as
-        | (CreateOrderResponse & { error?: string })
+        | (CreateOrderResponse & { error?: string; code?: string })
         | null;
 
       if (!orderResponse.ok || !orderData?.orderId) {
         paymentInFlight.current = false;
         setLoading(false);
+
+        const isSlotUnavailable = orderData?.code === "slots_unavailable";
+
+        if (isSlotUnavailable) {
+          toast.error("Slot no longer available", {
+            description:
+              orderData?.error ?? "This slot was just booked. Please choose another.",
+          });
+          router.replace("/book");
+          return;
+        }
+
         if (orderResponse.status === 409) {
           toast.error("Payment already completed", {
             description: "This booking session has already been paid for.",

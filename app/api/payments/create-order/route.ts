@@ -7,6 +7,8 @@ import {
   PAYMENT_ADVANCE_AMOUNT_INR,
   PAYMENT_ADVANCE_AMOUNT_PAISE,
   PAYMENT_CURRENCY,
+  SLOT_HOLD_CONFLICT_ERROR,
+  SLOT_UNAVAILABLE_USER_MESSAGE,
 } from "@/features/payments/constants";
 import { createOrderSchema } from "@/features/payments/schemas/create-order.schema";
 import { validateCreateOrderInput } from "@/features/payments/services/validate-create-order.service";
@@ -32,6 +34,24 @@ import { createClient } from "@/lib/supabase/server";
 
 const MAX_RAZORPAY_RECEIPT_LENGTH = 40;
 
+async function reserveSlotsForPayment(
+  bookingSessionId: string,
+  selectedSlotIds: string[],
+): Promise<NextResponse | null> {
+  try {
+    await upsertSlotHolds(bookingSessionId, selectedSlotIds);
+    return null;
+  } catch (error) {
+    if (error instanceof Error && error.message === SLOT_HOLD_CONFLICT_ERROR) {
+      return NextResponse.json(
+        { error: SLOT_UNAVAILABLE_USER_MESSAGE, code: "slots_unavailable" },
+        { status: 409 },
+      );
+    }
+    throw error;
+  }
+}
+
 export async function POST(request: Request) {
   try {
     if (await isBookingMaintenanceActive()) {
@@ -50,7 +70,10 @@ export async function POST(request: Request) {
 
     const validation = await validateCreateOrderInput(parsed.data);
     if (!validation.ok) {
-      return NextResponse.json({ error: validation.error }, { status: 400 });
+      return NextResponse.json(
+        { error: validation.error, code: validation.code },
+        { status: validation.code === "slots_unavailable" ? 409 : 400 },
+      );
     }
 
     const {
@@ -114,7 +137,8 @@ export async function POST(request: Request) {
 
       const activePayment = await getActivePaymentBySessionId(bookingSessionId);
       if (activePayment) {
-        await upsertSlotHolds(bookingSessionId, parsed.data.selectedSlotIds);
+        const holdError = await reserveSlotsForPayment(bookingSessionId, parsed.data.selectedSlotIds);
+        if (holdError) return holdError;
         return NextResponse.json({
           orderId: activePayment.razorpayOrderId,
           amount: activePayment.amount,
@@ -154,7 +178,8 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Booking session is too long for payment" }, { status: 400 });
     }
 
-    await upsertSlotHolds(bookingSessionId, parsed.data.selectedSlotIds);
+    const holdError = await reserveSlotsForPayment(bookingSessionId, parsed.data.selectedSlotIds);
+    if (holdError) return holdError;
 
     const order = await createRazorpayOrder({
       amount: PAYMENT_ADVANCE_AMOUNT_PAISE,

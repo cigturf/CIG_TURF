@@ -1,3 +1,5 @@
+import { getUnavailableSlotIds } from "@/features/booking/services/booked-slot.repository";
+import { SLOT_UNAVAILABLE_USER_MESSAGE } from "@/features/payments/constants";
 import type { CreateOrderInput } from "@/features/payments/schemas/create-order.schema";
 import { resolveBookingEngineConfig } from "@/features/booking/services/booking-config.service";
 import { buildBookingViewSlots } from "@/features/booking/services/booking-view-slots.service";
@@ -10,7 +12,7 @@ import { SettingsService } from "@/server/settings/settings.service";
 
 export type CreateOrderValidationResult =
   | { ok: true }
-  | { ok: false; error: string };
+  | { ok: false; error: string; code?: "slots_unavailable" };
 
 export async function validateCreateOrderInput(
   input: CreateOrderInput,
@@ -39,12 +41,14 @@ export async function validateCreateOrderInput(
     selectedSlotIds: input.selectedSlotIds,
     primaryAvailability: {
       bookedSlotIds: primaryAvailability.bookedSlotIds,
+      heldSlotIds: primaryAvailability.heldSlotIds,
       blockedSlotIds: primaryAvailability.blockedSlotIds,
       maintenanceSlotIds: primaryAvailability.maintenanceSlotIds,
       isHoliday: primaryAvailability.isHoliday,
     },
     bridgeAvailability: {
       bookedSlotIds: bridgeAvailability.bookedSlotIds,
+      heldSlotIds: bridgeAvailability.heldSlotIds,
       blockedSlotIds: bridgeAvailability.blockedSlotIds,
       maintenanceSlotIds: bridgeAvailability.maintenanceSlotIds,
       isHoliday: bridgeAvailability.isHoliday,
@@ -58,7 +62,14 @@ export async function validateCreateOrderInput(
   }
 
   if (selected.some((slot) => !slot.isSelectable)) {
-    return { ok: false, error: "One or more selected slots are unavailable" };
+    return { ok: false, error: SLOT_UNAVAILABLE_USER_MESSAGE, code: "slots_unavailable" };
+  }
+
+  const unavailable = await getUnavailableSlotIds(input.selectedSlotIds, {
+    bookingSessionId: input.bookingSessionId ?? undefined,
+  });
+  if (unavailable.length > 0) {
+    return { ok: false, error: SLOT_UNAVAILABLE_USER_MESSAGE, code: "slots_unavailable" };
   }
 
   if (!areConsecutiveSlotIds(input.selectedSlotIds, config.slotDurationMinutes)) {

@@ -1,4 +1,4 @@
-import { SLOT_HOLD_TTL_MINUTES } from "@/features/payments/constants";
+import { SLOT_HOLD_CONFLICT_ERROR, SLOT_HOLD_TTL_MINUTES } from "@/features/payments/constants";
 import { prisma } from "@/lib/prisma";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { randomUUID } from "crypto";
@@ -127,7 +127,7 @@ export async function upsertSlotHolds(
     if (!error) return;
 
     if (error.code === "23505") {
-      throw new Error("One or more slots are currently held by another booking.");
+      throw new Error(SLOT_HOLD_CONFLICT_ERROR);
     }
 
     console.error("[slot_holds] Supabase insert failed:", error.message);
