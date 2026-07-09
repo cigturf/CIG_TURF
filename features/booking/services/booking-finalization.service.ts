@@ -27,6 +27,12 @@ import { refundOnlineAdvanceWithoutBooking } from "@/features/payments/services/
 import { safeLogWarn } from "@/lib/security/safe-logger";
 
 async function handleSlotsUnavailableAfterPayment(bookingSessionId: string): Promise<void> {
+  const existingBooking = await getBookingBySessionId(bookingSessionId);
+  if (existingBooking) {
+    await releaseSlotHoldsForSession(bookingSessionId);
+    return;
+  }
+
   const payment = await getPaidPaymentBySessionId(bookingSessionId);
   if (payment?.status === "paid" && payment.razorpayPaymentId) {
     await refundOnlineAdvanceWithoutBooking({
@@ -93,6 +99,12 @@ export async function finalizeBookingFromSession(options: {
   }
 
   if (isBookingSessionExpired(session)) {
+    const existingBooking = await getBookingBySessionId(options.bookingSessionId);
+    if (existingBooking) {
+      await releaseSlotHoldsForSession(options.bookingSessionId);
+      return { success: true, booking: existingBooking };
+    }
+
     const paid = await getPaidPaymentBySessionId(options.bookingSessionId);
     if (paid?.razorpayPaymentId) {
       await refundOnlineAdvanceWithoutBooking({
@@ -170,7 +182,7 @@ export async function finalizeBookingFromSession(options: {
   try {
     const bookingReference = await generateBookingReference(session.selectedDate);
 
-    const booking = await createBookingRecord({
+    const { booking, isNew } = await createBookingRecord({
       bookingReference,
       userId: session.userId,
       bookingSessionId: session.id,
@@ -188,6 +200,11 @@ export async function finalizeBookingFromSession(options: {
       customerEmail: session.profileEmail,
     });
 
+    if (!isNew) {
+      await releaseSlotHoldsForSession(options.bookingSessionId);
+      return { success: true, booking };
+    }
+
     const racedBooking = await getBookingBySessionId(session.id);
     if (racedBooking && racedBooking.id !== booking.id) {
       await releaseBookedSlotsForBooking(booking.id).catch(() => undefined);
@@ -202,6 +219,14 @@ export async function finalizeBookingFromSession(options: {
     });
 
     if (!reservation.success) {
+      const confirmedBooking = await getBookingBySessionId(options.bookingSessionId);
+      if (confirmedBooking) {
+        await releaseBookedSlotsForBooking(booking.id).catch(() => undefined);
+        await deleteBookingById(booking.id).catch(() => undefined);
+        await releaseSlotHoldsForSession(options.bookingSessionId);
+        return { success: true, booking: confirmedBooking };
+      }
+
       await releaseBookedSlotsForBooking(booking.id);
       await deleteBookingById(booking.id);
       await handleSlotsUnavailableAfterPayment(options.bookingSessionId);

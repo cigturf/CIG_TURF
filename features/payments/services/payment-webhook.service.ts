@@ -1,4 +1,5 @@
 import { finalizeBookingFromPaidSessionIfNeeded } from "@/features/booking/services/booking-finalization.service";
+import { getBookingBySessionId } from "@/features/booking/services/booking.repository";
 import {
   getPaymentByOrderId,
   getPaymentByRazorpayPaymentId,
@@ -19,6 +20,9 @@ export type WebhookProcessResult =
   | { ok: false; error: string; status: number };
 
 async function ensureBookingFinalized(payment: PaymentRecord): Promise<void> {
+  const existingBooking = await getBookingBySessionId(payment.bookingSessionId);
+  if (existingBooking) return;
+
   await finalizeBookingFromPaidSessionIfNeeded({
     bookingSessionId: payment.bookingSessionId,
     userId: payment.userId,

@@ -179,15 +179,20 @@ export function AdminBookingsView() {
     await refreshDetail();
   };
 
-  const cancelBooking = async (reason: string) => {
+  const cancelBooking = async (payload: { reason: string; initiateRefund: boolean }) => {
     if (!selectedBookingId) return;
     const response = await fetch(`/api/admin/bookings/${selectedBookingId}/cancel`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ reason }),
+      body: JSON.stringify(payload),
     });
-    if (!response.ok) throw new Error("Failed to cancel booking");
-    toast.success("Booking cancelled");
+    if (!response.ok) {
+      const body = await response.json().catch(() => ({}));
+      throw new Error(body.error ?? "Failed to cancel booking");
+    }
+    toast.success(
+      payload.initiateRefund ? "Booking cancelled and refund initiated" : "Booking cancelled",
+    );
     await refresh();
     await refreshDetail();
   };
@@ -212,36 +217,6 @@ export function AdminBookingsView() {
     await refresh();
     await refreshDetail();
     window.open(`/api/admin/bookings/${selectedBookingId}/receipt`, "_blank");
-  };
-
-  const markArrived = async (bookingId = selectedBookingId) => {
-    if (!bookingId) return;
-    const response = await fetch(`/api/admin/bookings/${bookingId}/arrive`, {
-      method: "POST",
-    });
-    if (!response.ok) {
-      const body = await response.json().catch(() => ({}));
-      throw new Error(body.error ?? "Failed to mark arrived");
-    }
-    toast.success("Customer marked as arrived");
-    setSelectedBookingId(bookingId);
-    await refresh();
-    await refreshDetail();
-  };
-
-  const startMatch = async (bookingId = selectedBookingId) => {
-    if (!bookingId) return;
-    const response = await fetch(`/api/admin/bookings/${bookingId}/start`, {
-      method: "POST",
-    });
-    if (!response.ok) {
-      const body = await response.json().catch(() => ({}));
-      throw new Error(body.error ?? "Failed to start match");
-    }
-    toast.success("Match started");
-    setSelectedBookingId(bookingId);
-    await refresh();
-    await refreshDetail();
   };
 
   const completeBooking = async (payload: {
@@ -324,8 +299,6 @@ export function AdminBookingsView() {
                     setSelectedBookingId(id);
                     if (action === "collect") setCollectOpen(true);
                     if (action === "complete") setCompleteOpen(true);
-                    if (action === "arrive") void markArrived(id);
-                    if (action === "start") void startMatch(id);
                     if (action === "print") window.open(`/api/admin/bookings/${id}/receipt`, "_blank");
                   }}
                 />
@@ -354,8 +327,6 @@ export function AdminBookingsView() {
         }}
         onCollectPayment={() => setCollectOpen(true)}
         onComplete={() => setCompleteOpen(true)}
-        onMarkArrived={() => void markArrived()}
-        onStartMatch={() => void startMatch()}
       />
 
       <ManualBookingDialog
@@ -376,6 +347,8 @@ export function AdminBookingsView() {
         open={cancelOpen}
         onOpenChange={setCancelOpen}
         bookingReference={selectedBooking?.bookingReference ?? "this booking"}
+        source={selectedDetail?.source}
+        advancePaid={selectedDetail?.advancePaid ?? 0}
         onSubmit={cancelBooking}
       />
 

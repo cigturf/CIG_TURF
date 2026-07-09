@@ -15,8 +15,6 @@ export function buildBookingTimeline(
 
   const isCancelled = booking.status === "cancelled";
   const isCompleted = booking.status === "completed";
-  const hasArrived = Boolean(booking.arrivedAt) || booking.status === "arrived" || booking.status === "in_progress" || isCompleted;
-  const hasStarted = Boolean(booking.matchStartedAt) || booking.status === "in_progress" || isCompleted;
 
   const paymentStepStatus = (): BookingTimelineStep["status"] => {
     if (isCancelled) return "skipped";
@@ -50,34 +48,14 @@ export function buildBookingTimeline(
       status: isCancelled ? "skipped" : "completed",
     },
     {
-      id: "arrived",
-      label: "Customer Arrived",
-      description: hasArrived ? "Checked in at venue" : "Waiting for check-in",
-      timestamp: booking.arrivedAt?.toISOString(),
-      status: isCancelled ? "skipped" : hasArrived ? "completed" : booking.status === "confirmed" ? "current" : "upcoming",
-    },
-    {
-      id: "in_progress",
-      label: "Match In Progress",
-      description: hasStarted ? "Team on turf" : "Match not started",
-      timestamp: booking.matchStartedAt?.toISOString(),
-      status: isCancelled
-        ? "skipped"
-        : hasStarted
-          ? isCompleted
-            ? "completed"
-            : "current"
-          : hasArrived
-            ? "current"
-            : "upcoming",
-    },
-    {
       id: "completed",
       label: isCancelled ? "Booking Cancelled" : "Completed",
       description: isCancelled
         ? booking.cancellationReason ?? "Cancelled by admin"
         : "Session finished",
-      timestamp: booking.matchCompletedAt?.toISOString() ?? (isCancelled || isCompleted ? booking.updatedAt.toISOString() : undefined),
+      timestamp:
+        booking.matchCompletedAt?.toISOString() ??
+        (isCancelled || isCompleted ? booking.updatedAt.toISOString() : undefined),
       status: isCancelled ? "completed" : isCompleted ? "completed" : "upcoming",
     },
   ];

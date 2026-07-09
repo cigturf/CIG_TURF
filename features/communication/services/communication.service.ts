@@ -2,6 +2,7 @@ import { loadEmailBrandingContext } from "@/features/communication/lib/build-ema
 import {
   createEmailLog,
   getEmailLogById,
+  hasBookingNotificationPendingOrSent,
   hasSentTemplateRecently,
   updateEmailLogStatus,
 } from "@/features/communication/services/email-log.repository";
@@ -34,6 +35,15 @@ async function enqueueRenderedEmail(options: EnqueueOptions): Promise<string | n
   }
 
   if (!options.recipient?.trim()) return null;
+
+  if (options.bookingId) {
+    const alreadyQueuedOrSent = await hasBookingNotificationPendingOrSent(
+      options.bookingId,
+      options.template,
+      options.recipient,
+    );
+    if (alreadyQueuedOrSent) return null;
+  }
 
   const rendered = renderEmailTemplate({
     ...options.renderInput,
@@ -98,6 +108,8 @@ function bookingRenderInput(booking: BookingRecord) {
 
 export const CommunicationService = {
   async sendBookingConfirmed(booking: BookingRecord): Promise<void> {
+    if (booking.status === "cancelled") return;
+
     const customerEmail = booking.customerEmail?.trim();
 
     if (customerEmail) {
@@ -154,6 +166,8 @@ export const CommunicationService = {
   },
 
   async sendBookingCancelled(booking: BookingRecord, cancelledAt = new Date()): Promise<void> {
+    if (booking.status !== "cancelled") return;
+
     if (booking.customerEmail) {
       await enqueueRenderedEmail({
         recipient: booking.customerEmail,

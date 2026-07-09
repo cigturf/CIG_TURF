@@ -49,7 +49,6 @@ export type DashboardOperationsData = {
   currentMatch: DashboardOperationsBooking | null;
   upcomingMatch: DashboardOperationsBooking | null;
   pendingCollections: DashboardOperationsBooking[];
-  waitingForCheckIn: DashboardOperationsBooking[];
 };
 
 export type AdminDashboardData = {

@@ -251,6 +251,44 @@ export async function hasSentTemplateRecently(
   }
 }
 
+export async function hasBookingNotificationPendingOrSent(
+  bookingId: string,
+  template: EmailTemplateId,
+  recipient: string,
+): Promise<boolean> {
+  const normalizedRecipient = recipient.trim().toLowerCase();
+  const supabase = createServiceRoleClient();
+
+  if (supabase) {
+    const { data, error } = await supabase
+      .from("email_logs")
+      .select("recipient, status")
+      .eq("booking_id", bookingId)
+      .eq("template", template)
+      .in("status", ["queued", "sent"]);
+
+    if (!error && data) {
+      return data.some(
+        (row) => String(row.recipient).trim().toLowerCase() === normalizedRecipient,
+      );
+    }
+  }
+
+  try {
+    const count = await prisma.emailLog.count({
+      where: {
+        bookingId,
+        template,
+        recipient: { equals: recipient.trim(), mode: "insensitive" },
+        status: { in: ["queued", "sent"] },
+      },
+    });
+    return count > 0;
+  } catch {
+    return false;
+  }
+}
+
 export async function listEmailLogs(options?: {
   limit?: number;
   search?: string;

@@ -10,14 +10,14 @@ function createBooking(overrides: Partial<BookingRecord>): BookingRecord {
     userId: "u1",
     bookingSessionId: "s1",
     paymentId: "p1",
-    bookingDate: "2026-07-07",
-    startTime: "6:00 PM",
-    endTime: "7:00 PM",
-    selectedSlots: ["2026-07-07-1080"],
-    durationMinutes: 60,
-    totalPrice: 2400,
+    bookingDate: "2026-07-11",
+    startTime: "2:00 PM",
+    endTime: "2:30 PM",
+    selectedSlots: ["2026-07-11-840"],
+    durationMinutes: 30,
+    totalPrice: 600,
     advancePaid: 200,
-    remainingAmount: 2200,
+    remainingAmount: 400,
     status: "confirmed",
     source: "online",
     notes: null,
@@ -28,40 +28,73 @@ function createBooking(overrides: Partial<BookingRecord>): BookingRecord {
     customerName: "Team Alpha",
     customerPhone: "9999999999",
     customerEmail: "team@example.com",
-    createdAt: new Date("2026-07-07T10:00:00"),
-    updatedAt: new Date("2026-07-07T10:00:00"),
+    createdAt: new Date("2026-07-11T08:00:00+05:30"),
+    updatedAt: new Date("2026-07-11T08:00:00+05:30"),
     ...overrides,
   };
 }
 
 describe("buildDashboardOperations", () => {
-  it("groups current, upcoming, collections, and check-ins", () => {
+  const now = new Date("2026-07-11T14:10:00+05:30");
+
+  it("shows the in-window booking as current and the next slot as upcoming", () => {
     const bookings = [
       createBooking({
-        id: "1",
-        status: "in_progress",
+        id: "past",
+        customerName: "Past Team",
+        selectedSlots: ["2026-07-11-780"],
+        startTime: "1:00 PM",
+        endTime: "1:30 PM",
+      }),
+      createBooking({
+        id: "current",
         customerName: "Current Team",
-        remainingAmount: 0,
-        advancePaid: 2400,
+        selectedSlots: ["2026-07-11-840"],
+        startTime: "2:00 PM",
+        endTime: "2:30 PM",
       }),
       createBooking({
-        id: "2",
-        status: "confirmed",
-        customerName: "Waiting Team",
-        startTime: "8:00 PM",
-      }),
-      createBooking({
-        id: "3",
-        status: "arrived",
-        customerName: "Arrived Team",
-        remainingAmount: 500,
+        id: "upcoming",
+        customerName: "Upcoming Team",
+        selectedSlots: ["2026-07-11-900"],
+        startTime: "3:00 PM",
+        endTime: "3:30 PM",
       }),
     ];
 
-    const result = buildDashboardOperations(bookings);
+    const result = buildDashboardOperations(bookings, {
+      now,
+      timezone: "Asia/Kolkata",
+    });
 
-    expect(result.currentMatch?.customerName).toBe("Current Team");
-    expect(result.waitingForCheckIn).toHaveLength(1);
-    expect(result.pendingCollections).toHaveLength(2);
+    expect(result.currentMatch?.id).toBe("current");
+    expect(result.upcomingMatch?.id).toBe("upcoming");
+  });
+
+  it("does not show past bookings as upcoming", () => {
+    const bookings = [
+      createBooking({
+        id: "past",
+        customerName: "Past Team",
+        selectedSlots: ["2026-07-11-780"],
+        startTime: "1:00 PM",
+        endTime: "1:30 PM",
+      }),
+      createBooking({
+        id: "next",
+        customerName: "Next Team",
+        selectedSlots: ["2026-07-11-900"],
+        startTime: "3:00 PM",
+        endTime: "3:30 PM",
+      }),
+    ];
+
+    const result = buildDashboardOperations(bookings, {
+      now,
+      timezone: "Asia/Kolkata",
+    });
+
+    expect(result.currentMatch).toBeNull();
+    expect(result.upcomingMatch?.id).toBe("next");
   });
 });

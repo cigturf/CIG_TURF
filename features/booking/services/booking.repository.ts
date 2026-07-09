@@ -190,7 +190,7 @@ export async function createBookingRecord(data: {
   customerEmail: string;
   source?: BookingRecord["source"];
   notes?: string | null;
-}): Promise<BookingRecord> {
+}): Promise<{ booking: BookingRecord; isNew: boolean }> {
   const supabase = createServiceRoleClient();
   const now = new Date().toISOString();
   const { randomUUID } = await import("crypto");
@@ -222,11 +222,11 @@ export async function createBookingRecord(data: {
     };
 
     const { data: row, error } = await supabase.from("bookings").insert(payload).select("*").single();
-    if (!error && row) return mapBooking(row as BookingRow);
+    if (!error && row) return { booking: mapBooking(row as BookingRow), isNew: true };
     if (error) {
       if (error.code === "23505") {
         const existing = await getBookingBySessionId(data.bookingSessionId);
-        if (existing) return existing;
+        if (existing) return { booking: existing, isNew: false };
       }
       throw new Error(error.message);
     }
@@ -257,11 +257,11 @@ export async function createBookingRecord(data: {
       },
     });
 
-    return mapPrismaBooking(row);
+    return { booking: mapPrismaBooking(row), isNew: true };
   } catch (error) {
     if (isUniqueViolation(error)) {
       const existing = await getBookingBySessionId(data.bookingSessionId);
-      if (existing) return existing;
+      if (existing) return { booking: existing, isNew: false };
     }
     throw error;
   }

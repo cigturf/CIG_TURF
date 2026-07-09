@@ -8,9 +8,8 @@ import type {
 } from "@/features/admin/bookings/types/admin-booking.types";
 import {
   canCompleteBooking,
-  canMarkArrived,
-  canStartMatch,
 } from "@/features/admin/bookings/lib/booking-status";
+import { hasBookingStartTimePassed } from "@/features/admin/bookings/lib/booking-schedule";
 import { toAdminBookingRecord } from "@/features/admin/bookings/lib/booking-utils";
 import {
   createBookingAuditLog,
@@ -25,6 +24,10 @@ import { refundOnlineAdvanceForBooking } from "@/features/payments/services/paym
 import { releaseSlotHoldsForSession } from "@/features/booking/services/slot-hold.repository";
 import { getPaymentById } from "@/features/payments/services/payment.repository";
 import { BOOKING_DEFAULTS } from "@/features/booking/config";
+import { resolveBookingEngineConfig } from "@/features/booking/services/booking-config.service";
+import { createEmptyBusinessSettings } from "@/features/business-settings/lib/defaults";
+import { toPublicBusinessSettings } from "@/features/business-settings/lib/parse";
+import { SettingsService } from "@/server/settings";
 import {
   createBookingRecord,
   deleteBookingById,
@@ -200,7 +203,7 @@ export async function createManualBooking(
     customerEmail,
     source: "manual",
     notes: input.notes ?? null,
-  });
+  }).then((result) => result.booking);
 
   const reservation = await reserveBookedSlots({
     bookingId: booking.id,
@@ -258,9 +261,44 @@ export async function cancelAdminBooking(
   if (!booking) return null;
   if (booking.status === "cancelled") return loadAdminBookingDetail(id);
 
+  const reason = input.reason.trim();
+  if (!reason) {
+    throw new Error("Cancellation reason is required.");
+  }
+
+  const initiateRefund = input.initiateRefund === true;
+
+  if (initiateRefund) {
+    if (booking.source !== "online" || booking.advancePaid <= 0) {
+      throw new Error("Refund is only available for online bookings with advance payment.");
+    }
+
+    const ledger = await listPaymentRecordsForBooking(id);
+    if (ledger.some((record) => record.type === "refund")) {
+      throw new Error("Advance has already been refunded for this booking.");
+    }
+
+    const payment = await getPaymentById(booking.paymentId);
+    if (!payment?.razorpayPaymentId || payment.status !== "paid") {
+      throw new Error("No refundable online payment was found for this booking.");
+    }
+
+    const refunded = await refundOnlineAdvanceForBooking({
+      payment,
+      bookingId: id,
+      amountInr: booking.advancePaid,
+      reason,
+      collectedBy: actor.userId,
+    });
+
+    if (!refunded) {
+      throw new Error("Refund could not be processed. Booking was not cancelled.");
+    }
+  }
+
   const updated = await updateBookingRecord(id, {
     status: "cancelled",
-    cancellationReason: input.reason,
+    cancellationReason: reason,
   });
 
   if (!updated) return null;
@@ -273,21 +311,9 @@ export async function cancelAdminBooking(
     );
   }
 
-  if (booking.source === "online" && booking.advancePaid > 0) {
-    const payment = await getPaymentById(booking.paymentId);
-    if (payment?.status === "paid" && payment.razorpayPaymentId) {
-      await refundOnlineAdvanceForBooking({
-        payment,
-        bookingId: id,
-        amountInr: booking.advancePaid,
-        reason: input.reason,
-        collectedBy: actor.userId,
-      });
-    }
-  }
-
   await logBookingChange(id, actor, "booking.cancelled", "status", booking.status, "cancelled", {
-    reason: input.reason,
+    reason,
+    refundInitiated: initiateRefund,
   });
 
   await dispatchBookingCancelledEmails(updated);
@@ -303,52 +329,6 @@ export async function cancelAdminBooking(
   return loadAdminBookingDetail(id);
 }
 
-export async function markBookingArrived(
-  id: string,
-  actor: AdminActor,
-): Promise<AdminBookingDetail | null> {
-  const booking = await getBookingById(id);
-  if (!booking) return null;
-  if (!canMarkArrived(booking.status)) {
-    throw new Error("Only confirmed bookings can be marked as arrived.");
-  }
-
-  const now = new Date();
-  const updated = await updateBookingRecord(id, {
-    status: "arrived",
-    arrivedAt: now,
-  });
-
-  if (!updated) return null;
-
-  await logBookingChange(id, actor, "booking.arrived", "status", booking.status, "arrived");
-
-  return loadAdminBookingDetail(id);
-}
-
-export async function startBookingMatch(
-  id: string,
-  actor: AdminActor,
-): Promise<AdminBookingDetail | null> {
-  const booking = await getBookingById(id);
-  if (!booking) return null;
-  if (!canStartMatch(booking.status)) {
-    throw new Error("Customer must be checked in before starting the match.");
-  }
-
-  const now = new Date();
-  const updated = await updateBookingRecord(id, {
-    status: "in_progress",
-    matchStartedAt: now,
-  });
-
-  if (!updated) return null;
-
-  await logBookingChange(id, actor, "booking.started", "status", booking.status, "in_progress");
-
-  return loadAdminBookingDetail(id);
-}
-
 export async function completeAdminBooking(
   id: string,
   input: CompleteBookingInput = {},
@@ -360,7 +340,16 @@ export async function completeAdminBooking(
   if (booking.status === "cancelled") {
     throw new Error("Cancelled bookings cannot be completed.");
   }
-  if (!canCompleteBooking(booking.status)) {
+
+  const settings =
+    (await SettingsService.getPublic()) ?? toPublicBusinessSettings(createEmptyBusinessSettings());
+  const config = resolveBookingEngineConfig(settings);
+  const now = new Date();
+
+  if (!canCompleteBooking(booking, now, config.timezone)) {
+    if (!hasBookingStartTimePassed(booking, now, config.timezone)) {
+      throw new Error("Booking can only be completed after the scheduled start time.");
+    }
     throw new Error("Booking cannot be completed from its current status.");
   }
 
@@ -383,7 +372,6 @@ export async function completeAdminBooking(
     );
   }
 
-  const now = new Date();
   const updated = await updateBookingRecord(id, {
     status: "completed",
     matchCompletedAt: now,

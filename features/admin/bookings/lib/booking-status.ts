@@ -1,5 +1,8 @@
 import type { AdminBookingRecord } from "@/features/admin/bookings/types/admin-booking.types";
-import type { BookingStatus } from "@/features/booking/types/booking-record.types";
+import {
+  hasBookingStartTimePassed,
+} from "@/features/admin/bookings/lib/booking-schedule";
+import type { BookingRecord, BookingStatus } from "@/features/booking/types/booking-record.types";
 
 type StatusBadgeConfig = {
   label: string;
@@ -9,11 +12,17 @@ type StatusBadgeConfig = {
 export function resolveBookingStatusBadge(status: BookingStatus): StatusBadgeConfig {
   switch (status) {
     case "confirmed":
-      return { label: "Confirmed", status: "confirmed" };
     case "arrived":
-      return { label: "Arrived", status: "pending" };
     case "in_progress":
-      return { label: "In Progress", status: "pending" };
+      return {
+        label:
+          status === "arrived"
+            ? "Arrived"
+            : status === "in_progress"
+              ? "In Progress"
+              : "Confirmed",
+        status: "confirmed",
+      };
     case "cancelled":
       return { label: "Cancelled", status: "cancelled" };
     case "completed":
@@ -41,20 +50,25 @@ export function resolvePaymentStatusBadge(
   }
 }
 
-export function canMarkArrived(status: BookingStatus): boolean {
-  return status === "confirmed";
-}
-
-export function canStartMatch(status: BookingStatus): boolean {
-  return status === "arrived";
-}
-
 export function canCollectPayment(status: BookingStatus): boolean {
   return status !== "cancelled" && status !== "completed" && status !== "expired";
 }
 
-export function canCompleteBooking(status: BookingStatus): boolean {
-  return status === "in_progress" || status === "arrived" || status === "confirmed";
+export function canCompleteBooking(
+  booking: Pick<
+    BookingRecord,
+    "status" | "bookingDate" | "selectedSlots" | "durationMinutes"
+  >,
+  now = new Date(),
+  timezone?: string,
+): boolean {
+  const completableStatus =
+    booking.status === "confirmed" ||
+    booking.status === "arrived" ||
+    booking.status === "in_progress";
+
+  if (!completableStatus) return false;
+  return hasBookingStartTimePassed(booking, now, timezone);
 }
 
 export function isActiveOperationsStatus(status: BookingStatus): boolean {

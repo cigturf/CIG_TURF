@@ -78,6 +78,19 @@ export async function refundOnlineAdvanceWithoutBooking(options: {
     return false;
   }
 
+  const { getBookingBySessionId } = await import(
+    "@/features/booking/services/booking.repository"
+  );
+  const existingBooking = await getBookingBySessionId(options.payment.bookingSessionId);
+  if (existingBooking) {
+    safeLogInfo("payment-refund", "Skipping refund — booking already confirmed", {
+      sessionId: options.payment.bookingSessionId,
+      bookingId: existingBooking.id,
+      reason: options.reason,
+    });
+    return false;
+  }
+
   try {
     await refundRazorpayPayment({
       razorpayPaymentId: options.payment.razorpayPaymentId,

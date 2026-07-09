@@ -4,6 +4,36 @@ import { getSlotHoliday, listSlotBlocksForDate } from "@/features/slots/services
 import { prisma } from "@/lib/prisma";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 
+export async function getBookedSlotIdsForBooking(bookingId: string): Promise<string[]> {
+  const supabase = createServiceRoleClient();
+  if (supabase) {
+    const { data, error } = await supabase
+      .from("booked_slots")
+      .select("slot_id")
+      .eq("booking_id", bookingId);
+
+    if (!error && data) {
+      return data.map((row) => String(row.slot_id));
+    }
+  }
+
+  try {
+    const rows = await prisma.bookedSlot.findMany({
+      where: { bookingId },
+      select: { slotId: true },
+    });
+    return rows.map((row) => row.slotId);
+  } catch {
+    return [];
+  }
+}
+
+function removeExcludedBookingSlots(unavailable: Set<string>, slotIds: string[]): void {
+  for (const slotId of slotIds) {
+    unavailable.delete(slotId);
+  }
+}
+
 export async function getBookedSlotIdsForDate(dateIso: string): Promise<string[]> {
   const supabase = createServiceRoleClient();
   if (supabase) {
@@ -30,7 +60,11 @@ export async function getBookedSlotIdsForDate(dateIso: string): Promise<string[]
 
 export async function getUnavailableSlotIds(
   slotIds: string[],
-  options?: { bookingSessionId?: string; respectAllHolds?: boolean },
+  options?: {
+    bookingSessionId?: string;
+    respectAllHolds?: boolean;
+    excludeBookingId?: string;
+  },
 ): Promise<string[]> {
   if (slotIds.length === 0) return [];
 
@@ -102,6 +136,20 @@ export async function getUnavailableSlotIds(
     for (const slotId of held) unavailable.add(slotId);
   }
 
+  if (options?.excludeBookingId) {
+    const ownedSlots = await getBookedSlotIdsForBooking(options.excludeBookingId);
+    removeExcludedBookingSlots(unavailable, ownedSlots);
+  } else if (options?.bookingSessionId) {
+    const { getBookingBySessionId } = await import(
+      "@/features/booking/services/booking.repository"
+    );
+    const existingBooking = await getBookingBySessionId(options.bookingSessionId);
+    if (existingBooking) {
+      const ownedSlots = await getBookedSlotIdsForBooking(existingBooking.id);
+      removeExcludedBookingSlots(unavailable, ownedSlots);
+    }
+  }
+
   return Array.from(unavailable);
 }
 
@@ -109,7 +157,15 @@ export async function reserveBookedSlots(data: {
   bookingId: string;
   slotIds: string[];
 }): Promise<{ success: true } | { success: false; conflictingSlotIds: string[] }> {
-  const unavailable = await getUnavailableSlotIds(data.slotIds);
+  const ownedSlots = await getBookedSlotIdsForBooking(data.bookingId);
+  const ownedSet = new Set(ownedSlots);
+  if (data.slotIds.every((slotId) => ownedSet.has(slotId))) {
+    return { success: true };
+  }
+
+  const unavailable = await getUnavailableSlotIds(data.slotIds, {
+    excludeBookingId: data.bookingId,
+  });
   if (unavailable.length > 0) {
     return { success: false, conflictingSlotIds: unavailable };
   }
@@ -136,7 +192,10 @@ export async function reserveBookedSlots(data: {
     const { error } = await supabase.from("booked_slots").insert(rows);
     if (error) {
       if (error.code === "23505") {
-        const conflicting = await getUnavailableSlotIds(data.slotIds);
+        const conflicting = await getUnavailableSlotIds(data.slotIds, {
+          excludeBookingId: data.bookingId,
+        });
+        if (conflicting.length === 0) return { success: true };
         return { success: false, conflictingSlotIds: conflicting };
       }
       throw new Error(error.message);
@@ -156,7 +215,10 @@ export async function reserveBookedSlots(data: {
     });
     return { success: true };
   } catch {
-    const conflicting = await getUnavailableSlotIds(data.slotIds);
+    const conflicting = await getUnavailableSlotIds(data.slotIds, {
+      excludeBookingId: data.bookingId,
+    });
+    if (conflicting.length === 0) return { success: true };
     return { success: false, conflictingSlotIds: conflicting };
   }
 }

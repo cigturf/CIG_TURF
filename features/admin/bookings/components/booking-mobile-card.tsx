@@ -8,8 +8,6 @@ import {
 import {
   canCollectPayment,
   canCompleteBooking,
-  canMarkArrived,
-  canStartMatch,
   resolveBookingStatusBadge,
   resolvePaymentStatusBadge,
 } from "@/features/admin/bookings/lib/booking-status";
@@ -17,7 +15,7 @@ import { Badge, Button, StatusBadge, Text } from "@/components/design-system";
 import { formatCurrency } from "@/utils";
 import { cn } from "@/lib/utils";
 
-type BookingQuickAction = "arrive" | "start" | "collect" | "complete" | "print";
+type BookingQuickAction = "collect" | "complete" | "print";
 
 type BookingMobileCardProps = {
   booking: AdminBookingRecord;
@@ -76,22 +74,12 @@ export function BookingMobileCard({ booking, onSelect, onQuickAction }: BookingM
 
       {onQuickAction ? (
         <div className="mt-4 grid grid-cols-2 gap-2">
-          {canMarkArrived(booking.status) ? (
-            <Button size="sm" onClick={() => onQuickAction("arrive", booking.id)}>
-              Arrived
-            </Button>
-          ) : null}
-          {canStartMatch(booking.status) ? (
-            <Button size="sm" onClick={() => onQuickAction("start", booking.id)}>
-              Start Match
-            </Button>
-          ) : null}
           {canCollectPayment(booking.status) && booking.remainingAmount > 0 ? (
             <Button size="sm" variant="outline" onClick={() => onQuickAction("collect", booking.id)}>
               Collect
             </Button>
           ) : null}
-          {canCompleteBooking(booking.status) ? (
+          {canCompleteBooking(booking) ? (
             <Button size="sm" variant="outline" onClick={() => onQuickAction("complete", booking.id)}>
               Complete
             </Button>

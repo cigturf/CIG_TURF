@@ -118,4 +118,5 @@ export type CompleteBookingInput = {
 
 export type CancelBookingInput = {
   reason: string;
+  initiateRefund?: boolean;
 };

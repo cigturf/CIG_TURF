@@ -110,7 +110,7 @@ export function DashboardTodayOperationsSection({
   return (
     <AnalyticsCard
       title="Today's Operations"
-      description="Your primary working screen — live match flow, collections, and check-ins."
+      description="Live booking status for right now and what's coming up next."
       action={
         <Link href="/admin/bookings">
           <Button size="sm" variant="outline">
@@ -121,27 +121,22 @@ export function DashboardTodayOperationsSection({
     >
       <div className="grid gap-4 lg:grid-cols-2">
         <OperationsCard
-          title="Current Match"
+          title="Current Booking"
           booking={operations.currentMatch}
-          emptyLabel="No match in progress right now."
+          emptyLabel="No booking is running right now."
         />
         <OperationsCard
-          title="Upcoming Match"
+          title="Next Upcoming"
           booking={operations.upcomingMatch}
-          emptyLabel="No upcoming confirmed bookings today."
+          emptyLabel="No more upcoming bookings today."
         />
       </div>
 
-      <div className="mt-6 grid gap-6 lg:grid-cols-2">
+      <div className="mt-6">
         <OperationsList
           title="Pending Collections"
           bookings={operations.pendingCollections}
           emptyLabel="All collections are settled for today."
-        />
-        <OperationsList
-          title="Waiting for Check-in"
-          bookings={operations.waitingForCheckIn}
-          emptyLabel="No teams waiting to check in."
         />
       </div>
     </AnalyticsCard>

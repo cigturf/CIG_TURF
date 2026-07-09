@@ -137,7 +137,7 @@ export function BookingsFilterBar({
           <Text size="sm" className="text-muted-foreground mr-1">
             Status
           </Text>
-          {(["confirmed", "arrived", "in_progress", "cancelled", "completed", "pending_payment"] as const).map(
+          {(["confirmed", "cancelled", "completed", "pending_payment"] as const).map(
             (status) => (
             <FilterChip
               key={status}

@@ -1,7 +1,15 @@
 import { NextResponse } from "next/server";
+import { z } from "zod";
 
 import { cancelAdminBooking } from "@/features/admin/bookings/services/admin-booking.service";
 import { requireAdminSession } from "@/lib/api/require-admin";
+
+const cancelSchema = z
+  .object({
+    reason: z.string().trim().min(1, "Cancellation reason is required."),
+    initiateRefund: z.boolean().optional(),
+  })
+  .strict();
 
 type RouteContext = {
   params: Promise<{ id: string }>;
@@ -13,11 +21,25 @@ export async function POST(request: Request, context: RouteContext) {
 
   const { id } = await context.params;
 
+  let body: unknown;
   try {
-    const body = await request.json();
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ error: "Invalid request body" }, { status: 400 });
+  }
+
+  const parsed = cancelSchema.safeParse(body);
+  if (!parsed.success) {
+    return NextResponse.json(
+      { error: parsed.error.issues[0]?.message ?? "Invalid request" },
+      { status: 400 },
+    );
+  }
+
+  try {
     const booking = await cancelAdminBooking(
       id,
-      body,
+      parsed.data,
       {
         userId: auth.session.user.id,
         email: auth.session.user.email,

@@ -11,8 +11,6 @@ import {
 import {
   canCollectPayment,
   canCompleteBooking,
-  canMarkArrived,
-  canStartMatch,
   resolveBookingStatusBadge,
   resolvePaymentStatusBadge,
 } from "@/features/admin/bookings/lib/booking-status";
@@ -39,8 +37,6 @@ type BookingDetailDrawerProps = {
   onPrint: () => void;
   onCollectPayment: () => void;
   onComplete: () => void;
-  onMarkArrived: () => void;
-  onStartMatch: () => void;
 };
 
 export function BookingDetailDrawer({
@@ -54,8 +50,6 @@ export function BookingDetailDrawer({
   onPrint,
   onCollectPayment,
   onComplete,
-  onMarkArrived,
-  onStartMatch,
 }: BookingDetailDrawerProps) {
   const [activeTab, setActiveTab] = useState<
     "customer" | "booking" | "payment" | "timeline" | "notes"
@@ -83,22 +77,12 @@ export function BookingDetailDrawer({
             </div>
 
             <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-              {canMarkArrived(detail.status) ? (
-                <Button size="sm" onClick={onMarkArrived}>
-                  Mark Arrived
-                </Button>
-              ) : null}
-              {canStartMatch(detail.status) ? (
-                <Button size="sm" onClick={onStartMatch}>
-                  Start Match
-                </Button>
-              ) : null}
               {canCollectPayment(detail.status) && detail.remainingAmount > 0 ? (
                 <Button size="sm" variant="outline" onClick={onCollectPayment}>
                   Collect Payment
                 </Button>
               ) : null}
-              {canCompleteBooking(detail.status) ? (
+              {canCompleteBooking(detail) ? (
                 <Button size="sm" variant="outline" onClick={onComplete}>
                   Complete
                 </Button>
@@ -136,18 +120,9 @@ export function BookingDetailDrawer({
                 <DetailRow label="Duration" value={formatDurationLabel(detail.durationMinutes)} />
                 <DetailRow label="Slots" value={`${detail.selectedSlots.length} selected`} />
                 <DetailRow label="Created" value={formatBookingTimestampFull(detail.createdAt)} />
-                {detail.arrivedAt ? (
-                  <DetailRow label="Arrived" value={formatBookingTimestampFull(detail.arrivedAt)} />
-                ) : null}
-                {detail.matchStartedAt ? (
-                  <DetailRow
-                    label="Match Started"
-                    value={formatBookingTimestampFull(detail.matchStartedAt)}
-                  />
-                ) : null}
                 {detail.matchCompletedAt ? (
                   <DetailRow
-                    label="Match Completed"
+                    label="Completed"
                     value={formatBookingTimestampFull(detail.matchCompletedAt)}
                   />
                 ) : null}

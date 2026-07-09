@@ -212,15 +212,20 @@ export function AdminSlotsView() {
     await openBooking(booking.id);
   };
 
-  const cancelBooking = async (reason: string) => {
+  const cancelBooking = async (payload: { reason: string; initiateRefund: boolean }) => {
     if (!selectedBookingId) return;
     const response = await fetch(`/api/admin/bookings/${selectedBookingId}/cancel`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ reason }),
+      body: JSON.stringify(payload),
     });
-    if (!response.ok) throw new Error("Failed to cancel booking");
-    toast.success("Booking cancelled");
+    if (!response.ok) {
+      const body = await response.json().catch(() => ({}));
+      throw new Error(body.error ?? "Failed to cancel booking");
+    }
+    toast.success(
+      payload.initiateRefund ? "Booking cancelled and refund initiated" : "Booking cancelled",
+    );
     await openBooking(selectedBookingId);
   };
 
@@ -257,22 +262,6 @@ export function AdminSlotsView() {
       throw new Error(body.error ?? "Failed to complete booking");
     }
     toast.success("Booking completed");
-    await openBooking(selectedBookingId);
-  };
-
-  const markArrived = async () => {
-    if (!selectedBookingId) return;
-    const response = await fetch(`/api/admin/bookings/${selectedBookingId}/arrive`, { method: "POST" });
-    if (!response.ok) throw new Error("Failed to mark arrived");
-    toast.success("Marked arrived");
-    await openBooking(selectedBookingId);
-  };
-
-  const startMatch = async () => {
-    if (!selectedBookingId) return;
-    const response = await fetch(`/api/admin/bookings/${selectedBookingId}/start`, { method: "POST" });
-    if (!response.ok) throw new Error("Failed to start match");
-    toast.success("Match started");
     await openBooking(selectedBookingId);
   };
 
@@ -410,14 +399,14 @@ export function AdminSlotsView() {
         }}
         onCollectPayment={() => setCollectOpen(true)}
         onComplete={() => setCompleteOpen(true)}
-        onMarkArrived={() => void markArrived()}
-        onStartMatch={() => void startMatch()}
       />
 
       <CancelBookingDialog
         open={cancelOpen}
         onOpenChange={setCancelOpen}
         bookingReference={selectedDetail?.bookingReference ?? "this booking"}
+        source={selectedDetail?.source}
+        advancePaid={selectedDetail?.advancePaid ?? 0}
         onSubmit={cancelBooking}
       />
 

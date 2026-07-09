@@ -18,7 +18,7 @@ import {
 } from "@/features/booking/services/booking.repository";
 import { generateSlots } from "@/features/booking/services/slot-generator.service";
 import type { BookingRecord } from "@/features/booking/types/booking-record.types";
-import { getTodayIso } from "@/features/booking/utils/time";
+import { getTodayIsoInTimezone } from "@/features/booking/utils/venue-timezone";
 import { buildPricingSnapshot } from "@/features/pricing/services/pricing-engine.service";
 import { listActivePricingRules } from "@/features/pricing/services/pricing.repository";
 import { SettingsService } from "@/server/settings";
@@ -204,10 +204,11 @@ function buildActivities(
 }
 
 export const getAdminDashboardData = cache(async (): Promise<AdminDashboardData> => {
-  const dateIso = getTodayIso();
   const settings =
     (await SettingsService.getPublic()) ?? toPublicBusinessSettings(createEmptyBusinessSettings());
   const config = resolveBookingEngineConfig(settings);
+  const now = new Date();
+  const dateIso = getTodayIsoInTimezone(now, config.timezone);
   const bookedSlotIds = await getBookedSlotIdsForDate(dateIso);
   const pricingSnapshot = buildPricingSnapshot(await listActivePricingRules());
   const slots = generateSlots({ dateIso, config, bookedSlotIds, pricing: pricingSnapshot });
@@ -219,7 +220,10 @@ export const getAdminDashboardData = cache(async (): Promise<AdminDashboardData>
     dateIso,
     stats: computeStats(todaysBookings, slots),
     timeline: buildTimeline(slots, todaysBookings),
-    operations: buildDashboardOperations(todaysBookings),
+    operations: buildDashboardOperations(todaysBookings, {
+      now,
+      timezone: config.timezone,
+    }),
     recentBookings,
     upcomingEvents,
     activities: buildActivities(recentBookings, dateIso),

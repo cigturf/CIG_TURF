@@ -63,6 +63,7 @@ import {
 } from "@/features/payments/services/booking-session.repository";
 import { getPaidPaymentBySessionId } from "@/features/payments/services/payment.repository";
 import { refundOnlineAdvanceWithoutBooking } from "@/features/payments/services/payment-refund.service";
+import { dispatchBookingConfirmedEmails } from "@/features/communication/services/communication-dispatcher";
 import {
   createBookingPaymentRecord,
   listPaymentRecordsForBooking,
@@ -142,7 +143,7 @@ describe("finalizeBookingFromSession", () => {
     vi.mocked(releaseBookedSlotsForBooking).mockResolvedValue([]);
     vi.mocked(deleteBookingById).mockResolvedValue(undefined);
     vi.mocked(listPaymentRecordsForBooking).mockResolvedValue([]);
-    vi.mocked(createBookingRecord).mockResolvedValue(baseBooking);
+    vi.mocked(createBookingRecord).mockResolvedValue({ booking: baseBooking, isNew: true });
   });
 
   it("is idempotent when booking already exists for session", async () => {
@@ -217,7 +218,10 @@ describe("finalizeBookingFromSession", () => {
 
   it("returns existing booking when concurrent finalize wins race", async () => {
     const concurrentBooking = { ...baseBooking, id: "booking-2" };
-    vi.mocked(createBookingRecord).mockResolvedValue({ ...baseBooking, id: "booking-orphan" });
+    vi.mocked(createBookingRecord).mockResolvedValue({
+      booking: { ...baseBooking, id: "booking-orphan" },
+      isNew: true,
+    });
     vi.mocked(getBookingBySessionId)
       .mockResolvedValueOnce(null)
       .mockResolvedValueOnce(concurrentBooking);
@@ -233,5 +237,59 @@ describe("finalizeBookingFromSession", () => {
       expect(result.booking.id).toBe("booking-2");
     }
     expect(reserveBookedSlots).not.toHaveBeenCalled();
+  });
+
+  it("does not refund when reserve fails but booking was already confirmed", async () => {
+    vi.mocked(reserveBookedSlots).mockResolvedValue({
+      success: false,
+      conflictingSlotIds: ["2026-07-10-1080"],
+    });
+    vi.mocked(getBookingBySessionId)
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce(baseBooking);
+
+    const result = await finalizeBookingFromSession({
+      bookingSessionId: "session-1",
+      userId: "user-1",
+      venueName: "CIG",
+    });
+
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.booking.id).toBe("booking-1");
+    }
+    expect(refundOnlineAdvanceWithoutBooking).not.toHaveBeenCalled();
+    expect(deleteBookingById).toHaveBeenCalled();
+  });
+
+  it("does not send emails when booking record already existed for session", async () => {
+    vi.mocked(createBookingRecord).mockResolvedValue({ booking: baseBooking, isNew: false });
+
+    const result = await finalizeBookingFromSession({
+      bookingSessionId: "session-1",
+      userId: "user-1",
+      venueName: "CIG",
+    });
+
+    expect(result.success).toBe(true);
+    expect(dispatchBookingConfirmedEmails).not.toHaveBeenCalled();
+    expect(reserveBookedSlots).not.toHaveBeenCalled();
+    expect(releaseSlotHoldsForSession).toHaveBeenCalledWith("session-1");
+  });
+
+  it("does not refund on expired session when booking already exists", async () => {
+    vi.mocked(isBookingSessionExpired).mockReturnValue(true);
+    vi.mocked(getBookingBySessionId).mockResolvedValue(baseBooking);
+
+    const result = await finalizeBookingFromSession({
+      bookingSessionId: "session-1",
+      userId: "user-1",
+      venueName: "CIG",
+    });
+
+    expect(result.success).toBe(true);
+    expect(refundOnlineAdvanceWithoutBooking).not.toHaveBeenCalled();
+    expect(createBookingRecord).not.toHaveBeenCalled();
   });
 });
