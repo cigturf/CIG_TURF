@@ -131,8 +131,9 @@ function resolveUpcomingEvents(): DashboardUpcomingEvent[] {
 async function resolveUpcomingEventsFromSettings(): Promise<DashboardUpcomingEvent[]> {
   const settings =
     (await SettingsService.getPublic()) ?? toPublicBusinessSettings(createEmptyBusinessSettings());
+  const config = resolveBookingEngineConfig(settings);
   const events = settings.content.events ?? [];
-  const today = getTodayIso();
+  const today = getTodayIsoInTimezone(new Date(), config.timezone);
 
   const configured = events
     .filter((event) => event.visible !== false && event.title && event.startDate)

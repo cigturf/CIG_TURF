@@ -151,9 +151,7 @@ export function BookingsFilterBar({
             >
               {status === "pending_payment"
                 ? "Pending Payment"
-                : status === "in_progress"
-                  ? "In Progress"
-                  : status[0]!.toUpperCase() + status.slice(1)}
+                : status[0]!.toUpperCase() + status.slice(1)}
             </FilterChip>
           ),
           )}
