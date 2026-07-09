@@ -7,6 +7,7 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from "react";
@@ -100,7 +101,8 @@ export function SlotRealtimeProvider({ children }: { children: ReactNode }) {
   });
 
   useAppEventSubscriber(APP_EVENT_TYPES.SLOT_RELEASED, (event) => {
-    const { slotId, bookingDate } = event.payload;
+    const { slotId, bookingDate, source } = event.payload;
+    if (source && source !== "booked") return;
     applySlotDelete(bookingDate, slotId);
   });
 
@@ -140,6 +142,7 @@ export function SlotRealtimeProvider({ children }: { children: ReactNode }) {
       ...current,
       [dateIso]: snapshot,
     }));
+    setVersion((current) => current + 1);
   }, []);
 
   const getSnapshot = useCallback(
@@ -169,6 +172,7 @@ export function useSlotRealtimeContext() {
 
 export function useRealtimeSlots(dateIso: string | null) {
   const { version, getSnapshot, setInitialSnapshot } = useSlotRealtimeContext();
+  const refetchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const availabilityQuery = useQuery({
     queryKey: dateIso ? QUERY_KEYS.slots.availability(dateIso) : ["slots", "availability", "none"],
@@ -184,6 +188,7 @@ export function useRealtimeSlots(dateIso: string | null) {
     enabled: Boolean(dateIso),
     staleTime: 0,
     gcTime: CACHE_TTL.defaultGc,
+    refetchOnWindowFocus: true,
   });
 
   useEffect(() => {
@@ -194,16 +199,47 @@ export function useRealtimeSlots(dateIso: string | null) {
       maintenanceSlotIds: availabilityQuery.data.maintenanceSlotIds ?? [],
       isHoliday: Boolean(availabilityQuery.data.isHoliday),
     });
-  }, [availabilityQuery.data, dateIso, setInitialSnapshot]);
+  }, [availabilityQuery.dataUpdatedAt, availabilityQuery.data, dateIso, setInitialSnapshot]);
+
+  const scheduleRefetch = useCallback(() => {
+    if (!dateIso) return;
+    if (refetchTimerRef.current) clearTimeout(refetchTimerRef.current);
+    refetchTimerRef.current = setTimeout(() => {
+      void availabilityQuery.refetch();
+    }, 350);
+  }, [availabilityQuery, dateIso]);
+
+  useEffect(() => {
+    return () => {
+      if (refetchTimerRef.current) clearTimeout(refetchTimerRef.current);
+    };
+  }, []);
 
   const debouncedRefetch = useDebouncedCallback(() => {
-    void availabilityQuery.refetch();
+    scheduleRefetch();
   }, CACHE_TTL.adminRefreshDebounce);
 
   useAppEventSubscriber(
-    [...SLOT_AVAILABILITY_EVENTS, APP_EVENT_TYPES.BOOKING_CREATED, APP_EVENT_TYPES.BOOKING_CANCELLED],
+    [...SLOT_AVAILABILITY_EVENTS, APP_EVENT_TYPES.BOOKING_CREATED, APP_EVENT_TYPES.BOOKING_MANUAL_CREATED, APP_EVENT_TYPES.BOOKING_CANCELLED],
     (event) => {
       if (!dateIso) return;
+
+      if (event.type === APP_EVENT_TYPES.SLOT_AVAILABILITY_REFRESH) {
+        const payload = event.payload as { bookingDate?: string; slotId?: string };
+        if (payload.bookingDate === dateIso || (payload.slotId && slotAffectsDate(payload.slotId, dateIso))) {
+          scheduleRefetch();
+        }
+        return;
+      }
+
+      if (
+        event.type === APP_EVENT_TYPES.SLOT_BOOKED ||
+        event.type === APP_EVENT_TYPES.SLOT_RELEASED
+      ) {
+        scheduleRefetch();
+        return;
+      }
+
       const payload = event.payload as BookingEventPayload;
       if (bookingEventAffectsDate(payload, dateIso)) {
         debouncedRefetch();

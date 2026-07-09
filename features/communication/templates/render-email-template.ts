@@ -146,7 +146,10 @@ export function renderEmailTemplate(input: RenderEmailInput): { subject: string;
           title: "Booking Confirmed",
           previewText: `Your booking ${booking.bookingReference} is confirmed.`,
           bodyHtml: body,
-          cta: { label: "Manage Booking", href: "#" },
+          cta: {
+            label: "Manage Booking",
+            href: `${branding.appUrl}/booking/confirmation/${booking.id}`,
+          },
         }),
       };
     }

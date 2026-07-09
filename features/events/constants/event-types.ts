@@ -15,6 +15,7 @@ export const APP_EVENT_TYPES = {
   SLOT_UNBLOCKED: "slot.unblocked",
   SLOT_MAINTENANCE: "slot.maintenance",
   SLOT_HOLIDAY: "slot.holiday",
+  SLOT_AVAILABILITY_REFRESH: "slot.availability.refresh",
   SLOT_PRICE_UPDATED: "slot.price.updated",
   PRICING_CREATED: "pricing.created",
   PRICING_UPDATED: "pricing.updated",
@@ -102,6 +103,7 @@ export const SLOT_AVAILABILITY_EVENTS: AppEventType[] = [
   APP_EVENT_TYPES.SLOT_UNBLOCKED,
   APP_EVENT_TYPES.SLOT_MAINTENANCE,
   APP_EVENT_TYPES.SLOT_HOLIDAY,
+  APP_EVENT_TYPES.SLOT_AVAILABILITY_REFRESH,
 ];
 
 export const REPORTS_REFRESH_EVENTS: AppEventType[] = [

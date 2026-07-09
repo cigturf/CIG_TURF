@@ -15,6 +15,7 @@ import {
   mapPricingRuleChangeToEvents,
   mapPaymentChangeToEvents,
   mapSlotBlockChangeToEvents,
+  mapSlotHoldChangeToEvents,
   mapSlotHolidayChangeToEvents,
 } from "@/features/events/bridge/map-realtime-to-events";
 import type { RealtimeChangePayload } from "@/features/realtime/types/realtime.types";
@@ -40,6 +41,11 @@ export function RealtimeEventBridge({ children }: { children: React.ReactNode })
   usePostgresChanges({
     table: "booked_slots",
     onChange: publishMappedEvents(mapBookedSlotChangeToEvents),
+  });
+
+  usePostgresChanges({
+    table: "slot_holds",
+    onChange: publishMappedEvents(mapSlotHoldChangeToEvents),
   });
 
   usePostgresChanges({

@@ -10,6 +10,7 @@ export type RealtimeScope = "public" | "admin";
 export type RealtimeTable =
   | "bookings"
   | "booked_slots"
+  | "slot_holds"
   | "slot_blocks"
   | "slot_holidays"
   | "pricing_rules"

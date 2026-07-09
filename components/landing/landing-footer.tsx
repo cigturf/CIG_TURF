@@ -1,5 +1,6 @@
 "use client";
 
+import { toWhatsAppHref } from "@/features/business-settings/lib/contact-utils";
 import Image from "next/image";
 import Link from "next/link";
 
@@ -86,11 +87,11 @@ export function LandingFooter({ content }: LandingFooterProps) {
               </div>
             ) : null}
             {content.contact.whatsapps.length > 0 ? (
-              <div className="mt-3 flex flex-wrap gap-3">
+              <div className="mt-3 flex flex-col gap-1">
                 {content.contact.whatsapps.map((whatsapp) => (
                   <Link
                     key={whatsapp}
-                    href={`https://wa.me/${whatsapp.replace(/\D/g, "")}`}
+                    href={toWhatsAppHref(whatsapp)}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="text-sm font-medium text-white/85 hover:underline"

@@ -16,10 +16,10 @@ describe("contact-utils", () => {
 
     expect(
       resolveWhatsappNumbers({
-        whatsappNumbers: ["+91 9193919798", "+91 9368332353"],
+        whatsappNumbers: ["9193919798 , 9368332353"],
         whatsappNumber: null,
       }),
-    ).toEqual(["+91 9193919798", "+91 9368332353"]);
+    ).toEqual(["9193919798", "9368332353"]);
   });
 
   it("migrates legacy single whatsappNumber", () => {

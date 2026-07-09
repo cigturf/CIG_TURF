@@ -3,6 +3,8 @@
 import { MapPin, Phone } from "lucide-react";
 import Link from "next/link";
 
+import { toWhatsAppHref } from "@/features/business-settings/lib/contact-utils";
+
 import {
   Button,
   Display,
@@ -76,12 +78,12 @@ export function LandingLocation({ content }: LandingLocationProps) {
                 {contact.whatsapps.map((whatsapp) => (
                   <Link
                     key={whatsapp}
-                    href={`https://wa.me/${whatsapp.replace(/\D/g, "")}`}
+                    href={toWhatsAppHref(whatsapp)}
                     target="_blank"
                     rel="noopener noreferrer"
                   >
                     <Button variant="outline" size="sm" className="touch-target">
-                      WhatsApp {contact.whatsapps.length > 1 ? whatsapp : ""}
+                      WhatsApp {whatsapp}
                     </Button>
                   </Link>
                 ))}

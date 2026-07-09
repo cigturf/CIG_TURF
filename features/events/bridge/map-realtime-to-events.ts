@@ -8,6 +8,7 @@ import {
   parsePricingRulePayload,
   parsePromotionPayload,
   parseSlotBlockPayload,
+  parseSlotHoldPayload,
   parseSlotHolidayPayload,
 } from "@/features/realtime/utils/realtime-payload";
 import type { RealtimeChangePayload } from "@/features/realtime/types/realtime.types";
@@ -28,6 +29,7 @@ export function mapBookedSlotChangeToEvents(payload: RealtimeChangePayload): Map
         payload: {
           slotId: event.slotId,
           bookingDate: event.bookingDate,
+          source: "booked",
         },
       },
     ];
@@ -39,6 +41,7 @@ export function mapBookedSlotChangeToEvents(payload: RealtimeChangePayload): Map
       payload: {
         slotId: event.slotId,
         bookingDate: event.bookingDate,
+        source: "booked",
       },
     },
   ];
@@ -203,9 +206,9 @@ export function mapBookingChangeToEvents(payload: RealtimeChangePayload): Mapped
 
   if (parsed.eventType === "INSERT") {
     if (source === "manual") {
-      return [{ type: APP_EVENT_TYPES.BOOKING_MANUAL_CREATED, payload: base }];
+      return [{ type: APP_EVENT_TYPES.BOOKING_MANUAL_CREATED, payload: { ...base, selectedSlots } }];
     }
-    return [{ type: APP_EVENT_TYPES.BOOKING_CREATED, payload: base }];
+    return [{ type: APP_EVENT_TYPES.BOOKING_CREATED, payload: { ...base, selectedSlots } }];
   }
 
   if (parsed.eventType === "UPDATE") {
@@ -282,6 +285,34 @@ export function mapPaymentChangeToEvents(payload: RealtimeChangePayload): Mapped
   }
 
   return [];
+}
+
+export function mapSlotHoldChangeToEvents(payload: RealtimeChangePayload): MappedAppEvent[] {
+  const event = parseSlotHoldPayload(payload);
+  if (!event) return [];
+
+  if (event.type === "insert") {
+    return [
+      {
+        type: APP_EVENT_TYPES.SLOT_BOOKED,
+        payload: {
+          slotId: event.slotId,
+          bookingDate: event.bookingDate,
+          source: "hold",
+        },
+      },
+    ];
+  }
+
+  return [
+    {
+      type: APP_EVENT_TYPES.SLOT_AVAILABILITY_REFRESH,
+      payload: {
+        bookingDate: event.bookingDate,
+        slotId: event.slotId,
+      },
+    },
+  ];
 }
 
 export function mapBusinessSettingsChangeToEvents(): MappedAppEvent[] {

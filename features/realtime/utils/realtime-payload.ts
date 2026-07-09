@@ -1,3 +1,4 @@
+import { parseSlotId } from "@/features/booking/utils/slot-id";
 import type { RealtimeChangePayload, RealtimeSlotEvent } from "@/features/realtime/types/realtime.types";
 
 export function parseBookedSlotPayload(payload: RealtimeChangePayload): RealtimeSlotEvent | null {
@@ -14,6 +15,25 @@ export function parseBookedSlotPayload(payload: RealtimeChangePayload): Realtime
 
   if (payload.eventType === "DELETE") {
     return { type: "delete", slotId, bookingDate, payload };
+  }
+
+  return null;
+}
+
+export function parseSlotHoldPayload(payload: RealtimeChangePayload): RealtimeSlotEvent | null {
+  const record = (payload.new ?? payload.old) as Record<string, unknown> | null;
+  if (!record) return null;
+
+  const slotId = String(record.slot_id ?? "");
+  const parsed = parseSlotId(slotId);
+  if (!slotId || !parsed) return null;
+
+  if (payload.eventType === "INSERT") {
+    return { type: "insert", slotId, bookingDate: parsed.dateIso, payload };
+  }
+
+  if (payload.eventType === "DELETE") {
+    return { type: "delete", slotId, bookingDate: parsed.dateIso, payload };
   }
 
   return null;

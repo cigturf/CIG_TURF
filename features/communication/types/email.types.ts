@@ -62,6 +62,7 @@ export type EmailBrandingContext = {
   fromName: string;
   replyTo: string | null;
   accentColor: string;
+  appUrl: string;
 };
 
 export type CommunicationSettings = {

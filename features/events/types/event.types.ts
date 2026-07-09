@@ -35,6 +35,12 @@ export type SlotEventPayload = {
   slotId: string;
   bookingDate: string;
   bookingId?: string;
+  source?: "booked" | "hold";
+};
+
+export type SlotAvailabilityRefreshPayload = {
+  bookingDate?: string;
+  slotId?: string;
 };
 
 export type SlotHolidayPayload = {
@@ -149,6 +155,7 @@ export type AppEventPayloadMap = {
   "slot.unblocked": SlotEventPayload;
   "slot.maintenance": SlotEventPayload;
   "slot.holiday": SlotHolidayPayload;
+  "slot.availability.refresh": SlotAvailabilityRefreshPayload;
   "slot.price.updated": SlotPriceEventPayload;
   "pricing.created": PricingEventPayload;
   "pricing.updated": PricingEventPayload;

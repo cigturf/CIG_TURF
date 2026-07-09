@@ -10,6 +10,7 @@ export type RealtimeHubBinding = {
 /** Postgres bindings registered on the hub channel before subscribe(). */
 export const REALTIME_HUB_BINDINGS: RealtimeHubBinding[] = [
   { table: "booked_slots", scopes: ["public", "admin"] },
+  { table: "slot_holds", scopes: ["public", "admin"] },
   { table: "bookings", scopes: ["public", "admin"] },
   { table: "slot_blocks", scopes: ["public", "admin"] },
   { table: "slot_holidays", scopes: ["public", "admin"] },

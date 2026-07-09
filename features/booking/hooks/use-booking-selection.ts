@@ -88,10 +88,12 @@ export function useBookingSelection() {
     primaryRealtime.blockedSlotIds,
     primaryRealtime.maintenanceSlotIds,
     primaryRealtime.isHoliday,
+    primaryRealtime.version,
     bridgeRealtime.bookedSlotIds,
     bridgeRealtime.blockedSlotIds,
     bridgeRealtime.maintenanceSlotIds,
     bridgeRealtime.isHoliday,
+    bridgeRealtime.version,
     pricingSnapshot,
   ]);
 

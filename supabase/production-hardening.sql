@@ -14,6 +14,32 @@ CREATE TABLE IF NOT EXISTS public.slot_holds (
 CREATE INDEX IF NOT EXISTS slot_holds_session_idx ON public.slot_holds(booking_session_id);
 CREATE INDEX IF NOT EXISTS slot_holds_expires_idx ON public.slot_holds(expires_at);
 
+-- ─── Realtime: slot holds (payment window visibility) ────────────────────────
+
+DO $$
+BEGIN
+  ALTER PUBLICATION supabase_realtime ADD TABLE public.slot_holds;
+EXCEPTION
+  WHEN duplicate_object THEN NULL;
+END $$;
+
+ALTER TABLE public.slot_holds REPLICA IDENTITY FULL;
+ALTER TABLE public.slot_holds ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "slot_holds_select_authenticated" ON public.slot_holds;
+CREATE POLICY "slot_holds_select_authenticated"
+  ON public.slot_holds
+  FOR SELECT
+  TO authenticated
+  USING (true);
+
+DROP POLICY IF EXISTS "slot_holds_select_anon" ON public.slot_holds;
+CREATE POLICY "slot_holds_select_anon"
+  ON public.slot_holds
+  FOR SELECT
+  TO anon
+  USING (true);
+
 -- ─── Performance indexes ─────────────────────────────────────────────────────
 
 CREATE INDEX IF NOT EXISTS booked_slots_booking_id_idx ON public.booked_slots(booking_id);

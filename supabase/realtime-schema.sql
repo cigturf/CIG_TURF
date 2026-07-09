@@ -13,6 +13,13 @@ END $$;
 
 DO $$
 BEGIN
+  ALTER PUBLICATION supabase_realtime ADD TABLE public.slot_holds;
+EXCEPTION
+  WHEN duplicate_object THEN NULL;
+END $$;
+
+DO $$
+BEGIN
   ALTER PUBLICATION supabase_realtime ADD TABLE public.bookings;
 EXCEPTION
   WHEN duplicate_object THEN NULL;
@@ -48,6 +55,7 @@ END $$;
 
 -- Full row data for DELETE events on slot inventory
 ALTER TABLE public.booked_slots REPLICA IDENTITY FULL;
+ALTER TABLE public.slot_holds REPLICA IDENTITY FULL;
 ALTER TABLE public.bookings REPLICA IDENTITY FULL;
 
 -- ─── RLS helper ───────────────────────────────────────────────────────────────
@@ -80,6 +88,24 @@ CREATE POLICY "booked_slots_select_authenticated"
 DROP POLICY IF EXISTS "booked_slots_select_anon" ON public.booked_slots;
 CREATE POLICY "booked_slots_select_anon"
   ON public.booked_slots
+  FOR SELECT
+  TO anon
+  USING (true);
+
+-- ─── slot_holds (customer-safe availability during payment) ─────────────────
+
+ALTER TABLE public.slot_holds ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "slot_holds_select_authenticated" ON public.slot_holds;
+CREATE POLICY "slot_holds_select_authenticated"
+  ON public.slot_holds
+  FOR SELECT
+  TO authenticated
+  USING (true);
+
+DROP POLICY IF EXISTS "slot_holds_select_anon" ON public.slot_holds;
+CREATE POLICY "slot_holds_select_anon"
+  ON public.slot_holds
   FOR SELECT
   TO anon
   USING (true);

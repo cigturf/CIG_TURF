@@ -110,15 +110,20 @@ export const contactSettingsSchema = z
     };
   });
 
+import { splitDelimitedContactValues } from "@/features/business-settings/lib/contact-utils";
+
 function resolveWhatsappNumbersFromRaw(contact: {
   whatsappNumbers: string[] | null;
   whatsappNumber: string | null;
 }): string[] | null {
-  const fromArray = (contact.whatsappNumbers ?? []).map((value) => value.trim()).filter(Boolean);
+  const fromArray = splitDelimitedContactValues(contact.whatsappNumbers);
   if (fromArray.length > 0) return fromArray;
 
   const legacy = contact.whatsappNumber?.trim();
-  return legacy ? [legacy] : null;
+  if (!legacy) return null;
+
+  const fromLegacy = splitDelimitedContactValues([legacy]);
+  return fromLegacy.length > 0 ? fromLegacy : null;
 }
 
 export const emailSettingsSchema = z.object({

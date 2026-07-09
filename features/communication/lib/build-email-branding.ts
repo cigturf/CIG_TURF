@@ -9,6 +9,7 @@ import {
 import { resolveEmailLogoUrl } from "@/features/communication/lib/resolve-email-logo-url";
 import { resolveThemeAccentColor } from "@/features/business-settings/lib/parse";
 import type { BusinessSettings } from "@/features/business-settings/types";
+import { env } from "@/lib/env";
 import { SettingsService } from "@/server/settings/settings.service";
 
 function buildFullAddress(contact: BusinessSettings["contact"]): string | null {
@@ -55,6 +56,7 @@ export function buildEmailBrandingFromSettings(settings: BusinessSettings): Emai
     fromName: communication.fromName ?? settings.branding.businessName ?? "Turf Booking",
     replyTo: communication.replyToEmail,
     accentColor: resolveThemeAccentColor(settings) ?? "#16a34a",
+    appUrl: (settings.contact.websiteUrl ?? env.NEXT_PUBLIC_APP_URL).replace(/\/$/, ""),
   };
 }
 

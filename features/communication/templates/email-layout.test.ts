@@ -69,6 +69,7 @@ describe("communication templates", () => {
     expect(rendered.html).toContain("Chandna Indoor Ground");
     expect(rendered.html).toContain("Booking Confirmed");
     expect(rendered.html).toContain("Manage Booking");
+    expect(rendered.html).toContain("/booking/confirmation/");
     expect(rendered.html).toContain(TRANSACTIONAL_EMAIL_SUPPORT_ADDRESS);
   });
 
