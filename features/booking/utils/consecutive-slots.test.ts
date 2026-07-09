@@ -16,6 +16,7 @@ import {
   getTodayIso,
   isPastSlotEnd,
   toggleConsecutiveSlot,
+  removeUnavailableSelectedSlots,
 } from "@/features/booking/utils";
 
 function buildTestConfig() {
@@ -99,6 +100,18 @@ describe("consecutive slot validation", () => {
     const result = toggleConsecutiveSlot([...slots, pastSlot], [], "past", buildTestConfig());
     expect(result.rejected).toBe(true);
     expect(result.rejectionReason).toBe("past");
+  });
+
+  it("removes selected slots that are no longer selectable", () => {
+    const bookedSlot = buildTestSlot({
+      id: "b",
+      sortOrder: 1,
+      status: "booked",
+      isSelectable: false,
+    });
+    const updatedSlots = [slots[0]!, bookedSlot, slots[2]!, slots[3]!];
+    const result = removeUnavailableSelectedSlots(updatedSlots, ["a", "b", "c"]);
+    expect(result).toEqual(["a", "c"]);
   });
 });
 

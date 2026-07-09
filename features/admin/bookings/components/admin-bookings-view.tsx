@@ -163,7 +163,7 @@ export function AdminBookingsView() {
 
   const updateBooking = async (payload: {
     customerName: string;
-    customerPhone: string;
+    customerPhone?: string;
     customerEmail: string;
     notes?: string;
     totalPrice: number;

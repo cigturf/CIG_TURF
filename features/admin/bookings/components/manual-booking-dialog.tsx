@@ -40,7 +40,7 @@ type ManualBookingDialogProps = {
     bookingDate: string;
     selectedSlots: string[];
     customerName: string;
-    customerPhone: string;
+    customerPhone?: string;
     customerEmail?: string;
     totalPrice: number;
     advancePaid: number;
@@ -156,8 +156,8 @@ export function ManualBookingDialog({
       toast.error("Select a date and at least one slot.");
       return;
     }
-    if (!customerName.trim() || !customerPhone.trim()) {
-      toast.error("Customer name and phone are required.");
+    if (!customerName.trim()) {
+      toast.error("Customer name is required.");
       return;
     }
 
@@ -174,7 +174,7 @@ export function ManualBookingDialog({
         bookingDate: dateIso,
         selectedSlots: selectedSlotIds,
         customerName: customerName.trim(),
-        customerPhone: customerPhone.trim(),
+        customerPhone: customerPhone.trim() || undefined,
         customerEmail: customerEmail.trim() || undefined,
         totalPrice: total,
         advancePaid: advance,
@@ -226,7 +226,7 @@ export function ManualBookingDialog({
             <FormField label="Customer Name">
               <FormInput value={customerName} onChange={(event) => setCustomerName(event.target.value)} />
             </FormField>
-            <FormField label="Phone">
+            <FormField label="Phone (optional)">
               <FormInput value={customerPhone} onChange={(event) => setCustomerPhone(event.target.value)} />
             </FormField>
             <FormField label="Email (optional)">

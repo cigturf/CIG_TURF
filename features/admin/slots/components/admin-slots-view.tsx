@@ -33,7 +33,7 @@ type ManualBookingPayload = {
   bookingDate: string;
   selectedSlots: string[];
   customerName: string;
-  customerPhone: string;
+  customerPhone?: string;
   customerEmail?: string;
   totalPrice: number;
   advancePaid: number;
@@ -60,7 +60,7 @@ export function AdminSlotsView() {
     [dateIso, config.bookingWindowDays],
   );
 
-  const { bookedSlotIds, blockedSlotIds, maintenanceSlotIds, isHoliday, hydrated } =
+  const { bookedSlotIds, heldSlotIds, blockedSlotIds, maintenanceSlotIds, isHoliday, hydrated } =
     useRealtimeSlots(activeDate);
   const { snapshot: pricingSnapshot } = useRealtimePricing();
 
@@ -68,7 +68,7 @@ export function AdminSlotsView() {
 
   const [selectedSlotIds, setSelectedSlotIds] = useState<string[]>([]);
   const [quickFilter, setQuickFilter] = useState<
-    "all" | "available" | "booked" | "blocked" | "maintenance"
+    "all" | "available" | "booked" | "reserved" | "blocked" | "maintenance"
   >("all");
   const [searchQuery, setSearchQuery] = useState("");
 
@@ -92,12 +92,13 @@ export function AdminSlotsView() {
       now: new Date(),
       selectedSlotIds: [],
       bookedSlotIds: new Set(bookedSlotIds),
+      heldSlotIds: new Set(heldSlotIds),
       blockedSlotIds: new Set(blockedSlotIds),
       maintenanceSlotIds: new Set(maintenanceSlotIds),
       isHoliday,
       pricing: pricingSnapshot,
     });
-  }, [activeDate, config, bookedSlotIds, blockedSlotIds, maintenanceSlotIds, isHoliday, pricingSnapshot]);
+  }, [activeDate, config, bookedSlotIds, heldSlotIds, blockedSlotIds, maintenanceSlotIds, isHoliday, pricingSnapshot]);
 
   const filteredSlots = useMemo(() => {
     if (quickFilter === "all") return slots;
@@ -132,10 +133,35 @@ export function AdminSlotsView() {
     }
   }, []);
 
+  const releasePaymentHold = async (slotId: string) => {
+    const response = await fetch("/api/admin/slots/holds", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ slotIds: [slotId] }),
+    });
+    if (!response.ok) {
+      const body = await response.json().catch(() => ({}));
+      throw new Error(body.error ?? "Failed to release hold");
+    }
+    const data = (await response.json()) as { releasedSlotIds?: string[] };
+    if (!data.releasedSlotIds?.length) {
+      toast.message("No active payment hold on this slot");
+      return;
+    }
+    toast.success("Payment hold released");
+  };
+
   const handleSlotPress = (slotId: string, status: string) => {
     if (status === "booked") {
       const booking = bookingBySlotId.get(slotId);
       if (booking) void openBooking(booking.id);
+      return;
+    }
+
+    if (status === "reserved") {
+      void releasePaymentHold(slotId).catch((error) => {
+        toast.error(error instanceof Error ? error.message : "Failed to release hold");
+      });
       return;
     }
 
@@ -315,6 +341,7 @@ export function AdminSlotsView() {
               ["all", "All"],
               ["available", "Available"],
               ["booked", "Booked"],
+              ["reserved", "Payment hold"],
               ["blocked", "Blocked"],
               ["maintenance", "Maintenance"],
             ] as const

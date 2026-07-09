@@ -253,7 +253,8 @@ export async function getSlotAvailabilitySnapshot(dateIso: string): Promise<Slot
     getSlotHoliday(dateIso),
   ]);
 
-  const allBooked = Array.from(new Set([...bookedSlotIds, ...heldSlotIds]));
+  const allBooked = bookedSlotIds;
+  const heldOnly = heldSlotIds.filter((slotId) => !allBooked.includes(slotId));
 
   const blockedSlotIds: string[] = [];
   const maintenanceSlotIds: string[] = [];
@@ -264,6 +265,7 @@ export async function getSlotAvailabilitySnapshot(dateIso: string): Promise<Slot
 
   return {
     bookedSlotIds: allBooked,
+    heldSlotIds: heldOnly,
     blockedSlotIds,
     maintenanceSlotIds,
     isHoliday: Boolean(holiday),

@@ -98,6 +98,7 @@ export function AdminSlotGrid({
                     isSelectable:
                       slot.status === "available" ||
                       slot.status === "booked" ||
+                      slot.status === "reserved" ||
                       slot.status === "blocked" ||
                       slot.status === "maintenance",
                   }}
@@ -110,6 +111,13 @@ export function AdminSlotGrid({
                     title={`${booking.bookingReference} · ${booking.customerName} · ${formatCurrency(booking.remainingAmount)} due`}
                   >
                     {booking.bookingReference} · {booking.customerName} · {formatCurrency(booking.remainingAmount)} due
+                  </Text>
+                ) : slot.status === "reserved" ? (
+                  <Text
+                    size="sm"
+                    className="text-muted-foreground mt-1 px-0.5 text-[0.65rem] leading-snug"
+                  >
+                    Payment hold · tap to release
                   </Text>
                 ) : null}
               </div>

@@ -9,6 +9,7 @@ import {
 
 type SlotAvailability = {
   bookedSlotIds?: Set<string> | string[];
+  heldSlotIds?: Set<string> | string[];
   blockedSlotIds?: Set<string> | string[];
   maintenanceSlotIds?: Set<string> | string[];
   isHoliday?: boolean;
@@ -45,6 +46,7 @@ export function buildBookingViewSlots({
     now,
     selectedSlotIds,
     bookedSlotIds: primaryAvailability.bookedSlotIds,
+    heldSlotIds: primaryAvailability.heldSlotIds,
     blockedSlotIds: primaryAvailability.blockedSlotIds,
     maintenanceSlotIds: primaryAvailability.maintenanceSlotIds,
     isHoliday: primaryAvailability.isHoliday ?? false,
@@ -59,6 +61,7 @@ export function buildBookingViewSlots({
     now,
     selectedSlotIds,
     bookedSlotIds: bridgeAvailability?.bookedSlotIds,
+    heldSlotIds: bridgeAvailability?.heldSlotIds,
     blockedSlotIds: bridgeAvailability?.blockedSlotIds,
     maintenanceSlotIds: bridgeAvailability?.maintenanceSlotIds,
     isHoliday: bridgeAvailability?.isHoliday ?? false,

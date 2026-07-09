@@ -12,6 +12,7 @@ export const BOOKING_MESSAGES = {
   notSelectable: "This slot is not available.",
   pastSlot: "Past time slots cannot be selected.",
   noSelection: "Please select at least one time slot.",
+  slotNoLongerAvailable: "One or more selected slots are no longer available.",
 } as const;
 
 function sortByOrder(slots: BookingSlot[], ids: string[]): string[] {
@@ -108,4 +109,15 @@ export function toggleConsecutiveSlot(
   }
 
   return { selectedSlotIds, rejected: true, rejectionReason: "non_consecutive" };
+}
+
+/** Drops selected slots that are no longer selectable (e.g. booked by someone else). */
+export function removeUnavailableSelectedSlots(
+  slots: BookingSlot[],
+  selectedSlotIds: string[],
+): string[] {
+  return selectedSlotIds.filter((slotId) => {
+    const slot = slots.find((item) => item.id === slotId);
+    return slot?.isSelectable === true;
+  });
 }

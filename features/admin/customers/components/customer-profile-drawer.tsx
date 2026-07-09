@@ -119,7 +119,7 @@ export function CustomerProfileDrawer({
     bookingDate: string;
     selectedSlots: string[];
     customerName: string;
-    customerPhone: string;
+    customerPhone?: string;
     customerEmail?: string;
     totalPrice: number;
     advancePaid: number;

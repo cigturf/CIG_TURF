@@ -20,6 +20,7 @@ export type SlotHolidayRecord = {
 
 export type SlotAvailabilitySnapshot = {
   bookedSlotIds: string[];
+  heldSlotIds: string[];
   blockedSlotIds: string[];
   maintenanceSlotIds: string[];
   isHoliday: boolean;

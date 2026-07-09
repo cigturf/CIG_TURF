@@ -306,10 +306,11 @@ export function mapSlotHoldChangeToEvents(payload: RealtimeChangePayload): Mappe
 
   return [
     {
-      type: APP_EVENT_TYPES.SLOT_AVAILABILITY_REFRESH,
+      type: APP_EVENT_TYPES.SLOT_RELEASED,
       payload: {
-        bookingDate: event.bookingDate,
         slotId: event.slotId,
+        bookingDate: event.bookingDate,
+        source: "hold",
       },
     },
   ];

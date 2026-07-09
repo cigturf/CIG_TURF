@@ -134,6 +134,7 @@ export async function createManualBooking(
   adminUserId: string,
 ): Promise<AdminBookingDetail> {
   const customerEmail = input.customerEmail?.trim().toLowerCase() ?? "";
+  const customerPhone = input.customerPhone?.trim() ?? "";
   const slotIds = input.selectedSlots;
   const unavailable = await getUnavailableSlotIds(slotIds, { respectAllHolds: true });
   if (unavailable.length > 0) {
@@ -163,7 +164,7 @@ export async function createManualBooking(
     advanceAmount: input.advancePaid,
     remainingAmount: input.remainingAmount,
     profileName: input.customerName,
-    profilePhone: input.customerPhone,
+    profilePhone: customerPhone,
     profileEmail: customerEmail,
   });
 
@@ -195,7 +196,7 @@ export async function createManualBooking(
     advancePaid: input.advancePaid,
     remainingAmount: input.remainingAmount,
     customerName: input.customerName,
-    customerPhone: input.customerPhone,
+    customerPhone,
     customerEmail,
     source: "manual",
     notes: input.notes ?? null,

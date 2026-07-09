@@ -25,6 +25,7 @@ import { useDebouncedCallback } from "@/lib/performance/use-debounced-callback";
 
 type SlotSnapshot = {
   bookedSlotIds: string[];
+  heldSlotIds: string[];
   blockedSlotIds: string[];
   maintenanceSlotIds: string[];
   isHoliday: boolean;
@@ -41,6 +42,7 @@ const SlotRealtimeContext = createContext<SlotRealtimeContextValue | null>(null)
 function emptySnapshot(): SlotSnapshot {
   return {
     bookedSlotIds: [],
+    heldSlotIds: [],
     blockedSlotIds: [],
     maintenanceSlotIds: [],
     isHoliday: false,
@@ -61,7 +63,11 @@ export function SlotRealtimeProvider({ children }: { children: ReactNode }) {
   const [snapshotsByDate, setSnapshotsByDate] = useState<Record<string, SlotSnapshot>>({});
 
   const applySlotInsert = useCallback(
-    (dateIso: string, key: "bookedSlotIds" | "blockedSlotIds" | "maintenanceSlotIds", slotId: string) => {
+    (
+      dateIso: string,
+      key: "bookedSlotIds" | "heldSlotIds" | "blockedSlotIds" | "maintenanceSlotIds",
+      slotId: string,
+    ) => {
       setSnapshotsByDate((current) => {
         const existing = current[dateIso] ?? emptySnapshot();
         const nextIds = existing[key].includes(slotId) ? existing[key] : [...existing[key], slotId];
@@ -80,6 +86,7 @@ export function SlotRealtimeProvider({ children }: { children: ReactNode }) {
         [dateIso]: {
           ...existing,
           bookedSlotIds: existing.bookedSlotIds.filter((id) => id !== slotId),
+          heldSlotIds: existing.heldSlotIds.filter((id) => id !== slotId),
           blockedSlotIds: existing.blockedSlotIds.filter((id) => id !== slotId),
           maintenanceSlotIds: existing.maintenanceSlotIds.filter((id) => id !== slotId),
         },
@@ -96,12 +103,28 @@ export function SlotRealtimeProvider({ children }: { children: ReactNode }) {
   }, [applySlotDelete]);
 
   useAppEventSubscriber(APP_EVENT_TYPES.SLOT_BOOKED, (event) => {
-    const { slotId, bookingDate } = event.payload;
+    const { slotId, bookingDate, source } = event.payload as {
+      slotId: string;
+      bookingDate: string;
+      source?: string;
+    };
+    if (source === "hold") {
+      applySlotInsert(bookingDate, "heldSlotIds", slotId);
+      return;
+    }
     applySlotInsert(bookingDate, "bookedSlotIds", slotId);
   });
 
   useAppEventSubscriber(APP_EVENT_TYPES.SLOT_RELEASED, (event) => {
-    const { slotId, bookingDate, source } = event.payload;
+    const { slotId, bookingDate, source } = event.payload as {
+      slotId: string;
+      bookingDate: string;
+      source?: string;
+    };
+    if (source === "hold") {
+      applySlotDelete(bookingDate, slotId);
+      return;
+    }
     if (source && source !== "booked") return;
     applySlotDelete(bookingDate, slotId);
   });
@@ -195,6 +218,7 @@ export function useRealtimeSlots(dateIso: string | null) {
     if (!dateIso || !availabilityQuery.data) return;
     setInitialSnapshot(dateIso, {
       bookedSlotIds: availabilityQuery.data.bookedSlotIds ?? [],
+      heldSlotIds: availabilityQuery.data.heldSlotIds ?? [],
       blockedSlotIds: availabilityQuery.data.blockedSlotIds ?? [],
       maintenanceSlotIds: availabilityQuery.data.maintenanceSlotIds ?? [],
       isHoliday: Boolean(availabilityQuery.data.isHoliday),
@@ -251,6 +275,7 @@ export function useRealtimeSlots(dateIso: string | null) {
 
   return {
     bookedSlotIds: snapshot?.bookedSlotIds ?? [],
+    heldSlotIds: snapshot?.heldSlotIds ?? [],
     blockedSlotIds: snapshot?.blockedSlotIds ?? [],
     maintenanceSlotIds: snapshot?.maintenanceSlotIds ?? [],
     isHoliday: snapshot?.isHoliday ?? false,

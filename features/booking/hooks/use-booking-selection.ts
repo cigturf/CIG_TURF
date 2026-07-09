@@ -16,6 +16,7 @@ import {
   readBookingSession,
   saveBookingSession,
   toggleConsecutiveSlot,
+  removeUnavailableSelectedSlots,
 } from "@/features/booking/utils";
 import { getBridgeDateIso } from "@/features/booking/utils/slot-timeline";
 import { useRealtimeSlots } from "@/features/realtime/hooks/use-realtime-slots";
@@ -68,12 +69,14 @@ export function useBookingSelection() {
       selectedSlotIds: selection.selectedSlotIds,
       primaryAvailability: {
         bookedSlotIds: primaryRealtime.bookedSlotIds,
+        heldSlotIds: primaryRealtime.heldSlotIds,
         blockedSlotIds: primaryRealtime.blockedSlotIds,
         maintenanceSlotIds: primaryRealtime.maintenanceSlotIds,
         isHoliday: primaryRealtime.isHoliday,
       },
       bridgeAvailability: {
         bookedSlotIds: bridgeRealtime.bookedSlotIds,
+        heldSlotIds: bridgeRealtime.heldSlotIds,
         blockedSlotIds: bridgeRealtime.blockedSlotIds,
         maintenanceSlotIds: bridgeRealtime.maintenanceSlotIds,
         isHoliday: bridgeRealtime.isHoliday,
@@ -85,11 +88,13 @@ export function useBookingSelection() {
     selection.selectedSlotIds,
     config,
     primaryRealtime.bookedSlotIds,
+    primaryRealtime.heldSlotIds,
     primaryRealtime.blockedSlotIds,
     primaryRealtime.maintenanceSlotIds,
     primaryRealtime.isHoliday,
     primaryRealtime.version,
     bridgeRealtime.bookedSlotIds,
+    bridgeRealtime.heldSlotIds,
     bridgeRealtime.blockedSlotIds,
     bridgeRealtime.maintenanceSlotIds,
     bridgeRealtime.isHoliday,
@@ -106,6 +111,20 @@ export function useBookingSelection() {
     if (!slotView.bridgeDateIso) return null;
     return formatDate(slotView.bridgeDateIso);
   }, [slotView.bridgeDateIso]);
+
+  useEffect(() => {
+    if (!hydrated) return;
+
+    setSelection((prev) => {
+      if (prev.selectedSlotIds.length === 0) return prev;
+
+      const nextSelected = removeUnavailableSelectedSlots(slotView.slots, prev.selectedSlotIds);
+      if (nextSelected.length === prev.selectedSlotIds.length) return prev;
+
+      toast.message(BOOKING_MESSAGES.slotNoLongerAvailable);
+      return { ...prev, selectedSlotIds: nextSelected };
+    });
+  }, [hydrated, slotView.slots, primaryRealtime.version, bridgeRealtime.version]);
 
   useEffect(() => {
     if (!hydrated) return;

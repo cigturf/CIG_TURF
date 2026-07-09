@@ -136,3 +136,51 @@ export async function upsertSlotHolds(
 
   throw new Error("Slot holds require Supabase service role configuration.");
 }
+
+/** Admin emergency: release active holds for specific slot IDs. */
+export async function releaseSlotHoldsBySlotIds(slotIds: string[]): Promise<string[]> {
+  if (slotIds.length === 0) return [];
+
+  await purgeExpiredSlotHolds();
+
+  const supabase = createServiceRoleClient();
+  const now = new Date().toISOString();
+
+  if (supabase) {
+    const { data, error: selectError } = await supabase
+      .from("slot_holds")
+      .select("slot_id")
+      .in("slot_id", slotIds)
+      .gt("expires_at", now);
+
+    if (selectError) {
+      console.error("[slot_holds] Supabase lookup failed:", selectError.message);
+    }
+
+    const held = (data ?? []).map((row) => String(row.slot_id));
+
+    const { error: deleteError } = await supabase
+      .from("slot_holds")
+      .delete()
+      .in("slot_id", slotIds);
+
+    if (!deleteError) return held;
+
+    console.error("[slot_holds] Supabase release by slot failed:", deleteError.message);
+  }
+
+  try {
+    const rows = await prisma.$queryRaw<Array<{ slot_id: string }>>`
+      SELECT slot_id FROM slot_holds
+      WHERE slot_id = ANY(${slotIds}) AND expires_at > ${now}
+    `;
+    const held = rows.map((row) => row.slot_id);
+    await prisma.$executeRaw`
+      DELETE FROM slot_holds WHERE slot_id = ANY(${slotIds})
+    `;
+    return held;
+  } catch (error) {
+    console.error("[slot_holds] Prisma release by slot failed:", error);
+    return [];
+  }
+}

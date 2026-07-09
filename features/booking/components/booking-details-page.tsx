@@ -88,6 +88,18 @@ export function BookingDetailsPage({ venueName }: BookingDetailsPageProps) {
     return true;
   }, [name, phone]);
 
+  const abandonCheckout = async (bookingSessionId: string) => {
+    try {
+      await fetch("/api/payments/abandon", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ bookingSessionId }),
+      });
+    } catch {
+      // Best effort — holds also expire automatically after 2 minutes.
+    }
+  };
+
   const verifyPayment = async (
     bookingSessionId: string,
     payment: {
@@ -215,14 +227,18 @@ export function BookingDetailsPage({ venueName }: BookingDetailsPageProps) {
         onDismiss: () => {
           paymentInFlight.current = false;
           setLoading(false);
+          void abandonCheckout(orderData.bookingSessionId);
           toast.message("Payment cancelled", {
-            description: "Your booking details are saved. You can retry payment anytime.",
+            description: "Your slots have been released. You can select them again anytime.",
           });
         },
         onFailure: (message) => {
           paymentInFlight.current = false;
           setLoading(false);
-          toast.error("Payment failed", { description: message });
+          void abandonCheckout(orderData.bookingSessionId);
+          toast.error("Payment failed", {
+            description: `${message} Your slots have been released — try again when ready.`,
+          });
         },
         onSuccess: async (payment) => {
           try {

@@ -15,6 +15,7 @@ async function fetchSlotAvailability(dateIso: string): Promise<SlotAvailabilityS
   if (!response.ok) {
     return {
       bookedSlotIds: [],
+      heldSlotIds: [],
       blockedSlotIds: [],
       maintenanceSlotIds: [],
       isHoliday: false,

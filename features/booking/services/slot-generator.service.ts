@@ -18,6 +18,7 @@ type GenerateSlotsOptions = {
   now?: Date;
   selectedSlotIds?: string[];
   bookedSlotIds?: Set<string> | string[];
+  heldSlotIds?: Set<string> | string[];
   blockedSlotIds?: Set<string> | string[];
   maintenanceSlotIds?: Set<string> | string[];
   isHoliday?: boolean;
@@ -39,6 +40,7 @@ export function generateSlots({
   now = new Date(),
   selectedSlotIds = [],
   bookedSlotIds,
+  heldSlotIds,
   blockedSlotIds,
   maintenanceSlotIds,
   isHoliday = false,
@@ -64,6 +66,7 @@ export function generateSlots({
     if (isInSet(slotId, blockedSlotIds)) baseStatus = "blocked";
     if (isInSet(slotId, maintenanceSlotIds)) baseStatus = "maintenance";
     if (isInSet(slotId, bookedSlotIds)) baseStatus = "booked";
+    else if (isInSet(slotId, heldSlotIds)) baseStatus = "reserved";
     const isPast = isToday && isPastSlotEndInTimezone(dateIso, endMinute, now, config.timezone);
     const status: SlotStatus = isPast ? "past" : baseStatus;
     const isSelectable = status === "available";

@@ -1,6 +1,7 @@
 export {
   areConsecutiveIndices,
   BOOKING_MESSAGES,
+  removeUnavailableSelectedSlots,
   toggleConsecutiveSlot,
   validateConsecutiveSelection,
   type SlotSelectionResult,
