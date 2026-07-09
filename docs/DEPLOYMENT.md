@@ -23,13 +23,11 @@ Required in production/preview (validated at runtime):
 - `DATABASE_URL` — use Supabase **pooler** URL (`:6543`, `?pgbouncer=true`)
 - `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`
 - `NEXT_PUBLIC_APP_URL` — must be `https://chandnaindoorground.in` in production
-- `RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET`, `NEXT_PUBLIC_RAZORPAY_KEY_ID`
+- `RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET`, `RAZORPAY_WEBHOOK_SECRET`, `NEXT_PUBLIC_RAZORPAY_KEY_ID`
 - `BREVO_API_KEY`, `BREVO_SENDER_EMAIL`
 
 Optional:
 
-- `RAZORPAY_WEBHOOK_SECRET` — Razorpay Dashboard → Webhooks
-- `SENTRY_DSN` — error monitoring (install `@sentry/nextjs` to enable)
 - `DIRECT_URL` — direct Postgres for migrations only
 
 ## 2. Supabase

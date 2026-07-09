@@ -24,6 +24,7 @@ const deployedServerEnvSchema = z.object({
   NEXT_PUBLIC_SUPABASE_ANON_KEY: z.string().min(1),
   RAZORPAY_KEY_ID: z.string().min(1),
   RAZORPAY_KEY_SECRET: z.string().min(1),
+  RAZORPAY_WEBHOOK_SECRET: z.string().min(1),
   NEXT_PUBLIC_RAZORPAY_KEY_ID: z.string().min(1),
   NEXT_PUBLIC_APP_URL: z.string().url().min(1),
   BREVO_API_KEY: z.string().min(1),
@@ -121,5 +122,6 @@ function createEnv() {
 export const env = createEnv();
 
 export function getRazorpayWebhookSecret(): string | null {
-  return env.server.RAZORPAY_WEBHOOK_SECRET ?? env.server.RAZORPAY_KEY_SECRET ?? null;
+  const secret = env.server.RAZORPAY_WEBHOOK_SECRET?.trim();
+  return secret || null;
 }

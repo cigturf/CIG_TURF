@@ -8,6 +8,7 @@
 - [ ] Supabase Site URL + redirect URLs configured
 - [ ] Google OAuth redirect URIs updated
 - [ ] Razorpay live/test keys match intended mode
+- [ ] `RAZORPAY_WEBHOOK_SECRET` set (dedicated webhook secret — not API key secret)
 - [ ] Razorpay webhook → `/api/payments/webhook`
 - [ ] Brevo sender verified
 - [ ] Custom domain DNS pointed to Vercel

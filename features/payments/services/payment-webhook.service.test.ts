@@ -16,6 +16,10 @@ vi.mock("@/features/payments/services/booking-session.repository", () => ({
   updateBookingSessionStatus: vi.fn(),
 }));
 
+vi.mock("@/features/booking/services/booking-finalization.service", () => ({
+  finalizeBookingFromPaidSessionIfNeeded: vi.fn(),
+}));
+
 import {
   getPaymentByOrderId,
   getPaymentByRazorpayPaymentId,
@@ -23,39 +27,35 @@ import {
 } from "@/features/payments/services/payment.repository";
 import { handlePaymentFailure } from "@/features/payments/services/payment-lifecycle.service";
 import { updateBookingSessionStatus } from "@/features/payments/services/booking-session.repository";
+import { finalizeBookingFromPaidSessionIfNeeded } from "@/features/booking/services/booking-finalization.service";
+
+const basePayment = {
+  id: "pay-1",
+  bookingSessionId: "session-1",
+  userId: "user-1",
+  razorpayOrderId: "order_1",
+  razorpayPaymentId: null,
+  amount: 20000,
+  currency: "INR",
+  status: "created" as const,
+  paymentMethod: null,
+  createdAt: new Date(),
+  updatedAt: new Date(),
+};
 
 describe("processRazorpayWebhook", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  it("marks an existing payment as paid", async () => {
-    vi.mocked(getPaymentByOrderId).mockResolvedValue({
-      id: "pay-1",
-      bookingSessionId: "session-1",
-      userId: "user-1",
-      razorpayOrderId: "order_1",
-      razorpayPaymentId: null,
-      amount: 20000,
-      currency: "INR",
-      status: "created",
-      paymentMethod: null,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    });
+  it("marks an existing payment as paid and finalizes booking", async () => {
+    vi.mocked(getPaymentByOrderId).mockResolvedValue(basePayment);
     vi.mocked(getPaymentByRazorpayPaymentId).mockResolvedValue(null);
     vi.mocked(markPaymentPaid).mockResolvedValue({
-      id: "pay-1",
-      bookingSessionId: "session-1",
-      userId: "user-1",
-      razorpayOrderId: "order_1",
+      ...basePayment,
       razorpayPaymentId: "pay_razorpay",
-      amount: 20000,
-      currency: "INR",
       status: "paid",
       paymentMethod: "upi",
-      createdAt: new Date(),
-      updatedAt: new Date(),
     });
 
     const result = await processRazorpayWebhook({
@@ -75,21 +75,41 @@ describe("processRazorpayWebhook", () => {
     expect(result).toEqual({ ok: true, duplicate: false });
     expect(markPaymentPaid).toHaveBeenCalled();
     expect(updateBookingSessionStatus).toHaveBeenCalledWith("session-1", "payment_completed");
-  });
-
-  it("returns duplicate when payment already paid", async () => {
-    vi.mocked(getPaymentByOrderId).mockResolvedValue({
-      id: "pay-1",
+    expect(finalizeBookingFromPaidSessionIfNeeded).toHaveBeenCalledWith({
       bookingSessionId: "session-1",
       userId: "user-1",
-      razorpayOrderId: "order_1",
+    });
+  });
+
+  it("processes order.paid payloads", async () => {
+    vi.mocked(getPaymentByOrderId).mockResolvedValue(basePayment);
+    vi.mocked(getPaymentByRazorpayPaymentId).mockResolvedValue(null);
+    vi.mocked(markPaymentPaid).mockResolvedValue({
+      ...basePayment,
       razorpayPaymentId: "pay_razorpay",
-      amount: 20000,
-      currency: "INR",
+      status: "paid",
+    });
+
+    const result = await processRazorpayWebhook({
+      event: "order.paid",
+      payload: {
+        order: { entity: { id: "order_1", status: "paid" } },
+        payment: {
+          entity: { id: "pay_razorpay", order_id: "order_1", status: "captured" },
+        },
+      },
+    });
+
+    expect(result.ok).toBe(true);
+    expect(finalizeBookingFromPaidSessionIfNeeded).toHaveBeenCalled();
+  });
+
+  it("returns duplicate when payment already paid and still ensures finalize", async () => {
+    vi.mocked(getPaymentByOrderId).mockResolvedValue({
+      ...basePayment,
+      razorpayPaymentId: "pay_razorpay",
       status: "paid",
       paymentMethod: "upi",
-      createdAt: new Date(),
-      updatedAt: new Date(),
     });
 
     const result = await processRazorpayWebhook({
@@ -106,22 +126,15 @@ describe("processRazorpayWebhook", () => {
     });
 
     expect(result).toEqual({ ok: true, duplicate: true });
+    expect(markPaymentPaid).not.toHaveBeenCalled();
+    expect(finalizeBookingFromPaidSessionIfNeeded).toHaveBeenCalledWith({
+      bookingSessionId: "session-1",
+      userId: "user-1",
+    });
   });
 
   it("rejects webhook when payment amount mismatches", async () => {
-    vi.mocked(getPaymentByOrderId).mockResolvedValue({
-      id: "pay-1",
-      bookingSessionId: "session-1",
-      userId: "user-1",
-      razorpayOrderId: "order_1",
-      razorpayPaymentId: null,
-      amount: 100,
-      currency: "INR",
-      status: "created",
-      paymentMethod: null,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    });
+    vi.mocked(getPaymentByOrderId).mockResolvedValue({ ...basePayment, amount: 100 });
 
     const result = await processRazorpayWebhook({
       event: "payment.captured",
@@ -156,5 +169,16 @@ describe("processRazorpayWebhook", () => {
 
     expect(result).toEqual({ ok: true, duplicate: false });
     expect(handlePaymentFailure).toHaveBeenCalledWith("order_1");
+  });
+
+  it("rejects invalid order.paid payloads without payment id", async () => {
+    const result = await processRazorpayWebhook({
+      event: "order.paid",
+      payload: {
+        order: { entity: { id: "order_1", status: "paid" } },
+      },
+    });
+
+    expect(result).toEqual({ ok: false, error: "Invalid webhook payload", status: 400 });
   });
 });

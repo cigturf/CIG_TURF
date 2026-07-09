@@ -1,4 +1,5 @@
 import { BOOKING_DEFAULTS } from "@/features/booking/config";
+import { getAppConfig } from "@/config/app.config";
 import {
   createBookingRecord,
   deleteBookingById,
@@ -23,6 +24,7 @@ import {
 } from "@/features/payments/services/booking-session.repository";
 import { getPaidPaymentBySessionId } from "@/features/payments/services/payment.repository";
 import { refundOnlineAdvanceWithoutBooking } from "@/features/payments/services/payment-refund.service";
+import { safeLogWarn } from "@/lib/security/safe-logger";
 
 async function handleSlotsUnavailableAfterPayment(bookingSessionId: string): Promise<void> {
   const payment = await getPaidPaymentBySessionId(bookingSessionId);
@@ -35,6 +37,32 @@ async function handleSlotsUnavailableAfterPayment(bookingSessionId: string): Pro
 
   await releaseSlotHoldsForSession(bookingSessionId);
   await updateBookingSessionStatus(bookingSessionId, "failed");
+}
+
+/**
+ * Webhook backup: finalize booking when payment succeeded but the browser never called finalize.
+ * Idempotent — no-op if a booking already exists for the session.
+ */
+export async function finalizeBookingFromPaidSessionIfNeeded(options: {
+  bookingSessionId: string;
+  userId: string;
+}): Promise<void> {
+  const existing = await getBookingBySessionId(options.bookingSessionId);
+  if (existing) return;
+
+  const venueName = getAppConfig().envDisplayName;
+  const result = await finalizeBookingFromSession({
+    bookingSessionId: options.bookingSessionId,
+    userId: options.userId,
+    venueName,
+  });
+
+  if (!result.success) {
+    safeLogWarn("booking/finalize", "Webhook finalize did not complete", {
+      sessionId: options.bookingSessionId,
+      code: result.code,
+    });
+  }
 }
 
 export async function finalizeBookingFromSession(options: {

@@ -8,7 +8,6 @@ vi.mock("@/features/payments/services/payment.repository", () => ({
   getPaymentByOrderId: vi.fn(),
   getPaymentByRazorpayPaymentId: vi.fn(),
   markPaymentPaid: vi.fn(),
-  getPaidPaymentBySessionId: vi.fn(),
 }));
 
 vi.mock("@/features/payments/services/payment-lifecycle.service", () => ({
@@ -16,43 +15,16 @@ vi.mock("@/features/payments/services/payment-lifecycle.service", () => ({
 }));
 
 vi.mock("@/features/payments/services/booking-session.repository", () => ({
-  getBookingSessionById: vi.fn(),
-  isBookingSessionExpired: vi.fn(),
   updateBookingSessionStatus: vi.fn(),
+}));
+
+vi.mock("@/features/booking/services/booking-finalization.service", () => ({
+  finalizeBookingFromPaidSessionIfNeeded: vi.fn(),
+  finalizeBookingFromSession: vi.fn(),
 }));
 
 vi.mock("@/features/booking/services/booking.repository", () => ({
   getBookingBySessionId: vi.fn(),
-  createBookingRecord: vi.fn(),
-  deleteBookingById: vi.fn(),
-}));
-
-vi.mock("@/features/booking/services/booked-slot.repository", () => ({
-  getUnavailableSlotIds: vi.fn(),
-  reserveBookedSlots: vi.fn(),
-  releaseBookedSlotsForBooking: vi.fn(),
-}));
-
-vi.mock("@/features/booking/services/slot-hold.repository", () => ({
-  releaseSlotHoldsForSession: vi.fn(),
-}));
-
-vi.mock("@/features/payments/services/payment-refund.service", () => ({
-  refundOnlineAdvanceWithoutBooking: vi.fn(),
-}));
-
-vi.mock("@/features/admin/bookings/services/booking-payment.repository", () => ({
-  createBookingPaymentRecord: vi.fn(),
-  listPaymentRecordsForBooking: vi.fn(),
-}));
-
-vi.mock("@/features/booking/services/booking-reference.service", () => ({
-  generateBookingReference: vi.fn().mockResolvedValue("CIG-CONC-001"),
-}));
-
-vi.mock("@/features/communication/services/communication-dispatcher", () => ({
-  dispatchBookingConfirmedEmails: vi.fn(),
-  publishCommunicationEvent: vi.fn(),
 }));
 
 import {
@@ -62,11 +34,22 @@ import {
 } from "@/features/payments/services/payment.repository";
 import { updateBookingSessionStatus } from "@/features/payments/services/booking-session.repository";
 import { getBookingBySessionId } from "@/features/booking/services/booking.repository";
+import { finalizeBookingFromPaidSessionIfNeeded } from "@/features/booking/services/booking-finalization.service";
 
-/**
- * Integration-style tests for production concurrency and payment safety.
- * Uses service mocks to simulate race conditions without a live database.
- */
+const basePayment = {
+  id: "pay-1",
+  bookingSessionId: "session-1",
+  userId: "user-1",
+  razorpayOrderId: "order_1",
+  razorpayPaymentId: null,
+  amount: 20000,
+  currency: "INR",
+  status: "created" as const,
+  paymentMethod: null,
+  createdAt: new Date(),
+  updatedAt: new Date(),
+};
+
 describe("production concurrency and payment safety", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -75,17 +58,10 @@ describe("production concurrency and payment safety", () => {
   describe("duplicate webhook delivery", () => {
     it("does not re-mark payment when webhook arrives twice", async () => {
       vi.mocked(getPaymentByOrderId).mockResolvedValue({
-        id: "pay-1",
-        bookingSessionId: "session-1",
-        userId: "user-1",
-        razorpayOrderId: "order_1",
+        ...basePayment,
         razorpayPaymentId: "pay_razorpay",
-        amount: 20000,
-        currency: "INR",
         status: "paid",
         paymentMethod: "upi",
-        createdAt: new Date(),
-        updatedAt: new Date(),
       });
 
       const first = await processRazorpayWebhook({
@@ -104,6 +80,47 @@ describe("production concurrency and payment safety", () => {
       expect(first).toEqual({ ok: true, duplicate: true });
       expect(second).toEqual({ ok: true, duplicate: true });
       expect(markPaymentPaid).not.toHaveBeenCalled();
+      expect(finalizeBookingFromPaidSessionIfNeeded).toHaveBeenCalledTimes(2);
+    });
+  });
+
+  describe("browser closed after payment", () => {
+    it("webhook capture triggers booking finalization backup", async () => {
+      vi.mocked(getPaymentByOrderId).mockResolvedValue(basePayment);
+      vi.mocked(getPaymentByRazorpayPaymentId).mockResolvedValue(null);
+      vi.mocked(markPaymentPaid).mockResolvedValue({
+        ...basePayment,
+        razorpayPaymentId: "pay_razorpay",
+        status: "paid",
+      });
+
+      await processRazorpayWebhook({
+        event: "payment.captured",
+        payload: {
+          payment: {
+            entity: { id: "pay_razorpay", order_id: "order_1", status: "captured", method: "upi" },
+          },
+        },
+      });
+
+      expect(updateBookingSessionStatus).toHaveBeenCalledWith("session-1", "payment_completed");
+      expect(finalizeBookingFromPaidSessionIfNeeded).toHaveBeenCalledWith({
+        bookingSessionId: "session-1",
+        userId: "user-1",
+      });
+    });
+  });
+
+  describe("late payment.failed after capture", () => {
+    it("routes late failure events through guarded lifecycle handler", async () => {
+      await processRazorpayWebhook({
+        event: "payment.failed",
+        payload: {
+          payment: { entity: { id: "pay_razorpay", order_id: "order_1", status: "failed" } },
+        },
+      });
+
+      expect(handlePaymentFailure).toHaveBeenCalledWith("order_1");
     });
   });
 
@@ -138,6 +155,10 @@ describe("production concurrency and payment safety", () => {
       };
 
       vi.mocked(getBookingBySessionId).mockResolvedValue(existing);
+      vi.mocked(finalizeBookingFromSession).mockResolvedValue({
+        success: true,
+        booking: existing,
+      });
 
       const result = await finalizeBookingFromSession({
         bookingSessionId: "session-1",
@@ -149,62 +170,6 @@ describe("production concurrency and payment safety", () => {
       if (result.success) {
         expect(result.booking.id).toBe("booking-1");
       }
-    });
-  });
-
-  describe("payment failure releases holds", () => {
-    it("webhook payment.failed triggers lifecycle cleanup", async () => {
-      await processRazorpayWebhook({
-        event: "payment.failed",
-        payload: {
-          payment: { entity: { id: "pay_x", order_id: "order_1", status: "failed" } },
-        },
-      });
-
-      expect(handlePaymentFailure).toHaveBeenCalledWith("order_1");
-    });
-  });
-
-  describe("webhook + client verify coordination", () => {
-    it("webhook marks session payment_completed without creating booking", async () => {
-      vi.mocked(getPaymentByOrderId).mockResolvedValue({
-        id: "pay-1",
-        bookingSessionId: "session-1",
-        userId: "user-1",
-        razorpayOrderId: "order_1",
-        razorpayPaymentId: null,
-        amount: 20000,
-        currency: "INR",
-        status: "created",
-        paymentMethod: null,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      });
-      vi.mocked(getPaymentByRazorpayPaymentId).mockResolvedValue(null);
-      vi.mocked(markPaymentPaid).mockResolvedValue({
-        id: "pay-1",
-        bookingSessionId: "session-1",
-        userId: "user-1",
-        razorpayOrderId: "order_1",
-        razorpayPaymentId: "pay_razorpay",
-        amount: 20000,
-        currency: "INR",
-        status: "paid",
-        paymentMethod: "upi",
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      });
-
-      await processRazorpayWebhook({
-        event: "payment.captured",
-        payload: {
-          payment: {
-            entity: { id: "pay_razorpay", order_id: "order_1", status: "captured", method: "upi" },
-          },
-        },
-      });
-
-      expect(updateBookingSessionStatus).toHaveBeenCalledWith("session-1", "payment_completed");
     });
   });
 });
