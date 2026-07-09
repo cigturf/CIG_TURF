@@ -2,7 +2,7 @@
 
 ## Before first deploy
 
-- [ ] All `supabase/*.sql` migrations applied
+- [ ] All `supabase/*.sql` migrations applied (including `production-hardening.sql` for slot holds + audit RLS fix)
 - [ ] `.env.example` variables set in Vercel (Production + Preview)
 - [ ] `NEXT_PUBLIC_APP_URL=https://chandnaindoorground.in`
 - [ ] Supabase Site URL + redirect URLs configured

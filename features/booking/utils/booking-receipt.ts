@@ -1,5 +1,6 @@
 import type { BookingPaymentRecord } from "@/features/admin/bookings/types/admin-booking.types";
 import type { BookingRecord } from "@/features/booking/types/booking-record.types";
+import { escapeHtml } from "@/features/communication/lib/escape-html";
 import { formatCurrency } from "@/utils";
 import { formatDate } from "@/utils/format";
 
@@ -55,7 +56,7 @@ export function buildBookingReceiptHtml({
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <title>Booking Receipt — ${booking.bookingReference}</title>
+  <title>Booking Receipt — ${escapeHtml(booking.bookingReference)}</title>
   <style>
     body { font-family: system-ui, -apple-system, sans-serif; color: #111; margin: 0; padding: 32px; }
     .wrap { max-width: 720px; margin: 0 auto; border: 1px solid #e5e7eb; border-radius: 16px; padding: 32px; }
@@ -74,18 +75,18 @@ export function buildBookingReceiptHtml({
 </head>
 <body>
   <div class="wrap">
-    <h1>${venueName}</h1>
-    <p class="muted">Booking receipt · Issued ${issuedAt}</p>
-    <p class="ref">${booking.bookingReference}</p>
+    <h1>${escapeHtml(venueName)}</h1>
+    <p class="muted">Booking receipt · Issued ${escapeHtml(issuedAt)}</p>
+    <p class="ref">${escapeHtml(booking.bookingReference)}</p>
     <table>
-      <tr><td>Venue</td><td>${venueName}</td></tr>
-      <tr><td>Date</td><td>${formatDate(booking.bookingDate)}</td></tr>
-      <tr><td>Time</td><td>${timeRange}</td></tr>
+      <tr><td>Venue</td><td>${escapeHtml(venueName)}</td></tr>
+      <tr><td>Date</td><td>${escapeHtml(formatDate(booking.bookingDate))}</td></tr>
+      <tr><td>Time</td><td>${escapeHtml(timeRange)}</td></tr>
       <tr><td>Duration</td><td>${booking.durationMinutes} minutes</td></tr>
-      <tr><td>Customer</td><td>${booking.customerName}</td></tr>
-      <tr><td>Phone</td><td>${booking.customerPhone}</td></tr>
-      <tr><td>Email</td><td>${booking.customerEmail}</td></tr>
-      <tr><td>Status</td><td>${booking.status.replace(/_/g, " ")}</td></tr>
+      <tr><td>Customer</td><td>${escapeHtml(booking.customerName)}</td></tr>
+      <tr><td>Phone</td><td>${escapeHtml(booking.customerPhone)}</td></tr>
+      <tr><td>Email</td><td>${escapeHtml(booking.customerEmail)}</td></tr>
+      <tr><td>Status</td><td>${escapeHtml(booking.status.replace(/_/g, " "))}</td></tr>
     </table>
 
     <h2>Payment Summary</h2>

@@ -290,6 +290,86 @@ export async function getPaidPaymentBySessionId(
   }
 }
 
+export async function getPaymentById(id: string): Promise<PaymentRecord | null> {
+  const supabase = createServiceRoleClient();
+  if (supabase) {
+    const { data, error } = await supabase
+      .from("payments")
+      .select("*")
+      .eq("id", id)
+      .maybeSingle();
+
+    if (!error && data) {
+      return mapPayment(data as PaymentRow);
+    }
+  }
+
+  try {
+    const row = await prisma.payment.findUnique({ where: { id } });
+    if (!row) return null;
+
+    return {
+      id: row.id,
+      bookingSessionId: row.bookingSessionId,
+      userId: row.userId,
+      razorpayOrderId: row.razorpayOrderId,
+      razorpayPaymentId: row.razorpayPaymentId,
+      amount: row.amount,
+      currency: row.currency,
+      status: row.status,
+      paymentMethod: row.paymentMethod,
+      createdAt: row.createdAt,
+      updatedAt: row.updatedAt,
+    };
+  } catch {
+    return null;
+  }
+}
+
+export async function getActivePaymentBySessionId(
+  bookingSessionId: string,
+): Promise<PaymentRecord | null> {
+  const supabase = createServiceRoleClient();
+  if (supabase) {
+    const { data, error } = await supabase
+      .from("payments")
+      .select("*")
+      .eq("booking_session_id", bookingSessionId)
+      .eq("status", "created")
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (!error && data) {
+      return mapPayment(data as PaymentRow);
+    }
+  }
+
+  try {
+    const row = await prisma.payment.findFirst({
+      where: { bookingSessionId, status: "created" },
+      orderBy: { createdAt: "desc" },
+    });
+    if (!row) return null;
+
+    return {
+      id: row.id,
+      bookingSessionId: row.bookingSessionId,
+      userId: row.userId,
+      razorpayOrderId: row.razorpayOrderId,
+      razorpayPaymentId: row.razorpayPaymentId,
+      amount: row.amount,
+      currency: row.currency,
+      status: row.status,
+      paymentMethod: row.paymentMethod,
+      createdAt: row.createdAt,
+      updatedAt: row.updatedAt,
+    };
+  } catch {
+    return null;
+  }
+}
+
 export async function markPaymentFailed(razorpayOrderId: string): Promise<void> {
   const supabase = createServiceRoleClient();
   const now = new Date().toISOString();
@@ -298,7 +378,8 @@ export async function markPaymentFailed(razorpayOrderId: string): Promise<void> 
     const { error } = await supabase
       .from("payments")
       .update({ status: "failed", updated_at: now })
-      .eq("razorpay_order_id", razorpayOrderId);
+      .eq("razorpay_order_id", razorpayOrderId)
+      .in("status", ["created"]);
 
     if (!error) return;
 
@@ -306,8 +387,8 @@ export async function markPaymentFailed(razorpayOrderId: string): Promise<void> 
   }
 
   try {
-    await prisma.payment.update({
-      where: { razorpayOrderId },
+    await prisma.payment.updateMany({
+      where: { razorpayOrderId, status: "created" },
       data: { status: "failed" },
     });
   } catch (error) {
@@ -323,7 +404,8 @@ export async function markPaymentCancelled(razorpayOrderId: string): Promise<voi
     const { error } = await supabase
       .from("payments")
       .update({ status: "cancelled", updated_at: now })
-      .eq("razorpay_order_id", razorpayOrderId);
+      .eq("razorpay_order_id", razorpayOrderId)
+      .in("status", ["created"]);
 
     if (!error) return;
 
@@ -331,8 +413,8 @@ export async function markPaymentCancelled(razorpayOrderId: string): Promise<voi
   }
 
   try {
-    await prisma.payment.update({
-      where: { razorpayOrderId },
+    await prisma.payment.updateMany({
+      where: { razorpayOrderId, status: "created" },
       data: { status: "cancelled" },
     });
   } catch (error) {

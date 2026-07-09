@@ -21,9 +21,13 @@ import {
   listPaymentRecordsForBooking,
 } from "@/features/admin/bookings/services/booking-payment.repository";
 import { buildBookingTimeline } from "@/features/admin/bookings/services/booking-timeline.service";
+import { refundOnlineAdvanceForBooking } from "@/features/payments/services/payment-refund.service";
+import { releaseSlotHoldsForSession } from "@/features/booking/services/slot-hold.repository";
+import { getPaymentById } from "@/features/payments/services/payment.repository";
 import { BOOKING_DEFAULTS } from "@/features/booking/config";
 import {
   createBookingRecord,
+  deleteBookingById,
   getBookingById,
   updateBookingRecord,
 } from "@/features/booking/services/booking.repository";
@@ -131,7 +135,7 @@ export async function createManualBooking(
 ): Promise<AdminBookingDetail> {
   const customerEmail = input.customerEmail?.trim().toLowerCase() ?? "";
   const slotIds = input.selectedSlots;
-  const unavailable = await getUnavailableSlotIds(slotIds);
+  const unavailable = await getUnavailableSlotIds(slotIds, { respectAllHolds: true });
   if (unavailable.length > 0) {
     throw new Error("Selected slots are no longer available.");
   }
@@ -204,6 +208,7 @@ export async function createManualBooking(
 
   if (!reservation.success) {
     await releaseBookedSlotsForBooking(booking.id);
+    await deleteBookingById(booking.id);
     throw new Error("Unable to reserve selected slots.");
   }
 
@@ -252,19 +257,33 @@ export async function cancelAdminBooking(
   if (!booking) return null;
   if (booking.status === "cancelled") return loadAdminBookingDetail(id);
 
-  const releasedSlotIds = await releaseBookedSlotsForBooking(id);
-  if (releasedSlotIds.length === 0 && booking.selectedSlots.length > 0) {
-    console.warn(
-      `[cancelAdminBooking] No booked_slots rows released for booking ${id} (${booking.selectedSlots.length} slots on record)`,
-    );
-  }
-
   const updated = await updateBookingRecord(id, {
     status: "cancelled",
     cancellationReason: input.reason,
   });
 
   if (!updated) return null;
+
+  const releasedSlotIds = await releaseBookedSlotsForBooking(id);
+  await releaseSlotHoldsForSession(booking.bookingSessionId);
+  if (releasedSlotIds.length === 0 && booking.selectedSlots.length > 0) {
+    console.warn(
+      `[cancelAdminBooking] No booked_slots rows released for booking ${id} (${booking.selectedSlots.length} slots on record)`,
+    );
+  }
+
+  if (booking.source === "online" && booking.advancePaid > 0) {
+    const payment = await getPaymentById(booking.paymentId);
+    if (payment?.status === "paid" && payment.razorpayPaymentId) {
+      await refundOnlineAdvanceForBooking({
+        payment,
+        bookingId: id,
+        amountInr: booking.advancePaid,
+        reason: input.reason,
+        collectedBy: actor.userId,
+      });
+    }
+  }
 
   await logBookingChange(id, actor, "booking.cancelled", "status", booking.status, "cancelled", {
     reason: input.reason,

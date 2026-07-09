@@ -1,4 +1,5 @@
 import { parseSlotId } from "@/features/booking/utils/slot-id";
+import { getForeignHeldSlotIds } from "@/features/booking/services/slot-hold.repository";
 import { getSlotHoliday, listSlotBlocksForDate } from "@/features/slots/services/slot-management.repository";
 import { prisma } from "@/lib/prisma";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
@@ -27,7 +28,10 @@ export async function getBookedSlotIdsForDate(dateIso: string): Promise<string[]
   }
 }
 
-export async function getUnavailableSlotIds(slotIds: string[]): Promise<string[]> {
+export async function getUnavailableSlotIds(
+  slotIds: string[],
+  options?: { bookingSessionId?: string; respectAllHolds?: boolean },
+): Promise<string[]> {
   if (slotIds.length === 0) return [];
 
   const byDate = new Map<string, string[]>();
@@ -54,6 +58,8 @@ export async function getUnavailableSlotIds(slotIds: string[]): Promise<string[]
     if (holiday) holidays.add(holiday.bookingDate);
   }
 
+  const unavailable = new Set<string>();
+
   const supabase = createServiceRoleClient();
   if (supabase) {
     const { data, error } = await supabase
@@ -61,39 +67,42 @@ export async function getUnavailableSlotIds(slotIds: string[]): Promise<string[]
       .select("slot_id")
       .in("slot_id", slotIds);
 
-    if (!error && data) {
-      const booked = data.map((row) => row.slot_id as string);
-      const unavailable = new Set<string>(booked);
-      for (const slotId of slotIds) {
-        const parsed = parseSlotId(slotId);
-        if (!parsed) continue;
-        if (holidays.has(parsed.dateIso) || blocked.has(slotId)) unavailable.add(slotId);
-      }
-      return Array.from(unavailable);
+    if (error) {
+      console.error("[booked_slots] Supabase availability check failed:", error.message);
+      throw new Error("Unable to verify slot availability");
+    }
+
+    for (const row of data ?? []) {
+      unavailable.add(String(row.slot_id));
+    }
+  } else {
+    try {
+      const rows = await prisma.bookedSlot.findMany({
+        where: { slotId: { in: slotIds } },
+        select: { slotId: true },
+      });
+      for (const row of rows) unavailable.add(row.slotId);
+    } catch (error) {
+      console.error("[booked_slots] availability check failed:", error);
+      throw error;
     }
   }
 
-  try {
-    const rows = await prisma.bookedSlot.findMany({
-      where: { slotId: { in: slotIds } },
-      select: { slotId: true },
-    });
-    const unavailable = new Set<string>(rows.map((row) => row.slotId));
-    for (const slotId of slotIds) {
-      const parsed = parseSlotId(slotId);
-      if (!parsed) continue;
-      if (holidays.has(parsed.dateIso) || blocked.has(slotId)) unavailable.add(slotId);
-    }
-    return Array.from(unavailable);
-  } catch {
-    const unavailable = new Set<string>();
-    for (const slotId of slotIds) {
-      const parsed = parseSlotId(slotId);
-      if (!parsed) continue;
-      if (holidays.has(parsed.dateIso) || blocked.has(slotId)) unavailable.add(slotId);
-    }
-    return Array.from(unavailable);
+  for (const slotId of slotIds) {
+    const parsed = parseSlotId(slotId);
+    if (!parsed) continue;
+    if (holidays.has(parsed.dateIso) || blocked.has(slotId)) unavailable.add(slotId);
   }
+
+  if (options?.bookingSessionId) {
+    const held = await getForeignHeldSlotIds(slotIds, options.bookingSessionId);
+    for (const slotId of held) unavailable.add(slotId);
+  } else if (options?.respectAllHolds) {
+    const held = await getForeignHeldSlotIds(slotIds, "");
+    for (const slotId of held) unavailable.add(slotId);
+  }
+
+  return Array.from(unavailable);
 }
 
 export async function reserveBookedSlots(data: {

@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 
 import { isAdminUser } from "@/features/auth/services";
+import { isBookingMaintenanceActive } from "@/features/business-settings/lib/maintenance-guard";
+import { upsertSlotHolds } from "@/features/booking/services/slot-hold.repository";
 import {
   PAYMENT_ADVANCE_AMOUNT_INR,
   PAYMENT_ADVANCE_AMOUNT_PAISE,
@@ -12,24 +14,32 @@ import {
   createBookingSession,
   getBookingSessionById,
   isBookingSessionExpired,
+  updateBookingSession,
   updateBookingSessionStatus,
 } from "@/features/payments/services/booking-session.repository";
-import { createPaymentRecord } from "@/features/payments/services/payment.repository";
+import {
+  createPaymentRecord,
+  getActivePaymentBySessionId,
+} from "@/features/payments/services/payment.repository";
 import {
   createRazorpayOrder,
   getPublicRazorpayKeyId,
 } from "@/features/payments/services/razorpay.service";
 import { parseJsonBody } from "@/lib/api/parse-request";
-import {
-  serializeUnknownError,
-  serializeUnknownErrorDetails,
-} from "@/lib/errors/serialize-error";
+import { apiErrorResponse } from "@/lib/security/safe-error";
 import { sanitizePlainText } from "@/lib/security/sanitize";
 import { createClient } from "@/lib/supabase/server";
 
+const MAX_RAZORPAY_RECEIPT_LENGTH = 40;
+
 export async function POST(request: Request) {
   try {
-    console.log("Received request");
+    if (await isBookingMaintenanceActive()) {
+      return NextResponse.json(
+        { error: "Online booking is temporarily unavailable for maintenance." },
+        { status: 503 },
+      );
+    }
 
     const parsed = await parseJsonBody(request, createOrderSchema);
     if (!parsed.success) return parsed.response;
@@ -38,22 +48,15 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Invalid advance amount" }, { status: 400 });
     }
 
-    console.log("Booking session:", parsed.data.bookingSessionId ?? null);
-
     const validation = await validateCreateOrderInput(parsed.data);
     if (!validation.ok) {
       return NextResponse.json({ error: validation.error }, { status: 400 });
     }
-    console.log("Business settings loaded");
-
-    const amountPaise = PAYMENT_ADVANCE_AMOUNT_PAISE;
-    console.log("Amount:", amountPaise);
 
     const {
       data: { user },
       error: authError,
-    } = await createClient()
-      .then((supabase) => supabase.auth.getUser());
+    } = await createClient().then((supabase) => supabase.auth.getUser());
 
     if (authError || !user) {
       return NextResponse.json({ error: "Session expired. Please sign in again." }, { status: 401 });
@@ -69,9 +72,8 @@ export async function POST(request: Request) {
         sanitizePlainText(parsed.data.profile.name, 120) ?? parsed.data.profile.name,
     };
 
-    const MAX_RAZORPAY_RECEIPT_LENGTH = 40;
-
     let bookingSessionId = parsed.data.bookingSessionId ?? null;
+
     if (bookingSessionId) {
       const existing = await getBookingSessionById(bookingSessionId);
       if (!existing || existing.userId !== user.id) {
@@ -89,6 +91,37 @@ export async function POST(request: Request) {
           { error: "Booking session expired. Please start again." },
           { status: 410 },
         );
+      }
+
+      const updated = await updateBookingSession(bookingSessionId, {
+        selectedDate: parsed.data.dateIso,
+        selectedSlots: parsed.data.selectedSlotIds,
+        timeRange: parsed.data.timeRange,
+        slotCount: parsed.data.slotCount,
+        totalDurationMinutes: parsed.data.totalDurationMinutes,
+        totalDurationLabel: parsed.data.totalDurationLabel,
+        totalPrice: parsed.data.totalPrice,
+        advanceAmount: parsed.data.advanceAmount,
+        remainingAmount: parsed.data.remainingAmount,
+        profileName: profile.name,
+        profilePhone: profile.phone,
+        profileEmail: profile.email,
+      });
+
+      if (!updated) {
+        return apiErrorResponse("Failed to update booking session", 500, "payments/create-order");
+      }
+
+      const activePayment = await getActivePaymentBySessionId(bookingSessionId);
+      if (activePayment) {
+        await upsertSlotHolds(bookingSessionId, parsed.data.selectedSlotIds);
+        return NextResponse.json({
+          orderId: activePayment.razorpayOrderId,
+          amount: activePayment.amount,
+          currency: activePayment.currency,
+          keyId: getPublicRazorpayKeyId(),
+          bookingSessionId,
+        });
       }
     } else {
       const session = await createBookingSession({
@@ -110,46 +143,31 @@ export async function POST(request: Request) {
     }
 
     if (!bookingSessionId) {
-      throw new Error("Booking session id is missing after initialization");
+      return apiErrorResponse("Booking session initialization failed", 500, "payments/create-order");
     }
 
-    console.log("Booking session:", bookingSessionId);
-
-    // Step 5 + 6: validate Razorpay payload constraints before calling Razorpay.
-    if (!Number.isInteger(amountPaise)) {
-      throw new Error(
-        `Razorpay amount must be an integer in paise. Got: ${amountPaise}`,
-      );
+    if (!Number.isInteger(PAYMENT_ADVANCE_AMOUNT_PAISE)) {
+      return apiErrorResponse("Invalid payment amount configuration", 500, "payments/create-order");
     }
 
     if (bookingSessionId.length > MAX_RAZORPAY_RECEIPT_LENGTH) {
-      throw new Error(
-        `Razorpay receipt length must be <= ${MAX_RAZORPAY_RECEIPT_LENGTH}. Got: ${bookingSessionId.length}`,
-      );
+      return NextResponse.json({ error: "Booking session is too long for payment" }, { status: 400 });
     }
 
-    const notes = {
-      booking_session_id: bookingSessionId,
-      user_id: user.id,
-      booking_date: parsed.data.dateIso,
-      slot_count: parsed.data.slotCount,
-    };
+    await upsertSlotHolds(bookingSessionId, parsed.data.selectedSlotIds);
 
-    // Step 4: payload shape must match Razorpay API.
-    const razorpayPayload = {
-      amount: amountPaise,
+    const order = await createRazorpayOrder({
+      amount: PAYMENT_ADVANCE_AMOUNT_PAISE,
       currency: PAYMENT_CURRENCY,
       receipt: bookingSessionId,
-      notes,
-    };
+      notes: {
+        booking_session_id: bookingSessionId,
+        user_id: user.id,
+        booking_date: parsed.data.dateIso,
+        slot_count: parsed.data.slotCount,
+      },
+    });
 
-    console.log("Creating Razorpay order...");
-    console.log("Razorpay payload:", razorpayPayload);
-
-    const order = await createRazorpayOrder(razorpayPayload);
-    console.log("Order response:", order);
-
-    // Step 8 + 7: separate logging for DB inserts after Razorpay succeeds.
     try {
       await createPaymentRecord({
         bookingSessionId,
@@ -159,13 +177,17 @@ export async function POST(request: Request) {
         currency: order.currency,
       });
     } catch (dbError) {
-      console.error("DB payment record insert failed after Razorpay:", dbError);
-      throw dbError;
+      return apiErrorResponse(
+        "Payment order created but could not be saved. Please contact support.",
+        500,
+        "payments/create-order",
+        dbError,
+      );
     }
 
     const sessionAfter = await updateBookingSessionStatus(bookingSessionId, "payment_started");
     if (!sessionAfter) {
-      throw new Error("Booking session status update failed (returned null) after payment record insert");
+      return apiErrorResponse("Failed to start payment session", 500, "payments/create-order");
     }
 
     return NextResponse.json({
@@ -176,16 +198,11 @@ export async function POST(request: Request) {
       bookingSessionId,
     });
   } catch (error) {
-    console.error(error);
-    console.error("Error details:", serializeUnknownErrorDetails(error));
-    return NextResponse.json(
-      {
-        success: false,
-        message: serializeUnknownError(error),
-        details: serializeUnknownErrorDetails(error),
-        stack: process.env.NODE_ENV === "development" ? (error instanceof Error ? error.stack : undefined) : undefined,
-      },
-      { status: 500 },
+    return apiErrorResponse(
+      "Unable to create payment order. Please try again.",
+      500,
+      "payments/create-order",
+      error,
     );
   }
 }

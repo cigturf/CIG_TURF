@@ -29,11 +29,9 @@ export async function GET(request: Request) {
     });
   } catch (error) {
     console.error("[slots/availability]", error);
-    return NextResponse.json({
-      bookedSlotIds: [],
-      blockedSlotIds: [],
-      maintenanceSlotIds: [],
-      isHoliday: false,
-    });
+    return NextResponse.json(
+      { error: "Unable to load slot availability" },
+      { status: 503 },
+    );
   }
 }

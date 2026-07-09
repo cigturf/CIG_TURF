@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi, beforeEach } from "vitest";
 
 import { processRazorpayWebhook } from "@/features/payments/services/payment-webhook.service";
 
@@ -6,7 +6,10 @@ vi.mock("@/features/payments/services/payment.repository", () => ({
   getPaymentByOrderId: vi.fn(),
   getPaymentByRazorpayPaymentId: vi.fn(),
   markPaymentPaid: vi.fn(),
-  markPaymentFailed: vi.fn(),
+}));
+
+vi.mock("@/features/payments/services/payment-lifecycle.service", () => ({
+  handlePaymentFailure: vi.fn(),
 }));
 
 vi.mock("@/features/payments/services/booking-session.repository", () => ({
@@ -18,9 +21,14 @@ import {
   getPaymentByRazorpayPaymentId,
   markPaymentPaid,
 } from "@/features/payments/services/payment.repository";
+import { handlePaymentFailure } from "@/features/payments/services/payment-lifecycle.service";
 import { updateBookingSessionStatus } from "@/features/payments/services/booking-session.repository";
 
 describe("processRazorpayWebhook", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
   it("marks an existing payment as paid", async () => {
     vi.mocked(getPaymentByOrderId).mockResolvedValue({
       id: "pay-1",
@@ -98,5 +106,55 @@ describe("processRazorpayWebhook", () => {
     });
 
     expect(result).toEqual({ ok: true, duplicate: true });
+  });
+
+  it("rejects webhook when payment amount mismatches", async () => {
+    vi.mocked(getPaymentByOrderId).mockResolvedValue({
+      id: "pay-1",
+      bookingSessionId: "session-1",
+      userId: "user-1",
+      razorpayOrderId: "order_1",
+      razorpayPaymentId: null,
+      amount: 100,
+      currency: "INR",
+      status: "created",
+      paymentMethod: null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
+
+    const result = await processRazorpayWebhook({
+      event: "payment.captured",
+      payload: {
+        payment: {
+          entity: {
+            id: "pay_razorpay",
+            order_id: "order_1",
+            status: "captured",
+          },
+        },
+      },
+    });
+
+    expect(result).toEqual({ ok: false, error: "Payment amount mismatch", status: 400 });
+    expect(markPaymentPaid).not.toHaveBeenCalled();
+  });
+
+  it("delegates payment.failed to lifecycle handler", async () => {
+    const result = await processRazorpayWebhook({
+      event: "payment.failed",
+      payload: {
+        payment: {
+          entity: {
+            id: "pay_razorpay",
+            order_id: "order_1",
+            status: "failed",
+          },
+        },
+      },
+    });
+
+    expect(result).toEqual({ ok: true, duplicate: false });
+    expect(handlePaymentFailure).toHaveBeenCalledWith("order_1");
   });
 });

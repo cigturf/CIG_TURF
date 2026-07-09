@@ -21,6 +21,7 @@ import {
 function buildTestConfig() {
   return {
     ...BOOKING_DEFAULTS,
+    timezone: "Asia/Kolkata",
     holidayPricing: {
       ...BOOKING_DEFAULTS.holidayPricing,
       holidayDates: [...BOOKING_DEFAULTS.holidayPricing.holidayDates],

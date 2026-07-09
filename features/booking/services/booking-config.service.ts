@@ -1,5 +1,6 @@
 import type { BusinessSettingsPublic } from "@/features/business-settings/types";
 import { BOOKING_DEFAULTS } from "@/features/booking/config";
+import { resolveVenueTimezone } from "@/features/booking/utils/venue-timezone";
 import { DEFAULT_SLOT_PRICE } from "@/features/pricing/config/pricing.defaults";
 import type { BookingEngineConfig } from "@/features/booking/types";
 
@@ -29,6 +30,7 @@ export function resolveBookingEngineConfig(
     maxConsecutiveDurationMinutes: BOOKING_DEFAULTS.maxConsecutiveDurationMinutes,
     minBookingDurationMinutes: BOOKING_DEFAULTS.minBookingDurationMinutes,
     crossMidnightBridgeMinutes: BOOKING_DEFAULTS.crossMidnightBridgeMinutes,
+    timezone: resolveVenueTimezone(settings.operations.timezone),
   };
 }
 

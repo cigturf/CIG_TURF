@@ -2,6 +2,7 @@ import type {
   BookingSessionRecord,
   BookingSessionStatus,
 } from "@/features/payments/types/payment.types";
+import { BOOKING_SESSION_EXPIRY_HOURS } from "@/features/payments/constants";
 import { prisma } from "@/lib/prisma";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { randomUUID } from "crypto";
@@ -192,6 +193,103 @@ export async function createBookingSession(data: {
   };
 }
 
+export async function updateBookingSession(
+  id: string,
+  data: {
+    selectedDate: string;
+    selectedSlots: string[];
+    timeRange: string | null;
+    slotCount: number;
+    totalDurationMinutes: number;
+    totalDurationLabel: string;
+    totalPrice: number;
+    advanceAmount: number;
+    remainingAmount: number;
+    profileName: string;
+    profilePhone: string;
+    profileEmail: string;
+  },
+): Promise<BookingSessionRecord | null> {
+  const supabase = createServiceRoleClient();
+  const now = new Date().toISOString();
+
+  const payload = {
+    selected_date: data.selectedDate,
+    selected_slots: data.selectedSlots,
+    time_range: data.timeRange,
+    slot_count: data.slotCount,
+    total_duration_minutes: data.totalDurationMinutes,
+    total_duration_label: data.totalDurationLabel,
+    total_price: data.totalPrice,
+    advance_amount: data.advanceAmount,
+    remaining_amount: data.remainingAmount,
+    profile_name: data.profileName,
+    profile_phone: data.profilePhone,
+    profile_email: data.profileEmail,
+    updated_at: now,
+  };
+
+  if (supabase) {
+    const { data: row, error } = await supabase
+      .from("booking_sessions")
+      .update(payload)
+      .eq("id", id)
+      .select("*")
+      .single();
+
+    if (!error && row) {
+      return mapBookingSession(row as BookingSessionRow);
+    }
+
+    if (error) {
+      console.error("[BookingSession] Supabase content update failed:", error.message);
+    }
+  }
+
+  try {
+    const row = await prisma.bookingSessionRecord.update({
+      where: { id },
+      data: {
+        selectedDate: data.selectedDate,
+        selectedSlots: data.selectedSlots,
+        timeRange: data.timeRange,
+        slotCount: data.slotCount,
+        totalDurationMinutes: data.totalDurationMinutes,
+        totalDurationLabel: data.totalDurationLabel,
+        totalPrice: data.totalPrice,
+        advanceAmount: data.advanceAmount,
+        remainingAmount: data.remainingAmount,
+        profileName: data.profileName,
+        profilePhone: data.profilePhone,
+        profileEmail: data.profileEmail,
+      },
+    });
+
+    return {
+      id: row.id,
+      userId: row.userId,
+      selectedDate: row.selectedDate,
+      selectedSlots: row.selectedSlots as string[],
+      timeRange: row.timeRange,
+      slotCount: row.slotCount,
+      totalDurationMinutes: row.totalDurationMinutes,
+      totalDurationLabel: row.totalDurationLabel,
+      totalPrice: row.totalPrice,
+      advanceAmount: row.advanceAmount,
+      remainingAmount: row.remainingAmount,
+      profileName: row.profileName,
+      profilePhone: row.profilePhone,
+      profileEmail: row.profileEmail,
+      status: row.status,
+      createdAt: row.createdAt,
+      updatedAt: row.updatedAt,
+    };
+  } catch (error) {
+    console.error("[BookingSession] Prisma content update failed:", error);
+    return null;
+  }
+}
+
 export async function updateBookingSessionStatus(
   id: string,
   status: BookingSessionStatus,
@@ -248,6 +346,6 @@ export async function updateBookingSessionStatus(
 }
 
 export function isBookingSessionExpired(session: BookingSessionRecord): boolean {
-  const expiryMs = 24 * 60 * 60 * 1000;
+  const expiryMs = BOOKING_SESSION_EXPIRY_HOURS * 60 * 60 * 1000;
   return Date.now() - session.createdAt.getTime() > expiryMs;
 }

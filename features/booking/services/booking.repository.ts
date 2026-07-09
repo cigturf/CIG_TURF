@@ -1,4 +1,5 @@
 import type { BookingRecord } from "@/features/booking/types/booking-record.types";
+import { isUniqueViolation } from "@/lib/db/is-unique-violation";
 import { prisma } from "@/lib/prisma";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 
@@ -222,34 +223,48 @@ export async function createBookingRecord(data: {
 
     const { data: row, error } = await supabase.from("bookings").insert(payload).select("*").single();
     if (!error && row) return mapBooking(row as BookingRow);
-    if (error) throw new Error(error.message);
+    if (error) {
+      if (error.code === "23505") {
+        const existing = await getBookingBySessionId(data.bookingSessionId);
+        if (existing) return existing;
+      }
+      throw new Error(error.message);
+    }
   }
 
-  const row = await prisma.booking.create({
-    data: {
-      id,
-      bookingReference: data.bookingReference,
-      userId: data.userId,
-      bookingSessionId: data.bookingSessionId,
-      paymentId: data.paymentId,
-      bookingDate: data.bookingDate,
-      startTime: data.startTime,
-      endTime: data.endTime,
-      selectedSlots: data.selectedSlots,
-      durationMinutes: data.durationMinutes,
-      totalPrice: data.totalPrice,
-      advancePaid: data.advancePaid,
-      remainingAmount: data.remainingAmount,
-      status: "confirmed",
-      source: data.source ?? "online",
-      notes: data.notes ?? null,
-      customerName: data.customerName,
-      customerPhone: data.customerPhone,
-      customerEmail: data.customerEmail,
-    },
-  });
+  try {
+    const row = await prisma.booking.create({
+      data: {
+        id,
+        bookingReference: data.bookingReference,
+        userId: data.userId,
+        bookingSessionId: data.bookingSessionId,
+        paymentId: data.paymentId,
+        bookingDate: data.bookingDate,
+        startTime: data.startTime,
+        endTime: data.endTime,
+        selectedSlots: data.selectedSlots,
+        durationMinutes: data.durationMinutes,
+        totalPrice: data.totalPrice,
+        advancePaid: data.advancePaid,
+        remainingAmount: data.remainingAmount,
+        status: "confirmed",
+        source: data.source ?? "online",
+        notes: data.notes ?? null,
+        customerName: data.customerName,
+        customerPhone: data.customerPhone,
+        customerEmail: data.customerEmail,
+      },
+    });
 
-  return mapPrismaBooking(row);
+    return mapPrismaBooking(row);
+  } catch (error) {
+    if (isUniqueViolation(error)) {
+      const existing = await getBookingBySessionId(data.bookingSessionId);
+      if (existing) return existing;
+    }
+    throw error;
+  }
 }
 
 export async function deleteBookingById(id: string): Promise<void> {

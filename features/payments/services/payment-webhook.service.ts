@@ -1,9 +1,10 @@
 import {
   getPaymentByOrderId,
   getPaymentByRazorpayPaymentId,
-  markPaymentFailed,
   markPaymentPaid,
 } from "@/features/payments/services/payment.repository";
+import { PAYMENT_ADVANCE_AMOUNT_PAISE } from "@/features/payments/constants";
+import { handlePaymentFailure } from "@/features/payments/services/payment-lifecycle.service";
 import { updateBookingSessionStatus } from "@/features/payments/services/booking-session.repository";
 import { safeLogInfo } from "@/lib/security/safe-logger";
 
@@ -41,7 +42,7 @@ export async function processRazorpayWebhook(
   const paymentId = paymentEntity.id;
 
   if (event === "payment.failed") {
-    await markPaymentFailed(orderId);
+    await handlePaymentFailure(orderId);
     safeLogInfo("payments/webhook", "Payment marked failed", { orderId, paymentId });
     return { ok: true, duplicate: false };
   }
@@ -58,6 +59,10 @@ export async function processRazorpayWebhook(
   const payment = await getPaymentByOrderId(orderId);
   if (!payment) {
     return { ok: false, error: "Payment record not found", status: 404 };
+  }
+
+  if (payment.amount !== PAYMENT_ADVANCE_AMOUNT_PAISE) {
+    return { ok: false, error: "Payment amount mismatch", status: 400 };
   }
 
   if (payment.status === "paid") {

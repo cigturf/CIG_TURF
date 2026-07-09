@@ -109,7 +109,7 @@ export function renderDetailTable(rows: Array<{ label: string; value: string }>)
     .map(
       (row) => `<tr>
         <td style="padding:10px 0;border-bottom:1px solid #e2e8f0;color:#64748b;font-size:14px;width:42%;vertical-align:top;">${escapeHtml(row.label)}</td>
-        <td style="padding:10px 0;border-bottom:1px solid #e2e8f0;color:#0f172a;font-size:14px;font-weight:600;vertical-align:top;">${row.value}</td>
+        <td style="padding:10px 0;border-bottom:1px solid #e2e8f0;color:#0f172a;font-size:14px;font-weight:600;vertical-align:top;">${escapeHtml(row.value)}</td>
       </tr>`,
     )
     .join("");

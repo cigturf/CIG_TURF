@@ -75,6 +75,8 @@ export type BookingEngineConfig = {
   minBookingDurationMinutes: number;
   /** Early-morning slots on the next day offered for cross-midnight bookings */
   crossMidnightBridgeMinutes: number;
+  /** IANA timezone for slot date boundaries (e.g. Asia/Kolkata) */
+  timezone: string;
 };
 
 export type BookingSummary = {

@@ -10,15 +10,32 @@ import {
   releaseBookedSlotsForBooking,
   reserveBookedSlots,
 } from "@/features/booking/services/booked-slot.repository";
+import { releaseSlotHoldsForSession } from "@/features/booking/services/slot-hold.repository";
+import { createBookingPaymentRecord, listPaymentRecordsForBooking } from "@/features/admin/bookings/services/booking-payment.repository";
 import { dispatchBookingConfirmedEmails, publishCommunicationEvent } from "@/features/communication/services/communication-dispatcher";
 import { APP_EVENT_TYPES } from "@/features/events/constants/event-types";
 import type { FinalizeBookingResult } from "@/features/booking/types/booking-record.types";
 import { resolveSlotTimeBounds } from "@/features/booking/utils/slot-id";
 import {
   getBookingSessionById,
+  isBookingSessionExpired,
   updateBookingSessionStatus,
 } from "@/features/payments/services/booking-session.repository";
 import { getPaidPaymentBySessionId } from "@/features/payments/services/payment.repository";
+import { refundOnlineAdvanceWithoutBooking } from "@/features/payments/services/payment-refund.service";
+
+async function handleSlotsUnavailableAfterPayment(bookingSessionId: string): Promise<void> {
+  const payment = await getPaidPaymentBySessionId(bookingSessionId);
+  if (payment?.status === "paid" && payment.razorpayPaymentId) {
+    await refundOnlineAdvanceWithoutBooking({
+      payment,
+      reason: "Slots unavailable after payment",
+    });
+  }
+
+  await releaseSlotHoldsForSession(bookingSessionId);
+  await updateBookingSessionStatus(bookingSessionId, "failed");
+}
 
 export async function finalizeBookingFromSession(options: {
   bookingSessionId: string;
@@ -34,6 +51,7 @@ export async function finalizeBookingFromSession(options: {
         message: "Booking session not found.",
       };
     }
+    await releaseSlotHoldsForSession(options.bookingSessionId);
     return { success: true, booking: existing };
   }
 
@@ -43,6 +61,23 @@ export async function finalizeBookingFromSession(options: {
       success: false,
       code: "session_invalid",
       message: "Booking session not found.",
+    };
+  }
+
+  if (isBookingSessionExpired(session)) {
+    const paid = await getPaidPaymentBySessionId(options.bookingSessionId);
+    if (paid?.razorpayPaymentId) {
+      await refundOnlineAdvanceWithoutBooking({
+        payment: paid,
+        reason: "Booking session expired after payment",
+      });
+    }
+    await updateBookingSessionStatus(options.bookingSessionId, "expired");
+    await releaseSlotHoldsForSession(options.bookingSessionId);
+    return {
+      success: false,
+      code: "session_invalid",
+      message: "Booking session expired. Please start again.",
     };
   }
 
@@ -73,15 +108,17 @@ export async function finalizeBookingFromSession(options: {
   }
 
   const slotIds = selectedSlots as string[];
-  const unavailable = await getUnavailableSlotIds(slotIds);
+  const unavailable = await getUnavailableSlotIds(slotIds, {
+    bookingSessionId: options.bookingSessionId,
+  });
   if (unavailable.length > 0) {
-    await updateBookingSessionStatus(options.bookingSessionId, "failed");
+    await handleSlotsUnavailableAfterPayment(options.bookingSessionId);
     console.error("[FinalizeBooking] Slots unavailable:", unavailable);
     return {
       success: false,
       code: "slots_unavailable",
       message:
-        "One or more selected slots were just booked by someone else. Please choose different slots.",
+        "One or more selected slots were just booked by someone else. Your advance payment will be refunded shortly.",
     };
   }
 
@@ -123,6 +160,14 @@ export async function finalizeBookingFromSession(options: {
       customerEmail: session.profileEmail,
     });
 
+    const racedBooking = await getBookingBySessionId(session.id);
+    if (racedBooking && racedBooking.id !== booking.id) {
+      await releaseBookedSlotsForBooking(booking.id).catch(() => undefined);
+      await deleteBookingById(booking.id).catch(() => undefined);
+      await releaseSlotHoldsForSession(options.bookingSessionId);
+      return { success: true, booking: racedBooking };
+    }
+
     const reservation = await reserveBookedSlots({
       bookingId: booking.id,
       slotIds,
@@ -131,14 +176,31 @@ export async function finalizeBookingFromSession(options: {
     if (!reservation.success) {
       await releaseBookedSlotsForBooking(booking.id);
       await deleteBookingById(booking.id);
-      await updateBookingSessionStatus(options.bookingSessionId, "failed");
+      await handleSlotsUnavailableAfterPayment(options.bookingSessionId);
       console.error("[FinalizeBooking] Race condition — slots taken:", reservation.conflictingSlotIds);
       return {
         success: false,
         code: "slots_unavailable",
         message:
-          "One or more selected slots became unavailable while confirming your booking. Please select different slots.",
+          "One or more selected slots became unavailable while confirming your booking. Your advance payment will be refunded shortly.",
       };
+    }
+
+    await releaseSlotHoldsForSession(options.bookingSessionId);
+
+    const ledger = await listPaymentRecordsForBooking(booking.id);
+    const hasAdvanceLedger = ledger.some(
+      (record) => record.type === "advance" && record.method === "online",
+    );
+    if (!hasAdvanceLedger) {
+      await createBookingPaymentRecord({
+        bookingId: booking.id,
+        type: "advance",
+        amount: session.advanceAmount,
+        method: "online",
+        referenceNumber: payment.razorpayPaymentId,
+        notes: "Online booking advance",
+      });
     }
 
     publishCommunicationEvent(APP_EVENT_TYPES.BOOKING_CREATED, {
@@ -158,7 +220,7 @@ export async function finalizeBookingFromSession(options: {
       success: false,
       code: "finalize_failed",
       message:
-        "Your payment was successful, but we couldn't complete the booking automatically. Our team will contact you shortly.",
+        "We received your payment but could not confirm the booking. Please contact support with your payment reference.",
     };
   }
 }

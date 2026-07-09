@@ -243,12 +243,17 @@ export async function deleteSlotHoliday(dateIso: string): Promise<void> {
 }
 
 export async function getSlotAvailabilitySnapshot(dateIso: string): Promise<SlotAvailabilitySnapshot> {
-  const [bookedSlotIds, blocks, holiday] = await Promise.all([
-    // booked slots are already centralized in this repository
-    (await import("@/features/booking/services/booked-slot.repository")).getBookedSlotIdsForDate(dateIso),
+  const bookedSlotRepo = await import("@/features/booking/services/booked-slot.repository");
+  const slotHoldRepo = await import("@/features/booking/services/slot-hold.repository");
+
+  const [bookedSlotIds, heldSlotIds, blocks, holiday] = await Promise.all([
+    bookedSlotRepo.getBookedSlotIdsForDate(dateIso),
+    slotHoldRepo.getActiveHeldSlotIdsForDate(dateIso),
     listSlotBlocksForDate(dateIso),
     getSlotHoliday(dateIso),
   ]);
+
+  const allBooked = Array.from(new Set([...bookedSlotIds, ...heldSlotIds]));
 
   const blockedSlotIds: string[] = [];
   const maintenanceSlotIds: string[] = [];
@@ -258,7 +263,7 @@ export async function getSlotAvailabilitySnapshot(dateIso: string): Promise<Slot
   }
 
   return {
-    bookedSlotIds,
+    bookedSlotIds: allBooked,
     blockedSlotIds,
     maintenanceSlotIds,
     isHoliday: Boolean(holiday),

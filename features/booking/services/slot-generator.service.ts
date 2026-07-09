@@ -6,9 +6,11 @@ import {
   formatMinutesAsTime,
   formatSlotTimeRange,
   getOperatingWindow,
-  getTodayIso,
-  isPastSlotEnd,
 } from "@/features/booking/utils/time";
+import {
+  getTodayIsoInTimezone,
+  isPastSlotEndInTimezone,
+} from "@/features/booking/utils/venue-timezone";
 
 type GenerateSlotsOptions = {
   dateIso: string;
@@ -43,7 +45,7 @@ export function generateSlots({
   pricing,
 }: GenerateSlotsOptions): BookingSlot[] {
   const { startMinutes, endExclusiveMinutes } = getOperatingWindow(config.businessHours);
-  const isToday = dateIso === getTodayIso(now);
+  const isToday = dateIso === getTodayIsoInTimezone(now, config.timezone);
   const slots: BookingSlot[] = [];
   let sortOrder = 0;
 
@@ -62,7 +64,7 @@ export function generateSlots({
     if (isInSet(slotId, blockedSlotIds)) baseStatus = "blocked";
     if (isInSet(slotId, maintenanceSlotIds)) baseStatus = "maintenance";
     if (isInSet(slotId, bookedSlotIds)) baseStatus = "booked";
-    const isPast = isToday && isPastSlotEnd(dateIso, endMinute, now);
+    const isPast = isToday && isPastSlotEndInTimezone(dateIso, endMinute, now, config.timezone);
     const status: SlotStatus = isPast ? "past" : baseStatus;
     const isSelectable = status === "available";
     const isSelected = selectedSlotIds.includes(slotId);
@@ -112,6 +114,7 @@ export function generatePlaceholderSlots(
       maxConsecutiveDurationMinutes: 240,
       minBookingDurationMinutes: 30,
       crossMidnightBridgeMinutes: 240,
+      timezone: "Asia/Kolkata",
     },
     now,
   });

@@ -11,12 +11,18 @@ export async function GET() {
     const result = await runHealthCheck();
     const statusCode = result.status === "error" ? 503 : 200;
 
-    return NextResponse.json(result, {
-      status: statusCode,
-      headers: {
-        "Cache-Control": "no-store",
+    return NextResponse.json(
+      {
+        status: result.status,
+        timestamp: result.timestamp,
       },
-    });
+      {
+        status: statusCode,
+        headers: {
+          "Cache-Control": "no-store",
+        },
+      },
+    );
   } catch (error) {
     captureError(error, { route: "health" });
     return NextResponse.json(

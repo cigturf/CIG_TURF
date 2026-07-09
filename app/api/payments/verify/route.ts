@@ -11,6 +11,7 @@ import {
   getPaymentByRazorpayPaymentId,
   markPaymentPaid,
 } from "@/features/payments/services/payment.repository";
+import { PAYMENT_ADVANCE_AMOUNT_PAISE } from "@/features/payments/constants";
 import { verifyRazorpaySignature } from "@/features/payments/utils/verify-signature";
 import { publishCommunicationEvent } from "@/features/communication/services/communication-dispatcher";
 import { APP_EVENT_TYPES } from "@/features/events/constants/event-types";
@@ -99,6 +100,10 @@ export async function POST(request: Request) {
       status: "failed",
     });
     return NextResponse.json({ error: "Payment verification failed" }, { status: 400 });
+  }
+
+  if (payment.amount !== PAYMENT_ADVANCE_AMOUNT_PAISE) {
+    return NextResponse.json({ error: "Payment amount mismatch" }, { status: 400 });
   }
 
   const updatedPayment = await markPaymentPaid({

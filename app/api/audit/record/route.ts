@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 
 import { recordAuditFromAppEvent } from "@/features/audit/services/audit.service";
+import { isCustomerAuditEventType } from "@/features/audit/lib/client-audit-allowlist";
 import { getAdminContext } from "@/features/admin/services/admin-context.service";
 import type { AppEventEnvelope } from "@/features/events/types/event.types";
 import { parseJsonBody } from "@/lib/api/parse-request";
@@ -32,6 +33,10 @@ export async function POST(request: Request) {
     const admin = await getAdminContext(session.user.id);
     const event = parsed.data as AppEventEnvelope;
 
+    if (!admin && !isCustomerAuditEventType(event.type)) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+
     const record = await recordAuditFromAppEvent(event, {
       id: admin?.userId ?? session.user.id,
       email: admin?.email ?? session.user.email ?? null,
@@ -43,6 +48,6 @@ export async function POST(request: Request) {
 
     return NextResponse.json(record);
   } catch (error) {
-    return apiErrorResponse("Failed to record audit log", 400, "audit/record", error);
+    return apiErrorResponse("Failed to record audit log", 500, "audit/record", error);
   }
 }
