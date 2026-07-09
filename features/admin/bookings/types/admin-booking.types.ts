@@ -118,4 +118,6 @@ export type CompleteBookingInput = {
 
 export type CancelBookingInput = {
   reason: string;
+  /** When true, refunds the online advance via Razorpay (online bookings only). */
+  issueRefund?: boolean;
 };

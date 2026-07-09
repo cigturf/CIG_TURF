@@ -13,25 +13,32 @@ import {
   DialogTitle,
   FormField,
   FormTextarea,
+  Text,
 } from "@/components/design-system";
+import { formatCurrency } from "@/utils";
 
 type CancelBookingDialogProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   bookingReference: string;
-  onSubmit: (reason: string) => Promise<void>;
+  /** Online advance eligible for Razorpay refund; 0 hides refund option. */
+  refundableAmount?: number;
+  onSubmit: (payload: { reason: string; issueRefund: boolean }) => Promise<void>;
 };
 
 export function CancelBookingDialog({
   open,
   onOpenChange,
   bookingReference,
+  refundableAmount = 0,
   onSubmit,
 }: CancelBookingDialogProps) {
   const [reason, setReason] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleSubmit = async () => {
+  const canRefund = refundableAmount > 0;
+
+  const handleSubmit = async (issueRefund: boolean) => {
     if (!reason.trim()) {
       toast.error("Please provide a cancellation reason.");
       return;
@@ -39,7 +46,7 @@ export function CancelBookingDialog({
 
     setIsSubmitting(true);
     try {
-      await onSubmit(reason.trim());
+      await onSubmit({ reason: reason.trim(), issueRefund });
       onOpenChange(false);
       setReason("");
     } catch (error) {
@@ -55,8 +62,10 @@ export function CancelBookingDialog({
         <DialogHeader>
           <DialogTitle>Cancel Booking</DialogTitle>
           <DialogDescription>
-            Cancel {bookingReference}? Slots will become available immediately and customer
-            notification architecture will be prepared.
+            Cancel {bookingReference}? Slots will become available immediately.
+            {canRefund
+              ? ` Choose whether to refund the online advance of ${formatCurrency(refundableAmount)}.`
+              : " No online advance refund applies to this booking."}
           </DialogDescription>
         </DialogHeader>
 
@@ -69,13 +78,43 @@ export function CancelBookingDialog({
           />
         </FormField>
 
-        <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
+        {canRefund ? (
+          <Text size="sm" className="text-muted-foreground">
+            Cancel only keeps the advance payment on record. Cancel &amp; refund initiates a Razorpay
+            refund to the customer.
+          </Text>
+        ) : null}
+
+        <DialogFooter className="gap-2 sm:gap-0">
+          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isSubmitting}>
             Keep Booking
           </Button>
-          <Button variant="destructive" loading={isSubmitting} onClick={() => void handleSubmit()}>
-            Cancel Booking
-          </Button>
+          {canRefund ? (
+            <>
+              <Button
+                variant="destructive"
+                loading={isSubmitting}
+                onClick={() => void handleSubmit(false)}
+              >
+                Cancel only
+              </Button>
+              <Button
+                variant="destructive"
+                loading={isSubmitting}
+                onClick={() => void handleSubmit(true)}
+              >
+                Cancel &amp; refund
+              </Button>
+            </>
+          ) : (
+            <Button
+              variant="destructive"
+              loading={isSubmitting}
+              onClick={() => void handleSubmit(false)}
+            >
+              Cancel booking
+            </Button>
+          )}
         </DialogFooter>
       </DialogContent>
     </Dialog>

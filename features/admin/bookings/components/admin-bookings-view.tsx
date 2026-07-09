@@ -179,15 +179,18 @@ export function AdminBookingsView() {
     await refreshDetail();
   };
 
-  const cancelBooking = async (reason: string) => {
+  const cancelBooking = async (payload: { reason: string; issueRefund: boolean }) => {
     if (!selectedBookingId) return;
     const response = await fetch(`/api/admin/bookings/${selectedBookingId}/cancel`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ reason }),
+      body: JSON.stringify(payload),
     });
-    if (!response.ok) throw new Error("Failed to cancel booking");
-    toast.success("Booking cancelled");
+    if (!response.ok) {
+      const body = await response.json().catch(() => ({}));
+      throw new Error(body.error ?? "Failed to cancel booking");
+    }
+    toast.success(payload.issueRefund ? "Booking cancelled and refund initiated" : "Booking cancelled");
     await refresh();
     await refreshDetail();
   };
@@ -376,6 +379,11 @@ export function AdminBookingsView() {
         open={cancelOpen}
         onOpenChange={setCancelOpen}
         bookingReference={selectedBooking?.bookingReference ?? "this booking"}
+        refundableAmount={
+          selectedDetail?.source === "online" && selectedDetail.advancePaid > 0
+            ? selectedDetail.advancePaid
+            : 0
+        }
         onSubmit={cancelBooking}
       />
 
