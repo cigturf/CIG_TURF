@@ -15,6 +15,7 @@ export async function GET() {
       {
         status: result.status,
         timestamp: result.timestamp,
+        checks: result.checks,
       },
       {
         status: statusCode,

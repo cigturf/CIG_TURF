@@ -19,7 +19,19 @@ export type HealthCheckResult = {
   };
 };
 
-async function checkDatabase(): Promise<HealthComponentStatus> {
+async function checkDatabaseWithSupabase(): Promise<HealthComponentStatus | null> {
+  const supabase = createServiceRoleClient();
+  if (!supabase) return null;
+
+  try {
+    const { error } = await supabase.from("business_settings").select("id").limit(1);
+    return error ? "error" : "ok";
+  } catch {
+    return "error";
+  }
+}
+
+async function checkDatabaseWithPrisma(): Promise<HealthComponentStatus> {
   try {
     await prisma.$queryRaw`SELECT 1`;
     return "ok";
@@ -28,12 +40,22 @@ async function checkDatabase(): Promise<HealthComponentStatus> {
   }
 }
 
+async function checkDatabase(): Promise<HealthComponentStatus> {
+  const supabaseStatus = await checkDatabaseWithSupabase();
+  if (supabaseStatus === "ok") return "ok";
+
+  const prismaStatus = await checkDatabaseWithPrisma();
+  if (prismaStatus === "ok") return "ok";
+
+  return "error";
+}
+
 async function checkStorage(): Promise<HealthComponentStatus> {
   const supabase = createServiceRoleClient();
   if (!supabase) return "not_configured";
 
   try {
-    const { error } = await supabase.storage.listBuckets();
+    const { error } = await supabase.storage.from("media").list("", { limit: 1 });
     return error ? "error" : "ok";
   } catch {
     return "error";
@@ -52,6 +74,12 @@ function checkRazorpay(): HealthComponentStatus {
     return "not_configured";
   }
   if (!env.NEXT_PUBLIC_RAZORPAY_KEY_ID) return "degraded";
+  if (
+    (getAppEnvironment() === "production" || getAppEnvironment() === "preview") &&
+    !env.server.RAZORPAY_WEBHOOK_SECRET?.trim()
+  ) {
+    return "degraded";
+  }
   return "ok";
 }
 
