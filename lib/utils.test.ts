@@ -37,7 +37,7 @@ describe("business settings", () => {
     expect(settings.media.heroVideos).toBeNull();
     expect(settings.media.gallery).toBeNull();
     expect(settings.contact.contactNumbers).toBeNull();
-    expect(settings.contact.whatsappNumber).toBeNull();
+    expect(settings.contact.whatsappNumbers).toBeNull();
     expect(settings.emails.bookingNotificationEmails).toBeNull();
     expect(settings.booking.rules).toBeNull();
     expect(settings.pricing.tiers).toBeNull();

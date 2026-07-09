@@ -51,6 +51,8 @@ export type EmailBrandingContext = {
   businessName: string;
   logoUrl: string | null;
   phone: string | null;
+  contactNumbers: string[];
+  whatsappNumbers: string[];
   supportEmail: string | null;
   address: string | null;
   googleMapsLink: string | null;

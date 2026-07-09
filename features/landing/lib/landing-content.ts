@@ -1,4 +1,8 @@
 import type { BusinessSettingsPublic } from "@/features/business-settings/types";
+import {
+  resolveContactNumbers,
+  resolveWhatsappNumbers,
+} from "@/features/business-settings/lib/contact-utils";
 import { normalizeAppMediaUrl } from "@/features/media/lib/normalize-media-url";
 
 import { resolveGoogleMapsEmbedUrl } from "@/features/landing/lib/google-maps-embed";
@@ -194,7 +198,7 @@ export type LandingContent = {
     pincode: string | null;
     fullAddress: string | null;
     phones: string[];
-    whatsapp: string | null;
+    whatsapps: string[];
     googleMapsLink: string | null;
     googleMapsEmbedUrl: string | null;
     email: string | null;
@@ -373,8 +377,8 @@ export function resolveLandingContent(
       state: contact.state,
       pincode: contact.pincode,
       fullAddress,
-      phones: contact.contactNumbers ?? [],
-      whatsapp: contact.whatsappNumber,
+      phones: resolveContactNumbers(contact),
+      whatsapps: resolveWhatsappNumbers(contact),
       googleMapsLink: contact.googleMapsLink,
       googleMapsEmbedUrl: resolveGoogleMapsEmbedUrl(contact.googleMapsLink, fullAddress),
       email: null,

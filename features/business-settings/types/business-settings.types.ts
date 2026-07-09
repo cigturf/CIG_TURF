@@ -105,7 +105,9 @@ export type ContactSettings = {
   state: string | null;
   pincode: string | null;
   contactNumbers: string[] | null;
-  whatsappNumber: string | null;
+  /** @deprecated Legacy single field — use whatsappNumbers. Kept for DB migration only. */
+  whatsappNumber?: string | null;
+  whatsappNumbers: string[] | null;
   googleMapsLink: string | null;
   websiteUrl: string | null;
   socialMediaLinks: SocialMediaLinks;

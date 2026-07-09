@@ -47,8 +47,6 @@ async function enqueueRenderedEmail(options: EnqueueOptions): Promise<string | n
     bookingId: options.bookingId ?? null,
     metadata: {
       html: rendered.html,
-      fromName: branding.fromName,
-      replyTo: branding.replyTo,
     },
   });
 

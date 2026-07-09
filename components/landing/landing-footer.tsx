@@ -72,13 +72,33 @@ export function LandingFooter({ content }: LandingFooterProps) {
                 {content.contact.fullAddress}
               </Text>
             ) : null}
-            {content.contact.phones[0] ? (
-              <Link
-                href={`tel:${content.contact.phones[0]}`}
-                className="mt-3 block text-sm font-medium text-white/85 hover:underline"
-              >
-                {content.contact.phones[0]}
-              </Link>
+            {content.contact.phones.length > 0 ? (
+              <div className="mt-3 space-y-1">
+                {content.contact.phones.map((phone) => (
+                  <Link
+                    key={phone}
+                    href={`tel:${phone}`}
+                    className="block text-sm font-medium text-white/85 hover:underline"
+                  >
+                    {phone}
+                  </Link>
+                ))}
+              </div>
+            ) : null}
+            {content.contact.whatsapps.length > 0 ? (
+              <div className="mt-3 flex flex-wrap gap-3">
+                {content.contact.whatsapps.map((whatsapp) => (
+                  <Link
+                    key={whatsapp}
+                    href={`https://wa.me/${whatsapp.replace(/\D/g, "")}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-sm font-medium text-white/85 hover:underline"
+                  >
+                    WhatsApp {whatsapp}
+                  </Link>
+                ))}
+              </div>
             ) : null}
           </div>
 

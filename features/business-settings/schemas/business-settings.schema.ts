@@ -82,17 +82,44 @@ export const mediaSettingsSchema = z.object({
   gallery: z.array(galleryItemSchema).nullable(),
 });
 
-export const contactSettingsSchema = z.object({
-  address: nullableString,
-  city: nullableString,
-  state: nullableString,
-  pincode: nullableString,
-  contactNumbers: nullableStringArray,
-  whatsappNumber: nullableString,
-  googleMapsLink: nullableString,
-  websiteUrl: nullableString,
-  socialMediaLinks: socialMediaLinksSchema,
-});
+export const contactSettingsSchema = z
+  .object({
+    address: nullableString,
+    city: nullableString,
+    state: nullableString,
+    pincode: nullableString,
+    contactNumbers: nullableStringArray,
+    whatsappNumber: nullableString,
+    whatsappNumbers: nullableStringArray,
+    googleMapsLink: nullableString,
+    websiteUrl: nullableString,
+    socialMediaLinks: socialMediaLinksSchema,
+  })
+  .transform((contact) => {
+    const whatsappNumbers = resolveWhatsappNumbersFromRaw(contact);
+    return {
+      address: contact.address,
+      city: contact.city,
+      state: contact.state,
+      pincode: contact.pincode,
+      contactNumbers: contact.contactNumbers,
+      whatsappNumbers,
+      googleMapsLink: contact.googleMapsLink,
+      websiteUrl: contact.websiteUrl,
+      socialMediaLinks: contact.socialMediaLinks,
+    };
+  });
+
+function resolveWhatsappNumbersFromRaw(contact: {
+  whatsappNumbers: string[] | null;
+  whatsappNumber: string | null;
+}): string[] | null {
+  const fromArray = (contact.whatsappNumbers ?? []).map((value) => value.trim()).filter(Boolean);
+  if (fromArray.length > 0) return fromArray;
+
+  const legacy = contact.whatsappNumber?.trim();
+  return legacy ? [legacy] : null;
+}
 
 export const emailSettingsSchema = z.object({
   fromName: nullableString,

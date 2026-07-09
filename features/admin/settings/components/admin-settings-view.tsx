@@ -319,7 +319,7 @@ function SettingsSectionForm({
             onChange({ ...settings, contact: { ...settings.contact, pincode: value || null } })
           } />
           <Field
-            label="Contact Numbers (comma separated)"
+            label="Phone Numbers (comma separated)"
             value={(settings.contact.contactNumbers ?? []).join(", ")}
             onChange={(value) =>
               onChange({
@@ -331,9 +331,20 @@ function SettingsSectionForm({
               })
             }
           />
-          <Field label="WhatsApp Number" value={settings.contact.whatsappNumber ?? ""} onChange={(value) =>
-            onChange({ ...settings, contact: { ...settings.contact, whatsappNumber: value || null } })
-          } />
+          <Field
+            label="WhatsApp Numbers (comma separated)"
+            value={(settings.contact.whatsappNumbers ?? []).join(", ")}
+            onChange={(value) =>
+              onChange({
+                ...settings,
+                contact: {
+                  ...settings.contact,
+                  whatsappNumbers: resolveStringArray(value),
+                  whatsappNumber: null,
+                },
+              })
+            }
+          />
           <Field label="Google Maps Link" value={settings.contact.googleMapsLink ?? ""} onChange={(value) =>
             onChange({ ...settings, contact: { ...settings.contact, googleMapsLink: value || null } })
           } />

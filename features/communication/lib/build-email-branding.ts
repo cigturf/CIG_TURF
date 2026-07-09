@@ -2,6 +2,10 @@ import type {
   CommunicationSettings,
   EmailBrandingContext,
 } from "@/features/communication/types/email.types";
+import {
+  resolveContactNumbers,
+  resolveWhatsappNumbers,
+} from "@/features/business-settings/lib/contact-utils";
 import { resolveEmailLogoUrl } from "@/features/communication/lib/resolve-email-logo-url";
 import { resolveThemeAccentColor } from "@/features/business-settings/lib/parse";
 import type { BusinessSettings } from "@/features/business-settings/types";
@@ -33,10 +37,15 @@ export function buildEmailBrandingFromSettings(settings: BusinessSettings): Emai
   const communication = resolveCommunicationSettings(settings);
   const social = settings.contact.socialMediaLinks;
 
+  const contactNumbers = resolveContactNumbers(settings.contact);
+  const whatsappNumbers = resolveWhatsappNumbers(settings.contact);
+
   return {
     businessName: settings.branding.businessName ?? "Turf Booking",
     logoUrl: settings.branding.logoUrl,
-    phone: settings.contact.contactNumbers?.[0] ?? settings.contact.whatsappNumber,
+    phone: contactNumbers[0] ?? whatsappNumbers[0] ?? null,
+    contactNumbers,
+    whatsappNumbers,
     supportEmail: communication.supportEmails[0] ?? communication.replyToEmail,
     address: buildFullAddress(settings.contact),
     googleMapsLink: settings.contact.googleMapsLink,

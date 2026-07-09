@@ -11,10 +11,10 @@ describe("resolveGoogleMapsEmbedUrl", () => {
   it("builds embed from full address for short share links", () => {
     const embed = resolveGoogleMapsEmbedUrl(
       "https://maps.app.goo.gl/49zVPI",
-      "Chandana Indoor Ground, Saharanpur",
+      "Chandna Indoor Ground, Saharanpur",
     );
     expect(embed).toContain("maps.google.com/maps?");
-    expect(embed).toContain("Chandana");
+    expect(embed).toContain("Chandna");
     expect(embed).toContain("Saharanpur");
     expect(embed).toContain("output=embed");
   });

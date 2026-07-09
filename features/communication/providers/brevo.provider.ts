@@ -1,4 +1,8 @@
 import type { EmailProvider } from "@/features/communication/providers/email-provider";
+import {
+  TRANSACTIONAL_EMAIL_REPLY_TO,
+  TRANSACTIONAL_EMAIL_SENDER_NAME,
+} from "@/features/communication/constants/email.constants";
 import type { EmailProviderResult, SendEmailInput } from "@/features/communication/types/email.types";
 
 const MAX_ATTEMPTS = 3;
@@ -18,17 +22,16 @@ export class BrevoEmailProvider implements EmailProvider {
   constructor(
     private readonly apiKey: string,
     private readonly senderEmail: string,
-    private readonly defaultSenderName: string,
+    private readonly replyToEmail: string = TRANSACTIONAL_EMAIL_REPLY_TO,
   ) {}
 
   async send(input: SendEmailInput): Promise<EmailProviderResult> {
-    const fromName = input.fromName?.trim() || this.defaultSenderName;
     const body = JSON.stringify({
-      sender: { name: fromName, email: this.senderEmail },
+      sender: { name: TRANSACTIONAL_EMAIL_SENDER_NAME, email: this.senderEmail },
       to: [{ email: input.to }],
       subject: input.subject,
       htmlContent: input.html,
-      replyTo: input.replyTo ? { email: input.replyTo } : undefined,
+      replyTo: { email: this.replyToEmail },
     });
 
     let lastError = "Brevo request failed";

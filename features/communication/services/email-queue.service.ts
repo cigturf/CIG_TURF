@@ -17,8 +17,6 @@ export async function processEmailLogById(logId: string): Promise<void> {
 
     const metadata = log.metadata ?? {};
     const html = typeof metadata.html === "string" ? metadata.html : null;
-    const fromName = typeof metadata.fromName === "string" ? metadata.fromName : null;
-    const replyTo = typeof metadata.replyTo === "string" ? metadata.replyTo : null;
 
     if (!html) {
       await updateEmailLogStatus(logId, {
@@ -34,8 +32,6 @@ export async function processEmailLogById(logId: string): Promise<void> {
       to: log.recipient,
       subject: log.subject,
       html,
-      fromName,
-      replyTo,
     });
 
     if (result.success) {

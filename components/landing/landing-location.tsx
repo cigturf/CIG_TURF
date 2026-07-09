@@ -73,17 +73,18 @@ export function LandingLocation({ content }: LandingLocationProps) {
               ))}
 
               <div className="flex flex-wrap gap-3 pt-1">
-                {contact.whatsapp ? (
+                {contact.whatsapps.map((whatsapp) => (
                   <Link
-                    href={`https://wa.me/${contact.whatsapp.replace(/\D/g, "")}`}
+                    key={whatsapp}
+                    href={`https://wa.me/${whatsapp.replace(/\D/g, "")}`}
                     target="_blank"
                     rel="noopener noreferrer"
                   >
                     <Button variant="outline" size="sm" className="touch-target">
-                      WhatsApp
+                      WhatsApp {contact.whatsapps.length > 1 ? whatsapp : ""}
                     </Button>
                   </Link>
-                ) : null}
+                ))}
 
                 {hasMapLink ? (
                   <Link href={contact.googleMapsLink!} target="_blank" rel="noopener noreferrer">
