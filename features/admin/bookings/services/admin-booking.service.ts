@@ -273,7 +273,7 @@ export async function cancelAdminBooking(
     );
   }
 
-  if (input.issueRefund && booking.source === "online" && booking.advancePaid > 0) {
+  if (booking.source === "online" && booking.advancePaid > 0) {
     const payment = await getPaymentById(booking.paymentId);
     if (payment?.status === "paid" && payment.razorpayPaymentId) {
       await refundOnlineAdvanceForBooking({
@@ -288,7 +288,6 @@ export async function cancelAdminBooking(
 
   await logBookingChange(id, actor, "booking.cancelled", "status", booking.status, "cancelled", {
     reason: input.reason,
-    issueRefund: Boolean(input.issueRefund),
   });
 
   await dispatchBookingCancelledEmails(updated);

@@ -1,8 +1,6 @@
 import { NextResponse } from "next/server";
 
 import { cancelAdminBooking } from "@/features/admin/bookings/services/admin-booking.service";
-import { cancelBookingSchema } from "@/features/admin/bookings/schemas/cancel-booking.schema";
-import { parseJsonBody } from "@/lib/api/parse-request";
 import { requireAdminSession } from "@/lib/api/require-admin";
 
 type RouteContext = {
@@ -13,15 +11,13 @@ export async function POST(request: Request, context: RouteContext) {
   const auth = await requireAdminSession("bookings.manage");
   if ("error" in auth) return auth.error;
 
-  const parsed = await parseJsonBody(request, cancelBookingSchema);
-  if (!parsed.success) return parsed.response;
-
   const { id } = await context.params;
 
   try {
+    const body = await request.json();
     const booking = await cancelAdminBooking(
       id,
-      parsed.data,
+      body,
       {
         userId: auth.session.user.id,
         email: auth.session.user.email,
