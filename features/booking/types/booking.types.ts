@@ -26,6 +26,7 @@ export type BookingSlot = {
   endTimeLabel: string;
   price: number;
   status: SlotStatus;
+  statusReason?: string | null;
   isPast: boolean;
   isSelectable: boolean;
   isSelected: boolean;

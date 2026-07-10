@@ -73,6 +73,7 @@ export function useBookingSelection() {
         blockedSlotIds: primaryRealtime.blockedSlotIds,
         maintenanceSlotIds: primaryRealtime.maintenanceSlotIds,
         isHoliday: primaryRealtime.isHoliday,
+        slotReasons: primaryRealtime.slotReasons,
       },
       bridgeAvailability: {
         bookedSlotIds: bridgeRealtime.bookedSlotIds,
@@ -80,6 +81,7 @@ export function useBookingSelection() {
         blockedSlotIds: bridgeRealtime.blockedSlotIds,
         maintenanceSlotIds: bridgeRealtime.maintenanceSlotIds,
         isHoliday: bridgeRealtime.isHoliday,
+        slotReasons: bridgeRealtime.slotReasons,
       },
       pricing: pricingSnapshot,
     });
@@ -92,12 +94,14 @@ export function useBookingSelection() {
     primaryRealtime.blockedSlotIds,
     primaryRealtime.maintenanceSlotIds,
     primaryRealtime.isHoliday,
+    primaryRealtime.slotReasons,
     primaryRealtime.version,
     bridgeRealtime.bookedSlotIds,
     bridgeRealtime.heldSlotIds,
     bridgeRealtime.blockedSlotIds,
     bridgeRealtime.maintenanceSlotIds,
     bridgeRealtime.isHoliday,
+    bridgeRealtime.slotReasons,
     bridgeRealtime.version,
     pricingSnapshot,
   ]);

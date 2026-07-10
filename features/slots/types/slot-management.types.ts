@@ -23,6 +23,8 @@ export type SlotAvailabilitySnapshot = {
   heldSlotIds: string[];
   blockedSlotIds: string[];
   maintenanceSlotIds: string[];
+  /** slotId → reason for blocked/maintenance slots */
+  slotReasons: Record<string, string>;
   isHoliday: boolean;
 };
 

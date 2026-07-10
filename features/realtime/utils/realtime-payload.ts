@@ -44,6 +44,7 @@ export type RealtimeSlotBlockEvent = {
   bookingDate: string;
   slotId: string;
   state: "blocked" | "maintenance";
+  reason?: string | null;
   payload: RealtimeChangePayload;
 };
 
@@ -54,11 +55,18 @@ export function parseSlotBlockPayload(payload: RealtimeChangePayload): RealtimeS
   const bookingDate = String(record.booking_date ?? "");
   const slotId = String(record.slot_id ?? "");
   const state = String(record.state ?? "") as "blocked" | "maintenance";
+  const reason = record.reason != null ? String(record.reason) : null;
   if (!bookingDate || !slotId || (state !== "blocked" && state !== "maintenance")) return null;
 
-  if (payload.eventType === "INSERT") return { type: "insert", bookingDate, slotId, state, payload };
-  if (payload.eventType === "UPDATE") return { type: "update", bookingDate, slotId, state, payload };
-  if (payload.eventType === "DELETE") return { type: "delete", bookingDate, slotId, state, payload };
+  if (payload.eventType === "INSERT") {
+    return { type: "insert", bookingDate, slotId, state, reason, payload };
+  }
+  if (payload.eventType === "UPDATE") {
+    return { type: "update", bookingDate, slotId, state, reason, payload };
+  }
+  if (payload.eventType === "DELETE") {
+    return { type: "delete", bookingDate, slotId, state, reason, payload };
+  }
   return null;
 }
 

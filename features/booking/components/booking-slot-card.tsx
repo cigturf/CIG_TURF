@@ -22,6 +22,9 @@ const STATUS_LABELS: Record<SlotStatus, string> = {
 
 function getStatusLabel(slot: BookingSlot): string {
   if (slot.isSelected) return "Selected";
+  if ((slot.status === "maintenance" || slot.status === "blocked") && slot.statusReason) {
+    return slot.statusReason;
+  }
   return STATUS_LABELS[slot.status];
 }
 
@@ -84,6 +87,11 @@ export function BookingSlotCard({ slot, onSelect }: BookingSlotCardProps) {
         </Badge>
       </div>
       <span className="text-muted-foreground mt-1 text-xs">{formatCurrency(slot.price)}</span>
+      {(slot.status === "maintenance" || slot.status === "blocked") && slot.statusReason ? (
+        <span className="text-muted-foreground mt-0.5 line-clamp-2 text-[0.65rem] leading-snug">
+          {slot.statusReason}
+        </span>
+      ) : null}
     </button>
   );
 }

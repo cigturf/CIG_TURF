@@ -36,6 +36,7 @@ export type SlotEventPayload = {
   bookingDate: string;
   bookingId?: string;
   source?: "booked" | "hold";
+  reason?: string;
 };
 
 export type SlotAvailabilityRefreshPayload = {

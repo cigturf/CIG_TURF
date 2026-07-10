@@ -12,6 +12,7 @@ type SlotAvailability = {
   heldSlotIds?: Set<string> | string[];
   blockedSlotIds?: Set<string> | string[];
   maintenanceSlotIds?: Set<string> | string[];
+  slotReasons?: Record<string, string>;
   isHoliday?: boolean;
 };
 
@@ -49,6 +50,7 @@ export function buildBookingViewSlots({
     heldSlotIds: primaryAvailability.heldSlotIds,
     blockedSlotIds: primaryAvailability.blockedSlotIds,
     maintenanceSlotIds: primaryAvailability.maintenanceSlotIds,
+    slotReasons: primaryAvailability.slotReasons,
     isHoliday: primaryAvailability.isHoliday ?? false,
     pricing,
   });
@@ -64,6 +66,7 @@ export function buildBookingViewSlots({
     heldSlotIds: bridgeAvailability?.heldSlotIds,
     blockedSlotIds: bridgeAvailability?.blockedSlotIds,
     maintenanceSlotIds: bridgeAvailability?.maintenanceSlotIds,
+    slotReasons: bridgeAvailability?.slotReasons,
     isHoliday: bridgeAvailability?.isHoliday ?? false,
     pricing,
   });

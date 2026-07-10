@@ -60,13 +60,14 @@ export function AdminSlotsView() {
     [dateIso, config.bookingWindowDays],
   );
 
-  const { bookedSlotIds, heldSlotIds, blockedSlotIds, maintenanceSlotIds, isHoliday, hydrated } =
+  const { bookedSlotIds, heldSlotIds, blockedSlotIds, maintenanceSlotIds, slotReasons, isHoliday, hydrated } =
     useRealtimeSlots(activeDate);
   const { snapshot: pricingSnapshot } = useRealtimePricing();
 
   const { bookingBySlotId } = useSlotDateBookings(activeDate);
 
   const [selectedSlotIds, setSelectedSlotIds] = useState<string[]>([]);
+  const [selectionMode, setSelectionMode] = useState(false);
   const [quickFilter, setQuickFilter] = useState<
     "all" | "available" | "booked" | "reserved" | "blocked" | "maintenance"
   >("all");
@@ -95,10 +96,11 @@ export function AdminSlotsView() {
       heldSlotIds: new Set(heldSlotIds),
       blockedSlotIds: new Set(blockedSlotIds),
       maintenanceSlotIds: new Set(maintenanceSlotIds),
+      slotReasons,
       isHoliday,
       pricing: pricingSnapshot,
     });
-  }, [activeDate, config, bookedSlotIds, heldSlotIds, blockedSlotIds, maintenanceSlotIds, isHoliday, pricingSnapshot]);
+  }, [activeDate, config, bookedSlotIds, heldSlotIds, blockedSlotIds, maintenanceSlotIds, slotReasons, isHoliday, pricingSnapshot]);
 
   const filteredSlots = useMemo(() => {
     if (quickFilter === "all") return slots;
@@ -107,6 +109,7 @@ export function AdminSlotsView() {
 
   const handleDateNav = (direction: -1 | 1) => {
     setSelectedSlotIds([]);
+    setSelectionMode(false);
     setDateIso((current) => addDaysToIsoDate(clampDateToWindow(current, config.bookingWindowDays), direction));
   };
 
@@ -152,6 +155,23 @@ export function AdminSlotsView() {
   };
 
   const handleSlotPress = (slotId: string, status: string) => {
+    if (selectionMode) {
+      if (status === "booked" || status === "reserved" || status === "past") {
+        toast.message(
+          status === "booked"
+            ? "Booked slots cannot be put under maintenance"
+            : status === "reserved"
+              ? "Release the payment hold first"
+              : "Past slots cannot be selected",
+        );
+        return;
+      }
+      setSelectedSlotIds((current) =>
+        current.includes(slotId) ? current.filter((id) => id !== slotId) : [...current, slotId],
+      );
+      return;
+    }
+
     if (status === "booked") {
       const booking = bookingBySlotId.get(slotId);
       if (booking) void openBooking(booking.id);
@@ -171,7 +191,7 @@ export function AdminSlotsView() {
       return;
     }
 
-    // select for bulk actions
+    // blocked / maintenance / holiday — select for bulk actions
     setSelectedSlotIds((current) =>
       current.includes(slotId) ? current.filter((id) => id !== slotId) : [...current, slotId],
     );
@@ -302,6 +322,21 @@ export function AdminSlotsView() {
             <Button size="sm" variant="outline" onClick={() => setHolidayDialogOpen(true)}>
               Holiday
             </Button>
+            <Button
+              size="sm"
+              variant={selectionMode ? "default" : "outline"}
+              onClick={() => {
+                setSelectionMode((current) => !current);
+                setSelectedSlotIds([]);
+              }}
+            >
+              {selectionMode ? "Selecting slots…" : "Select for maintenance"}
+            </Button>
+            {selectedSlotIds.length > 0 ? (
+              <Button size="sm" onClick={() => setBlockDialogOpen(true)}>
+                Apply ({selectedSlotIds.length})
+              </Button>
+            ) : null}
             {isHoliday ? <Badge variant="destructive">Holiday</Badge> : null}
           </div>
 
@@ -352,6 +387,7 @@ export function AdminSlotsView() {
         slots={filteredSlots}
         hydrated={hydrated}
         selectedSlotIds={selectedSlotIds}
+        selectionMode={selectionMode}
         bookingBySlotId={bookingBySlotId}
         onSlotPress={handleSlotPress}
         onClearSelection={() => setSelectedSlotIds([])}
@@ -363,7 +399,11 @@ export function AdminSlotsView() {
         onOpenChange={setBlockDialogOpen}
         activeDate={activeDate}
         selectedSlotIds={selectedSlotIds}
-        onDone={() => setSelectedSlotIds([])}
+        defaultAction="maintenance"
+        onDone={() => {
+          setSelectedSlotIds([]);
+          setSelectionMode(false);
+        }}
       />
 
       <SlotHolidayDialog

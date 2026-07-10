@@ -7,6 +7,8 @@ import { ChevronLeft, Mail } from "lucide-react";
 import { toast } from "sonner";
 
 import { submitCompleteProfile } from "@/features/auth/lib/auth-client-api";
+import { sendEmailOtp } from "@/features/auth/lib/email-otp.client";
+import { EmailOtpVerification } from "@/features/auth/components/email-otp-verification";
 import { isAdminLoginEmail } from "@/features/auth/config/auth.config";
 import { useAuthSession } from "@/features/auth/hooks";
 import { AUTH_ROUTES, isBookingFlowReturn, type LoginMode } from "@/features/auth/types";
@@ -39,7 +41,6 @@ export function AuthPage() {
   const [mode, setMode] = useState<LoginMode>("choose");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [otp, setOtp] = useState("");
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [loading, setLoading] = useState(false);
@@ -103,10 +104,7 @@ export function AuthPage() {
     setLoading(true);
     try {
       const supabase = createClient();
-      const { error } = await supabase.auth.signInWithOtp({
-        email: parsed.data,
-        options: { shouldCreateUser: true },
-      });
+      const { error } = await sendEmailOtp(supabase, parsed.data);
 
       if (error) {
         toast.error(error.message ?? "Failed to send OTP");
@@ -130,7 +128,6 @@ export function AuthPage() {
     const normalizedEmail = parsed.data.toLowerCase();
     setEmail(normalizedEmail);
     setPassword("");
-    setOtp("");
     setOtpSent(false);
 
     if (isAdminLoginEmail(normalizedEmail)) {
@@ -186,40 +183,12 @@ export function AuthPage() {
     }
   };
 
-  const handleSendOtp = async () => {
-    await sendOtp();
-  };
-
-  const handleVerifyOtp = async () => {
-    if (otp.length < 6) {
-      toast.error("Enter the 6-digit OTP");
-      return;
-    }
-
-    setLoading(true);
-    try {
-      const supabase = createClient();
-      const { data, error } = await supabase.auth.verifyOtp({
-        email,
-        token: otp,
-        type: "email",
-      });
-
-      if (error) {
-        toast.error(error.message ?? "Invalid OTP");
-        return;
-      }
-
-      if (data.user) {
-        publish(APP_EVENT_TYPES.AUTH_LOGIN_SUCCESS, {
-          userId: data.user.id,
-          email,
-        });
-        continueAfterAuth();
-      }
-    } finally {
-      setLoading(false);
-    }
+  const handleVerifyOtpSuccess = (userId: string, verifiedEmail: string) => {
+    publish(APP_EVENT_TYPES.AUTH_LOGIN_SUCCESS, {
+      userId,
+      email: verifiedEmail,
+    });
+    continueAfterAuth();
   };
 
   const handleSendResetLink = async () => {
@@ -394,67 +363,17 @@ export function AuthPage() {
           )}
 
           {mode === "email-otp" && (
-            <div className="space-y-4">
-              <Text size="sm" className="text-muted-foreground">
-                We sent a one-time code to your email. Enter it below to sign in.
-              </Text>
-
-              <FormField label="Email" htmlFor="otp-email">
-                <FormInput id="otp-email" type="email" value={email} readOnly />
-              </FormField>
-
-              {!otpSent ? (
-                <Button
-                  variant="booking"
-                  className="touch-target min-h-12 w-full"
-                  onClick={handleSendOtp}
-                  disabled={loading}
-                >
-                  Send email OTP
-                </Button>
-              ) : (
-                <>
-                  <FormField label="One-time password" htmlFor="otp">
-                    <FormInput
-                      id="otp"
-                      inputMode="numeric"
-                      maxLength={6}
-                      placeholder="6-digit code"
-                      value={otp}
-                      onChange={(e) => setOtp(e.target.value.replace(/\D/g, ""))}
-                    />
-                  </FormField>
-                  <Button
-                    variant="booking"
-                    className="touch-target min-h-12 w-full"
-                    onClick={handleVerifyOtp}
-                    disabled={loading}
-                  >
-                    Verify &amp; Sign In
-                  </Button>
-                  <Button
-                    variant="outline"
-                    className="w-full"
-                    onClick={handleSendOtp}
-                    disabled={loading}
-                  >
-                    Resend OTP
-                  </Button>
-                </>
-              )}
-
-              <Button
-                variant="ghost"
-                className="w-full"
-                onClick={() => {
-                  setMode("choose");
-                  setOtp("");
-                  setOtpSent(false);
-                }}
-              >
-                Back
-              </Button>
-            </div>
+            <EmailOtpVerification
+              email={email}
+              otpAlreadySent={otpSent}
+              loading={loading}
+              onLoadingChange={setLoading}
+              onVerified={handleVerifyOtpSuccess}
+              onBack={() => {
+                setMode("choose");
+                setOtpSent(false);
+              }}
+            />
           )}
 
           {mode === "forgot-password" && (

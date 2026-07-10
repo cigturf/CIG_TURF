@@ -6,13 +6,15 @@ import { toast } from "sonner";
 import { BookingSlotGrid } from "@/features/booking/components/booking-slot-grid";
 import {
   buildBookingDateOptions,
-  generateSlots,
   resolveBookingEngineConfig,
 } from "@/features/booking/services";
+import { buildBookingViewSlots } from "@/features/booking/services/booking-view-slots.service";
 import { getTodayIso } from "@/features/booking/utils/time";
+import { getBridgeDateIso } from "@/features/booking/utils/slot-timeline";
 import { toggleConsecutiveSlot } from "@/features/booking/utils";
 import { useRealtimeSlots } from "@/features/realtime/hooks/use-realtime-slots";
 import { useRealtimePricing } from "@/features/pricing/hooks/use-realtime-pricing";
+import { formatDate } from "@/utils/format";
 import {
   Button,
   Dialog,
@@ -90,7 +92,9 @@ export function ManualBookingDialog({
     initialCustomerPhone,
     initialCustomerEmail,
   ]);
-  const { bookedSlotIds, blockedSlotIds, maintenanceSlotIds, isHoliday } = useRealtimeSlots(dateIso);
+  const bridgeDateIso = dateIso ? getBridgeDateIso(dateIso) : null;
+  const primaryRealtime = useRealtimeSlots(dateIso);
+  const bridgeRealtime = useRealtimeSlots(bridgeDateIso);
   const { snapshot: pricingSnapshot } = useRealtimePricing();
 
   const [customerName, setCustomerName] = useState("");
@@ -101,29 +105,56 @@ export function ManualBookingDialog({
   const [notes, setNotes] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const slots = useMemo(() => {
-    if (!dateIso) return [];
-    return generateSlots({
+  const slotView = useMemo(() => {
+    if (!dateIso) {
+      return { slots: [], bridgeDateIso: null as string | null, bridgeStartIndex: -1 };
+    }
+
+    return buildBookingViewSlots({
       dateIso,
       config,
-      now: new Date(),
       selectedSlotIds,
-      bookedSlotIds: new Set(bookedSlotIds),
-      blockedSlotIds: new Set(blockedSlotIds),
-      maintenanceSlotIds: new Set(maintenanceSlotIds),
-      isHoliday,
+      primaryAvailability: {
+        bookedSlotIds: primaryRealtime.bookedSlotIds,
+        heldSlotIds: primaryRealtime.heldSlotIds,
+        blockedSlotIds: primaryRealtime.blockedSlotIds,
+        maintenanceSlotIds: primaryRealtime.maintenanceSlotIds,
+        isHoliday: primaryRealtime.isHoliday,
+        slotReasons: primaryRealtime.slotReasons,
+      },
+      bridgeAvailability: {
+        bookedSlotIds: bridgeRealtime.bookedSlotIds,
+        heldSlotIds: bridgeRealtime.heldSlotIds,
+        blockedSlotIds: bridgeRealtime.blockedSlotIds,
+        maintenanceSlotIds: bridgeRealtime.maintenanceSlotIds,
+        isHoliday: bridgeRealtime.isHoliday,
+        slotReasons: bridgeRealtime.slotReasons,
+      },
       pricing: pricingSnapshot,
     });
   }, [
     dateIso,
     selectedSlotIds,
     config,
-    bookedSlotIds,
-    blockedSlotIds,
-    maintenanceSlotIds,
-    isHoliday,
+    primaryRealtime.bookedSlotIds,
+    primaryRealtime.heldSlotIds,
+    primaryRealtime.blockedSlotIds,
+    primaryRealtime.maintenanceSlotIds,
+    primaryRealtime.isHoliday,
+    primaryRealtime.slotReasons,
+    primaryRealtime.version,
+    bridgeRealtime.bookedSlotIds,
+    bridgeRealtime.heldSlotIds,
+    bridgeRealtime.blockedSlotIds,
+    bridgeRealtime.maintenanceSlotIds,
+    bridgeRealtime.isHoliday,
+    bridgeRealtime.slotReasons,
+    bridgeRealtime.version,
     pricingSnapshot,
   ]);
+
+  const slots = slotView.slots;
+  const bridgeDateLabel = slotView.bridgeDateIso ? formatDate(slotView.bridgeDateIso) : null;
 
   const remainingAmount = useMemo(() => {
     const total = Number(totalPrice) || 0;
@@ -220,7 +251,12 @@ export function ManualBookingDialog({
             </select>
           </FormField>
 
-          <BookingSlotGrid slots={slots} onToggleSlot={toggleSlot} />
+          <BookingSlotGrid
+            slots={slots}
+            onToggleSlot={toggleSlot}
+            bridgeStartIndex={slotView.bridgeStartIndex}
+            bridgeDateLabel={bridgeDateLabel}
+          />
 
           <div className="grid gap-4 sm:grid-cols-2">
             <FormField label="Customer Name">

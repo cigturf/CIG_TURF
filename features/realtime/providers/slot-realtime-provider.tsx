@@ -28,6 +28,7 @@ type SlotSnapshot = {
   heldSlotIds: string[];
   blockedSlotIds: string[];
   maintenanceSlotIds: string[];
+  slotReasons: Record<string, string>;
   isHoliday: boolean;
 };
 
@@ -45,6 +46,7 @@ function emptySnapshot(): SlotSnapshot {
     heldSlotIds: [],
     blockedSlotIds: [],
     maintenanceSlotIds: [],
+    slotReasons: {},
     isHoliday: false,
   };
 }
@@ -81,6 +83,8 @@ export function SlotRealtimeProvider({ children }: { children: ReactNode }) {
   const applySlotDelete = useCallback((dateIso: string, slotId: string) => {
     setSnapshotsByDate((current) => {
       const existing = current[dateIso] ?? emptySnapshot();
+      const nextReasons = { ...existing.slotReasons };
+      delete nextReasons[slotId];
       return {
         ...current,
         [dateIso]: {
@@ -89,6 +93,7 @@ export function SlotRealtimeProvider({ children }: { children: ReactNode }) {
           heldSlotIds: existing.heldSlotIds.filter((id) => id !== slotId),
           blockedSlotIds: existing.blockedSlotIds.filter((id) => id !== slotId),
           maintenanceSlotIds: existing.maintenanceSlotIds.filter((id) => id !== slotId),
+          slotReasons: nextReasons,
         },
       };
     });
@@ -130,8 +135,20 @@ export function SlotRealtimeProvider({ children }: { children: ReactNode }) {
   });
 
   useAppEventSubscriber(APP_EVENT_TYPES.SLOT_BLOCKED, (event) => {
-    const { slotId, bookingDate } = event.payload;
+    const { slotId, bookingDate, reason } = event.payload;
     applySlotInsert(bookingDate, "blockedSlotIds", slotId);
+    if (reason?.trim()) {
+      setSnapshotsByDate((current) => {
+        const existing = current[bookingDate] ?? emptySnapshot();
+        return {
+          ...current,
+          [bookingDate]: {
+            ...existing,
+            slotReasons: { ...existing.slotReasons, [slotId]: reason.trim() },
+          },
+        };
+      });
+    }
   });
 
   useAppEventSubscriber(APP_EVENT_TYPES.SLOT_UNBLOCKED, (event) => {
@@ -140,8 +157,20 @@ export function SlotRealtimeProvider({ children }: { children: ReactNode }) {
   });
 
   useAppEventSubscriber(APP_EVENT_TYPES.SLOT_MAINTENANCE, (event) => {
-    const { slotId, bookingDate } = event.payload;
+    const { slotId, bookingDate, reason } = event.payload;
     applySlotInsert(bookingDate, "maintenanceSlotIds", slotId);
+    if (reason?.trim()) {
+      setSnapshotsByDate((current) => {
+        const existing = current[bookingDate] ?? emptySnapshot();
+        return {
+          ...current,
+          [bookingDate]: {
+            ...existing,
+            slotReasons: { ...existing.slotReasons, [slotId]: reason.trim() },
+          },
+        };
+      });
+    }
   });
 
   useAppEventSubscriber(APP_EVENT_TYPES.SLOT_HOLIDAY, (event) => {
@@ -221,6 +250,7 @@ export function useRealtimeSlots(dateIso: string | null) {
       heldSlotIds: availabilityQuery.data.heldSlotIds ?? [],
       blockedSlotIds: availabilityQuery.data.blockedSlotIds ?? [],
       maintenanceSlotIds: availabilityQuery.data.maintenanceSlotIds ?? [],
+      slotReasons: availabilityQuery.data.slotReasons ?? {},
       isHoliday: Boolean(availabilityQuery.data.isHoliday),
     });
   }, [availabilityQuery.dataUpdatedAt, availabilityQuery.data, dateIso, setInitialSnapshot]);
@@ -278,6 +308,7 @@ export function useRealtimeSlots(dateIso: string | null) {
     heldSlotIds: snapshot?.heldSlotIds ?? [],
     blockedSlotIds: snapshot?.blockedSlotIds ?? [],
     maintenanceSlotIds: snapshot?.maintenanceSlotIds ?? [],
+    slotReasons: snapshot?.slotReasons ?? {},
     isHoliday: snapshot?.isHoliday ?? false,
     version,
     hydrated: !dateIso || availabilityQuery.isFetched,

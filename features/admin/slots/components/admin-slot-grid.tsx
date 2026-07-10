@@ -13,6 +13,7 @@ type AdminSlotGridProps = {
   slots: BookingSlot[];
   hydrated: boolean;
   selectedSlotIds: string[];
+  selectionMode?: boolean;
   bookingBySlotId: Map<string, AdminBookingRecord>;
   onSlotPress: (slotId: string, status: BookingSlot["status"]) => void;
   onClearSelection: () => void;
@@ -24,6 +25,7 @@ export function AdminSlotGrid({
   slots,
   hydrated,
   selectedSlotIds,
+  selectionMode = false,
   bookingBySlotId,
   onSlotPress,
   onClearSelection,
@@ -49,7 +51,11 @@ export function AdminSlotGrid({
   return (
     <AnalyticsCard
       title="Timeline & Slot Grid"
-      description="Tap slots to open bookings or select for bulk actions. Matches customer slot grid."
+      description={
+        selectionMode
+          ? "Selection mode on — tap available or maintenance slots, then Apply."
+          : "Tap available slots to book. Use “Select for maintenance” to mark slots unavailable."
+      }
       action={
         selectableCount > 0 ? (
           <div className="flex items-center gap-2">
@@ -57,7 +63,7 @@ export function AdminSlotGrid({
               Clear ({selectableCount})
             </Button>
             <Button size="sm" onClick={onBulkAction}>
-              Bulk Actions
+              Apply
             </Button>
           </div>
         ) : null
@@ -110,7 +116,8 @@ export function AdminSlotGrid({
                     className="text-muted-foreground mt-1 line-clamp-2 px-0.5 text-[0.65rem] leading-snug"
                     title={`${booking.bookingReference} · ${booking.customerName} · ${formatCurrency(booking.remainingAmount)} due`}
                   >
-                    {booking.bookingReference} · {booking.customerName} · {formatCurrency(booking.remainingAmount)} due
+                    {booking.bookingReference} · {booking.customerName} ·{" "}
+                    {formatCurrency(booking.remainingAmount)} due
                   </Text>
                 ) : slot.status === "reserved" ? (
                   <Text
@@ -131,4 +138,3 @@ export function AdminSlotGrid({
     </AnalyticsCard>
   );
 }
-

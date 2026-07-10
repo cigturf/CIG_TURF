@@ -18,6 +18,7 @@ async function fetchSlotAvailability(dateIso: string): Promise<SlotAvailabilityS
       heldSlotIds: [],
       blockedSlotIds: [],
       maintenanceSlotIds: [],
+      slotReasons: {},
       isHoliday: false,
     };
   }

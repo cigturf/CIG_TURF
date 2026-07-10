@@ -21,6 +21,7 @@ type GenerateSlotsOptions = {
   heldSlotIds?: Set<string> | string[];
   blockedSlotIds?: Set<string> | string[];
   maintenanceSlotIds?: Set<string> | string[];
+  slotReasons?: Record<string, string>;
   isHoliday?: boolean;
   pricing?: PricingSnapshot;
 };
@@ -43,6 +44,7 @@ export function generateSlots({
   heldSlotIds,
   blockedSlotIds,
   maintenanceSlotIds,
+  slotReasons,
   isHoliday = false,
   pricing,
 }: GenerateSlotsOptions): BookingSlot[] {
@@ -87,6 +89,10 @@ export function generateSlots({
       endTimeLabel: formatMinutesAsTime(endMinute % (24 * 60)),
       price,
       status,
+      statusReason:
+        status === "blocked" || status === "maintenance"
+          ? slotReasons?.[slotId] ?? null
+          : null,
       isPast,
       isSelectable,
       isSelected,

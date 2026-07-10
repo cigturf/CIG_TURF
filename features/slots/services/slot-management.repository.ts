@@ -258,9 +258,13 @@ export async function getSlotAvailabilitySnapshot(dateIso: string): Promise<Slot
 
   const blockedSlotIds: string[] = [];
   const maintenanceSlotIds: string[] = [];
+  const slotReasons: Record<string, string> = {};
   for (const block of blocks) {
     if (block.state === "maintenance") maintenanceSlotIds.push(block.slotId);
     else blockedSlotIds.push(block.slotId);
+    if (block.reason?.trim()) {
+      slotReasons[block.slotId] = block.reason.trim();
+    }
   }
 
   return {
@@ -268,6 +272,7 @@ export async function getSlotAvailabilitySnapshot(dateIso: string): Promise<Slot
     heldSlotIds: heldOnly,
     blockedSlotIds,
     maintenanceSlotIds,
+    slotReasons,
     isHoliday: Boolean(holiday),
   };
 }

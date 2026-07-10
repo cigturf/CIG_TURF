@@ -18,12 +18,14 @@ import {
   Text,
 } from "@/components/design-system";
 import { addDaysToIsoDate } from "@/features/booking/utils/time";
+import { cn } from "@/lib/utils";
 
 type SlotBulkBlockDialogProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   activeDate: string;
   selectedSlotIds: string[];
+  defaultAction?: ActionType;
   onDone: () => void;
 };
 
@@ -31,14 +33,23 @@ type ActionType = "block" | "maintenance" | "unblock";
 
 type ScopeType = "single" | "range";
 
+const MAINTENANCE_REASON_PRESETS = [
+  "Raining",
+  "Field under maintenance",
+  "Private event",
+  "Cleaning",
+  "Tournament",
+] as const;
+
 export function SlotBulkBlockDialog({
   open,
   onOpenChange,
   activeDate,
   selectedSlotIds,
+  defaultAction = "block",
   onDone,
 }: SlotBulkBlockDialogProps) {
-  const [action, setAction] = useState<ActionType>("block");
+  const [action, setAction] = useState<ActionType>(defaultAction);
   const [scope, setScope] = useState<ScopeType>("single");
   const [rangeStart, setRangeStart] = useState(activeDate);
   const [rangeEnd, setRangeEnd] = useState(activeDate);
@@ -47,13 +58,13 @@ export function SlotBulkBlockDialog({
 
   useEffect(() => {
     if (open) {
-      setAction("block");
+      setAction(defaultAction);
       setScope("single");
       setRangeStart(activeDate);
       setRangeEnd(activeDate);
       setReason("");
     }
-  }, [open, activeDate]);
+  }, [open, activeDate, defaultAction]);
 
   const bookingDates = useMemo(() => {
     if (scope === "single") return [activeDate];
@@ -76,6 +87,10 @@ export function SlotBulkBlockDialog({
       toast.error("Invalid date range.");
       return;
     }
+    if (action !== "unblock" && !reason.trim()) {
+      toast.error("Choose or enter a reason.");
+      return;
+    }
 
     setIsSubmitting(true);
     try {
@@ -89,7 +104,7 @@ export function SlotBulkBlockDialog({
           const body = await response.json().catch(() => ({}));
           throw new Error(body.error ?? "Failed to unblock slots");
         }
-        toast.success("Slots unblocked");
+        toast.success("Slots available for booking again");
       } else {
         const response = await fetch("/api/admin/slots/blocks", {
           method: "POST",
@@ -98,7 +113,7 @@ export function SlotBulkBlockDialog({
             bookingDates,
             slotIds: selectedSlotIds,
             state: action === "maintenance" ? "maintenance" : "blocked",
-            reason: reason.trim() || undefined,
+            reason: reason.trim(),
           }),
         });
         if (!response.ok) {
@@ -121,10 +136,10 @@ export function SlotBulkBlockDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle>Bulk Actions</DialogTitle>
+          <DialogTitle>Slot availability</DialogTitle>
           <DialogDescription>
-            Block, set maintenance, or unblock selected slots. Date range support is included for
-            tournament and maintenance planning.
+            Put selected slots under maintenance or block them. Customers cannot book these slots
+            while active. Unblock to make them available again.
           </DialogDescription>
         </DialogHeader>
 
@@ -132,15 +147,15 @@ export function SlotBulkBlockDialog({
           <div className="border-border/70 bg-muted/20 rounded-[var(--radius-md)] border p-4">
             <Text className="font-medium">{selectedSlotIds.length} slot(s) selected</Text>
             <Text size="sm" className="text-muted-foreground mt-1">
-              Applies across {bookingDates.length} date(s).
+              Applies across {bookingDates.length} date(s). Changes go live immediately.
             </Text>
           </div>
 
           <FormField label="Action">
             <FormSelect value={action} onChange={(event) => setAction(event.target.value as ActionType)}>
+              <option value="maintenance">Under maintenance</option>
               <option value="block">Block</option>
-              <option value="maintenance">Maintenance</option>
-              <option value="unblock">Unblock</option>
+              <option value="unblock">Remove &amp; make available</option>
             </FormSelect>
           </FormField>
 
@@ -163,14 +178,36 @@ export function SlotBulkBlockDialog({
           ) : null}
 
           {action !== "unblock" ? (
-            <FormField label="Reason (optional)">
-              <FormTextarea
-                value={reason}
-                onChange={(event) => setReason(event.target.value)}
-                rows={3}
-                placeholder="Maintenance, private booking, tournament, cleaning…"
-              />
-            </FormField>
+            <div className="space-y-2">
+              <Text size="sm" className="font-medium">
+                Reason
+              </Text>
+              <div className="flex flex-wrap gap-2">
+                {MAINTENANCE_REASON_PRESETS.map((preset) => (
+                  <button
+                    key={preset}
+                    type="button"
+                    onClick={() => setReason(preset)}
+                    className={cn(
+                      "rounded-[var(--radius-md)] border px-3 py-1.5 text-sm transition-colors",
+                      reason === preset
+                        ? "border-primary bg-primary/10 text-foreground"
+                        : "border-border/70 text-muted-foreground hover:bg-muted/30",
+                    )}
+                  >
+                    {preset}
+                  </button>
+                ))}
+              </div>
+              <FormField label="Custom reason">
+                <FormTextarea
+                  value={reason}
+                  onChange={(event) => setReason(event.target.value)}
+                  rows={2}
+                  placeholder="Raining, field under maintenance…"
+                />
+              </FormField>
+            </div>
           ) : null}
         </div>
 
@@ -179,11 +216,10 @@ export function SlotBulkBlockDialog({
             Cancel
           </Button>
           <Button loading={isSubmitting} onClick={() => void handleSubmit()}>
-            Apply
+            {action === "unblock" ? "Make available" : "Apply"}
           </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
   );
 }
-

@@ -64,7 +64,11 @@ export function mapSlotBlockChangeToEvents(payload: RealtimeChangePayload): Mapp
     return [
       {
         type: APP_EVENT_TYPES.SLOT_MAINTENANCE,
-        payload: { slotId: event.slotId, bookingDate: event.bookingDate },
+        payload: {
+          slotId: event.slotId,
+          bookingDate: event.bookingDate,
+          reason: event.reason ?? undefined,
+        },
       },
     ];
   }
@@ -72,7 +76,11 @@ export function mapSlotBlockChangeToEvents(payload: RealtimeChangePayload): Mapp
   return [
     {
       type: APP_EVENT_TYPES.SLOT_BLOCKED,
-      payload: { slotId: event.slotId, bookingDate: event.bookingDate },
+      payload: {
+        slotId: event.slotId,
+        bookingDate: event.bookingDate,
+        reason: event.reason ?? undefined,
+      },
     },
   ];
 }
