@@ -93,6 +93,7 @@ export type CreateManualBookingInput = {
   totalPrice: number;
   advancePaid: number;
   remainingAmount: number;
+  advanceMethod?: OfflinePaymentMethod;
   notes?: string;
 };
 
@@ -102,6 +103,7 @@ export type UpdateBookingInput = {
   customerEmail?: string;
   notes?: string;
   totalPrice?: number;
+  advancePaid?: number;
 };
 
 export type CollectPaymentInput = {

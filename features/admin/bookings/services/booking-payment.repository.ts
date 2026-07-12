@@ -128,3 +128,43 @@ export async function createBookingPaymentRecord(data: {
     createdAt: row.createdAt,
   };
 }
+
+export async function updateBookingPaymentRecordAmount(
+  id: string,
+  amount: number,
+): Promise<BookingPaymentRecord | null> {
+  const supabase = createServiceRoleClient();
+
+  if (supabase) {
+    const { data: row, error } = await supabase
+      .from("booking_payment_records")
+      .update({ amount })
+      .eq("id", id)
+      .select("*")
+      .maybeSingle();
+
+    if (!error && row) return mapPaymentRecord(row as PaymentRecordRow);
+    if (error) throw new Error(error.message);
+  }
+
+  try {
+    const row = await prisma.bookingPaymentRecord.update({
+      where: { id },
+      data: { amount },
+    });
+
+    return {
+      id: row.id,
+      bookingId: row.bookingId,
+      type: row.type,
+      amount: row.amount,
+      method: row.method as BookingPaymentRecord["method"],
+      collectedBy: row.collectedBy,
+      notes: row.notes,
+      referenceNumber: row.referenceNumber,
+      createdAt: row.createdAt,
+    };
+  } catch {
+    return null;
+  }
+}

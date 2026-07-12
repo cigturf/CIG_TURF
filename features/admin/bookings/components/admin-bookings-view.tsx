@@ -167,6 +167,7 @@ export function AdminBookingsView() {
     customerEmail: string;
     notes?: string;
     totalPrice: number;
+    advancePaid: number;
   }) => {
     if (!selectedBookingId) return;
     const response = await fetch(`/api/admin/bookings/${selectedBookingId}`, {
@@ -174,7 +175,10 @@ export function AdminBookingsView() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
     });
-    if (!response.ok) throw new Error("Failed to update booking");
+    if (!response.ok) {
+      const body = await response.json().catch(() => ({}));
+      throw new Error(body.error ?? "Failed to update booking");
+    }
     await refresh();
     await refreshDetail();
   };

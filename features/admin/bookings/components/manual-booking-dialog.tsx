@@ -25,10 +25,13 @@ import {
   DialogTitle,
   FormField,
   FormInput,
+  FormSelect,
   FormTextarea,
   Text,
 } from "@/components/design-system";
 import { useConfigContext } from "@/components/providers/config-provider";
+
+type AdvancePaymentMethod = "cash" | "online";
 
 type ManualBookingDialogProps = {
   open: boolean;
@@ -47,6 +50,7 @@ type ManualBookingDialogProps = {
     totalPrice: number;
     advancePaid: number;
     remainingAmount: number;
+    advanceMethod: AdvancePaymentMethod;
     notes?: string;
   }) => Promise<void>;
 };
@@ -83,6 +87,7 @@ export function ManualBookingDialog({
       setCustomerName(initialCustomerName ?? "");
       setCustomerPhone(initialCustomerPhone ?? "");
       setCustomerEmail(initialCustomerEmail ?? "");
+      setAdvanceMethod("cash");
     }
   }, [
     open,
@@ -102,6 +107,7 @@ export function ManualBookingDialog({
   const [customerEmail, setCustomerEmail] = useState("");
   const [totalPrice, setTotalPrice] = useState("");
   const [advancePaid, setAdvancePaid] = useState("");
+  const [advanceMethod, setAdvanceMethod] = useState<AdvancePaymentMethod>("cash");
   const [notes, setNotes] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -179,6 +185,7 @@ export function ManualBookingDialog({
     setCustomerEmail("");
     setTotalPrice("");
     setAdvancePaid("");
+    setAdvanceMethod("cash");
     setNotes("");
   };
 
@@ -210,6 +217,7 @@ export function ManualBookingDialog({
         totalPrice: total,
         advancePaid: advance,
         remainingAmount: Math.max(total - advance, 0),
+        advanceMethod: advance > 0 ? advanceMethod : "cash",
         notes: notes.trim() || undefined,
       });
       onOpenChange(false);
@@ -281,6 +289,18 @@ export function ManualBookingDialog({
                 value={advancePaid}
                 onChange={(event) => setAdvancePaid(event.target.value)}
               />
+            </FormField>
+            <FormField label="Advance Method">
+              <FormSelect
+                value={advanceMethod}
+                onChange={(event) =>
+                  setAdvanceMethod(event.target.value as AdvancePaymentMethod)
+                }
+                disabled={!advancePaid || Number(advancePaid) <= 0}
+              >
+                <option value="cash">Cash</option>
+                <option value="online">Online</option>
+              </FormSelect>
             </FormField>
             <FormField label="Remaining">
               <FormInput value={String(remainingAmount)} readOnly />

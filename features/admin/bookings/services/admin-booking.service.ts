@@ -18,6 +18,7 @@ import {
 import {
   createBookingPaymentRecord,
   listPaymentRecordsForBooking,
+  updateBookingPaymentRecordAmount,
 } from "@/features/admin/bookings/services/booking-payment.repository";
 import { buildBookingTimeline } from "@/features/admin/bookings/services/booking-timeline.service";
 import { refundOnlineAdvanceForBooking } from "@/features/payments/services/payment-refund.service";
@@ -155,6 +156,20 @@ export async function createManualBooking(
       ? `${Math.floor(durationMinutes / 60)} hr${durationMinutes % 60 ? ` ${durationMinutes % 60} min` : ""}`
       : `${durationMinutes} min`;
 
+  const totalPrice = Number(input.totalPrice);
+  const advancePaid = Number(input.advancePaid) || 0;
+  if (!Number.isFinite(totalPrice) || totalPrice <= 0) {
+    throw new Error("Total price must be a valid amount.");
+  }
+  if (!Number.isFinite(advancePaid) || advancePaid < 0) {
+    throw new Error("Advance paid must be a valid amount.");
+  }
+  if (advancePaid > totalPrice) {
+    throw new Error("Advance paid cannot exceed the total price.");
+  }
+  const remainingAmount = Math.max(totalPrice - advancePaid, 0);
+  const advanceMethod = input.advanceMethod === "online" ? "online" : "cash";
+
   const session = await createBookingSession({
     userId: adminUserId,
     selectedDate: input.bookingDate,
@@ -163,9 +178,9 @@ export async function createManualBooking(
     slotCount: slotIds.length,
     totalDurationMinutes: durationMinutes,
     totalDurationLabel: durationLabel,
-    totalPrice: input.totalPrice,
-    advanceAmount: input.advancePaid,
-    remainingAmount: input.remainingAmount,
+    totalPrice,
+    advanceAmount: advancePaid,
+    remainingAmount,
     profileName: input.customerName,
     profilePhone: customerPhone,
     profileEmail: customerEmail,
@@ -177,11 +192,11 @@ export async function createManualBooking(
     bookingSessionId: session.id,
     userId: adminUserId,
     razorpayOrderId: `manual-${randomUUID()}`,
-    amount: input.advancePaid,
+    amount: advancePaid,
     currency: "INR",
   });
 
-  await markManualPaymentPaid(payment.id, input.advancePaid, "manual");
+  await markManualPaymentPaid(payment.id, advancePaid, "manual");
 
   const bookingReference = await generateBookingReference(input.bookingDate);
 
@@ -195,9 +210,9 @@ export async function createManualBooking(
     endTime: timeBounds.endTime,
     selectedSlots: slotIds,
     durationMinutes,
-    totalPrice: input.totalPrice,
-    advancePaid: input.advancePaid,
-    remainingAmount: input.remainingAmount,
+    totalPrice,
+    advancePaid,
+    remainingAmount,
     customerName: input.customerName,
     customerPhone,
     customerEmail,
@@ -216,14 +231,17 @@ export async function createManualBooking(
     throw new Error("Unable to reserve selected slots.");
   }
 
-  if (input.advancePaid > 0) {
+  if (advancePaid > 0) {
     await createBookingPaymentRecord({
       bookingId: booking.id,
       type: "advance",
-      amount: input.advancePaid,
-      method: "cash",
+      amount: advancePaid,
+      method: advanceMethod,
       collectedBy: adminUserId,
-      notes: "Manual booking advance",
+      notes:
+        advanceMethod === "online"
+          ? "Manual booking advance (online)"
+          : "Manual booking advance (cash)",
     });
   }
 
@@ -247,7 +265,66 @@ export async function updateAdminBooking(
   id: string,
   input: UpdateBookingInput,
 ): Promise<AdminBookingDetail | null> {
-  const updated = await updateBookingRecord(id, input);
+  const booking = await getBookingById(id);
+  if (!booking) return null;
+
+  const amountsChanged = input.totalPrice !== undefined || input.advancePaid !== undefined;
+  const nextTotalPrice =
+    input.totalPrice !== undefined ? Number(input.totalPrice) : booking.totalPrice;
+  const nextAdvancePaid =
+    input.advancePaid !== undefined ? Number(input.advancePaid) : booking.advancePaid;
+
+  if (!Number.isFinite(nextTotalPrice) || nextTotalPrice < 0) {
+    throw new Error("Total price must be a valid amount.");
+  }
+  if (!Number.isFinite(nextAdvancePaid) || nextAdvancePaid < 0) {
+    throw new Error("Advance paid must be a valid amount.");
+  }
+  if (nextAdvancePaid > nextTotalPrice) {
+    throw new Error("Advance paid cannot exceed the total price.");
+  }
+
+  const remainingAmount = Math.max(nextTotalPrice - nextAdvancePaid, 0);
+
+  if (amountsChanged && nextAdvancePaid !== booking.advancePaid) {
+    const payments = await listPaymentRecordsForBooking(id);
+    const remainingPayments = payments.filter((payment) => payment.type === "remaining");
+    const advancePayments = payments.filter((payment) => payment.type === "advance");
+
+    if (remainingPayments.length > 0) {
+      throw new Error(
+        "Advance cannot be edited after remaining payments have been collected. Adjust via Collect Payment instead.",
+      );
+    }
+
+    if (advancePayments.length === 1) {
+      await updateBookingPaymentRecordAmount(advancePayments[0].id, nextAdvancePaid);
+    } else if (advancePayments.length === 0 && nextAdvancePaid > 0) {
+      await createBookingPaymentRecord({
+        bookingId: id,
+        type: "advance",
+        amount: nextAdvancePaid,
+        method: booking.source === "online" ? "online" : "cash",
+        notes: "Advance updated from booking edit",
+      });
+    } else if (advancePayments.length > 1) {
+      throw new Error("Multiple advance payments found. Update amounts from the payment history.");
+    }
+  }
+
+  const updated = await updateBookingRecord(id, {
+    customerName: input.customerName,
+    customerPhone: input.customerPhone,
+    customerEmail: input.customerEmail,
+    notes: input.notes,
+    ...(amountsChanged
+      ? {
+          totalPrice: nextTotalPrice,
+          advancePaid: nextAdvancePaid,
+          remainingAmount,
+        }
+      : {}),
+  });
   if (!updated) return null;
   return loadAdminBookingDetail(id);
 }
