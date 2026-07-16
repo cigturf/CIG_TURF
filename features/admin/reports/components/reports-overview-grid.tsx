@@ -32,7 +32,7 @@ const OVERVIEW_DEFINITIONS: {
   { key: "cancelledBookings", label: "Cancelled", hint: "Cancelled bookings", icon: Ban, format: "number" },
   { key: "manualBookings", label: "Manual", hint: "Walk-in / admin created", icon: PenLine, format: "number" },
   { key: "onlineBookings", label: "Online", hint: "Customer self-serve", icon: MonitorSmartphone, format: "number" },
-  { key: "totalRevenue", label: "Total Revenue", hint: "Gross booking value", icon: IndianRupee, format: "currency" },
+  { key: "totalRevenue", label: "Total Revenue", hint: "Actual collections", icon: IndianRupee, format: "currency" },
   { key: "advanceCollected", label: "Advance Collected", hint: "Payments received", icon: Wallet, format: "currency" },
   { key: "offlineCollections", label: "Offline Collections", hint: "Cash, UPI, card at venue", icon: CircleDollarSign, format: "currency" },
   { key: "pendingCollections", label: "Pending Collections", hint: "Outstanding at venue", icon: Clock3, format: "currency" },

@@ -91,8 +91,8 @@ export function CollectPaymentDialog({
         <DialogHeader>
           <DialogTitle>Collect Remaining Payment</DialogTitle>
           <DialogDescription>
-            Record an offline collection. Partial payments are supported — outstanding balance is
-            updated after each collection.
+            Record what the customer actually paid. Enter less than outstanding for partial
+            collections — only the amount entered is added to finance totals.
           </DialogDescription>
         </DialogHeader>
 

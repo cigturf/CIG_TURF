@@ -224,6 +224,12 @@ export function AdminBookingsView() {
   };
 
   const completeBooking = async (payload: {
+    collection?: {
+      amount: number;
+      method: OfflinePaymentMethod;
+      referenceNumber?: string;
+      notes?: string;
+    };
     overrideOutstanding?: boolean;
     overrideReason?: string;
   }) => {

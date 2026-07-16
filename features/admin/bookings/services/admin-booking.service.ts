@@ -406,75 +406,15 @@ export async function cancelAdminBooking(
   return loadAdminBookingDetail(id);
 }
 
-export async function completeAdminBooking(
+async function applyBookingPaymentCollection(
   id: string,
-  input: CompleteBookingInput = {},
-  actor: AdminActor,
-): Promise<AdminBookingDetail | null> {
-  const booking = await getBookingById(id);
-  if (!booking) return null;
-  if (booking.status === "completed") return loadAdminBookingDetail(id);
-  if (booking.status === "cancelled") {
-    throw new Error("Cancelled bookings cannot be completed.");
-  }
-
-  const settings =
-    (await SettingsService.getPublic()) ?? toPublicBusinessSettings(createEmptyBusinessSettings());
-  const config = resolveBookingEngineConfig(settings);
-  const now = new Date();
-
-  if (!canCompleteBooking(booking, now, config.timezone)) {
-    if (!hasBookingStartTimePassed(booking, now, config.timezone)) {
-      throw new Error("Booking can only be completed after the scheduled start time.");
-    }
-    throw new Error("Booking cannot be completed from its current status.");
-  }
-
-  if (booking.remainingAmount > 0 && !input.overrideOutstanding) {
-    throw new Error("Outstanding payment must be collected before completing this booking.");
-  }
-
-  if (booking.remainingAmount > 0 && input.overrideOutstanding) {
-    if (!input.overrideReason?.trim()) {
-      throw new Error("Override reason is required when completing with outstanding payment.");
-    }
-    await logBookingChange(
-      id,
-      actor,
-      "booking.complete.override",
-      "remaining_amount",
-      String(booking.remainingAmount),
-      "0",
-      { reason: input.overrideReason.trim() },
-    );
-  }
-
-  const updated = await updateBookingRecord(id, {
-    status: "completed",
-    matchCompletedAt: now,
-  });
-
-  if (!updated) return null;
-
-  await logBookingChange(id, actor, "booking.completed", "status", booking.status, "completed");
-
-  return loadAdminBookingDetail(id);
-}
-
-export async function collectBookingPayment(
-  id: string,
+  booking: NonNullable<Awaited<ReturnType<typeof getBookingById>>>,
   input: CollectPaymentInput,
   actor: AdminActor,
-): Promise<AdminBookingDetail | null> {
-  const booking = await getBookingById(id);
-  if (!booking) return null;
-  if (booking.status === "cancelled") {
-    throw new Error("Cannot collect payment for a cancelled booking.");
-  }
-
-  const amount = Math.min(input.amount, booking.remainingAmount);
-  if (amount <= 0) {
-    throw new Error("No remaining amount to collect.");
+): Promise<NonNullable<Awaited<ReturnType<typeof updateBookingRecord>>>> {
+  const amount = Math.min(Number(input.amount), booking.remainingAmount);
+  if (!Number.isFinite(amount) || amount <= 0) {
+    throw new Error("Enter a valid collection amount.");
   }
 
   await createBookingPaymentRecord({
@@ -493,7 +433,9 @@ export async function collectBookingPayment(
     remainingAmount: newRemaining,
   });
 
-  if (!updated) return null;
+  if (!updated) {
+    throw new Error("Failed to record payment collection.");
+  }
 
   await logBookingChange(
     id,
@@ -537,6 +479,89 @@ export async function collectBookingPayment(
     },
   );
 
+  return updated;
+}
+
+export async function completeAdminBooking(
+  id: string,
+  input: CompleteBookingInput = {},
+  actor: AdminActor,
+): Promise<AdminBookingDetail | null> {
+  let booking = await getBookingById(id);
+  if (!booking) return null;
+  if (booking.status === "completed") return loadAdminBookingDetail(id);
+  if (booking.status === "cancelled") {
+    throw new Error("Cancelled bookings cannot be completed.");
+  }
+
+  const settings =
+    (await SettingsService.getPublic()) ?? toPublicBusinessSettings(createEmptyBusinessSettings());
+  const config = resolveBookingEngineConfig(settings);
+  const now = new Date();
+
+  if (!canCompleteBooking(booking, now, config.timezone)) {
+    if (!hasBookingStartTimePassed(booking, now, config.timezone)) {
+      throw new Error("Booking can only be completed after the scheduled start time.");
+    }
+    throw new Error("Booking cannot be completed from its current status.");
+  }
+
+  if (input.collection && Number(input.collection.amount) > 0) {
+    await applyBookingPaymentCollection(id, booking, input.collection, actor);
+    booking = (await getBookingById(id)) ?? booking;
+  }
+
+  if (booking.remainingAmount > 0 && !input.overrideOutstanding) {
+    const collectedNow = Boolean(input.collection && Number(input.collection.amount) > 0);
+    if (!collectedNow) {
+      throw new Error(
+        "Record the amount collected (full or partial), or use owner override to complete without payment.",
+      );
+    }
+  }
+
+  if (booking.remainingAmount > 0 && input.overrideOutstanding) {
+    if (!input.overrideReason?.trim()) {
+      throw new Error("Override reason is required when completing with outstanding payment.");
+    }
+    await logBookingChange(
+      id,
+      actor,
+      "booking.complete.override",
+      "remaining_amount",
+      String(booking.remainingAmount),
+      "0",
+      { reason: input.overrideReason.trim() },
+    );
+  }
+
+  const updated = await updateBookingRecord(id, {
+    status: "completed",
+    matchCompletedAt: now,
+  });
+
+  if (!updated) return null;
+
+  await logBookingChange(id, actor, "booking.completed", "status", booking.status, "completed");
+
+  return loadAdminBookingDetail(id);
+}
+
+export async function collectBookingPayment(
+  id: string,
+  input: CollectPaymentInput,
+  actor: AdminActor,
+): Promise<AdminBookingDetail | null> {
+  const booking = await getBookingById(id);
+  if (!booking) return null;
+  if (booking.status === "cancelled") {
+    throw new Error("Cannot collect payment for a cancelled booking.");
+  }
+  if (booking.remainingAmount <= 0) {
+    throw new Error("No remaining amount to collect.");
+  }
+
+  await applyBookingPaymentCollection(id, booking, input, actor);
   return loadAdminBookingDetail(id);
 }
 

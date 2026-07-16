@@ -184,7 +184,7 @@ export function BookingDetailDrawer({
 
             <div className="grid grid-cols-2 gap-2">
               <Button variant="outline" onClick={onEdit}>
-                Edit
+                Edit Amounts
               </Button>
               <Button variant="outline" onClick={onDuplicate}>
                 Duplicate

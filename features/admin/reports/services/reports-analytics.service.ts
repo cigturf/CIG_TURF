@@ -68,8 +68,8 @@ export async function getReportsAnalyticsData(
     popularSlots: buildPopularSlots(bookings),
     popularDays: buildPopularDays(bookings),
     cancellationTrend: buildCancellationTrend(bookings, range.from, range.to),
-    dailyRevenue: buildDailyRevenue(bookings, range.from, range.to),
-    revenueTrend: buildDailyRevenue(bookings, range.from, range.to),
+    dailyRevenue: buildDailyRevenue(payments, range.from, range.to),
+    revenueTrend: buildDailyRevenue(payments, range.from, range.to),
     advancePayments: buildPaymentSeriesByDay(
       payments,
       range.from,

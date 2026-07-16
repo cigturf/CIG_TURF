@@ -114,6 +114,7 @@ export type CollectPaymentInput = {
 };
 
 export type CompleteBookingInput = {
+  collection?: CollectPaymentInput;
   overrideOutstanding?: boolean;
   overrideReason?: string;
 };

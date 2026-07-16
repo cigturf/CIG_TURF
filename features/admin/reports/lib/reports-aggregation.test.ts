@@ -89,7 +89,7 @@ describe("reports aggregation", () => {
     expect(overview.cancelledBookings).toBe(1);
     expect(overview.manualBookings).toBe(2);
     expect(overview.onlineBookings).toBe(1);
-    expect(overview.totalRevenue).toBe(2700);
+    expect(overview.totalRevenue).toBe(700);
     expect(overview.offlineCollections).toBe(500);
     expect(overview.pendingCollections).toBe(1000);
   });

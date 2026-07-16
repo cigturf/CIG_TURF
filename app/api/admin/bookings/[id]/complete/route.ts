@@ -18,6 +18,15 @@ export async function POST(request: Request, context: RouteContext) {
     const booking = await completeAdminBooking(
       id,
       {
+        collection:
+          body.collection && Number(body.collection.amount) > 0
+            ? {
+                amount: Number(body.collection.amount),
+                method: body.collection.method,
+                referenceNumber: body.collection.referenceNumber,
+                notes: body.collection.notes,
+              }
+            : undefined,
         overrideOutstanding: Boolean(body.overrideOutstanding),
         overrideReason: body.overrideReason,
       },

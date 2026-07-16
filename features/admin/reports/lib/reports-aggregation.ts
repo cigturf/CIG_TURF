@@ -59,6 +59,19 @@ function topSeries(map: Map<string, number>, limit = 8): ReportSeriesPoint[] {
     .map(([label, value]) => ({ label, value }));
 }
 
+function paymentNetAmount(payment: BookingPaymentRecord): number {
+  return payment.type === "refund" ? -payment.amount : payment.amount;
+}
+
+function sumCollectedPayments(
+  payments: BookingPaymentRecord[],
+  predicate?: (payment: BookingPaymentRecord) => boolean,
+): number {
+  return payments
+    .filter((payment) => (predicate ? predicate(payment) : true))
+    .reduce((sum, payment) => sum + paymentNetAmount(payment), 0);
+}
+
 export function buildReportOverview(
   bookings: AdminBookingRecord[],
   payments: BookingPaymentRecord[],
@@ -69,13 +82,15 @@ export function buildReportOverview(
   const manual = bookings.filter((booking) => booking.source === "manual");
   const online = bookings.filter((booking) => booking.source === "online");
 
-  const totalRevenue = active.reduce((sum, booking) => sum + booking.totalPrice, 0);
-  const advanceCollected = payments
-    .filter((payment) => payment.type === "advance" || payment.type === "remaining")
-    .reduce((sum, payment) => sum + payment.amount, 0);
-  const offlineCollections = payments
-    .filter((payment) => payment.method !== "online")
-    .reduce((sum, payment) => sum + payment.amount, 0);
+  const totalRevenue = sumCollectedPayments(payments);
+  const advanceCollected = sumCollectedPayments(
+    payments,
+    (payment) => payment.type === "advance" || payment.type === "remaining",
+  );
+  const offlineCollections = sumCollectedPayments(
+    payments,
+    (payment) => payment.method !== "online",
+  );
   const pendingCollections = active.reduce((sum, booking) => sum + booking.remainingAmount, 0);
 
   return {
@@ -88,7 +103,8 @@ export function buildReportOverview(
     advanceCollected,
     offlineCollections,
     pendingCollections,
-    averageBookingValue: active.length > 0 ? Math.round(totalRevenue / active.length) : 0,
+    averageBookingValue:
+      active.length > 0 ? Math.round(totalRevenue / active.length) : 0,
     occupancyRate: 0,
   };
 }
@@ -178,16 +194,17 @@ export function buildCancellationTrend(
 }
 
 export function buildDailyRevenue(
-  bookings: AdminBookingRecord[],
+  payments: BookingPaymentRecord[],
   from: string,
   to: string,
 ): ReportSeriesPoint[] {
   const dates = enumerateIsoDates(from, to);
   const totals = new Map(dates.map((date) => [date, 0]));
 
-  for (const booking of bookings) {
-    if (booking.status === "cancelled") continue;
-    totals.set(booking.bookingDate, (totals.get(booking.bookingDate) ?? 0) + booking.totalPrice);
+  for (const payment of payments) {
+    const date = payment.createdAt.toISOString().slice(0, 10);
+    if (!totals.has(date)) continue;
+    totals.set(date, (totals.get(date) ?? 0) + paymentNetAmount(payment));
   }
 
   return dates.map((date) => ({
