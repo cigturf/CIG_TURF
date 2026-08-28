@@ -66,6 +66,28 @@ export async function signOutAction(): Promise<void> {
 
 const SIGN_IN_TIMEOUT_MS = 15_000;
 
+/**
+ * Supabase's client can surface a raw, unparsed response body (e.g. "{}")
+ * as the error message when its API returns a malformed 5xx during an
+ * outage, instead of a real message. Filter that out in favor of a
+ * status-aware, human-readable fallback.
+ */
+function toUserFacingAuthError(
+  error: { message?: string; status?: number } | null | undefined,
+  fallback: string,
+): string {
+  const message = error?.message?.trim();
+  const looksUnusable = !message || /^[{[]/.test(message) || message === "[object Object]";
+
+  if (!looksUnusable) return message;
+
+  if (error?.status && error.status >= 500) {
+    return "Our sign-in service is temporarily unavailable. Please try again in a few minutes.";
+  }
+
+  return fallback;
+}
+
 export async function signInWithPasswordAction(
   email: string,
   password: string,
@@ -84,7 +106,23 @@ export async function signInWithPasswordAction(
     ]);
 
     if (error || !data.user) {
-      return { success: false, error: "Invalid email or password" };
+      if (error) {
+        console.error("[signInWithPasswordAction] Supabase error:", {
+          message: error.message,
+          status: error.status,
+          code: error.code,
+        });
+      }
+      // Never surface Supabase's actual message here (avoids leaking whether
+      // an account exists) — except for a genuine service outage, where the
+      // honest answer isn't "wrong password".
+      const isServiceOutage = Boolean(error?.status && error.status >= 500);
+      return {
+        success: false,
+        error: isServiceOutage
+          ? "Our sign-in service is temporarily unavailable. Please try again in a few minutes."
+          : "Invalid email or password",
+      };
     }
 
     return { success: true, userId: data.user.id };
@@ -116,7 +154,7 @@ export async function sendEmailOtpAction(
         status: error.status,
         code: error.code,
       });
-      return { success: false, error: error.message || "Failed to send OTP" };
+      return { success: false, error: toUserFacingAuthError(error, "Failed to send OTP") };
     }
 
     return { success: true };
@@ -151,7 +189,7 @@ export async function verifyEmailOtpAction(
           code: error.code,
         });
       }
-      return { success: false, error: error?.message || "Invalid OTP" };
+      return { success: false, error: toUserFacingAuthError(error, "Invalid OTP") };
     }
 
     return { success: true, userId: data.user.id };
