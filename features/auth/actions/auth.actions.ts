@@ -64,16 +64,34 @@ export async function signOutAction(): Promise<void> {
   await supabase.auth.signOut();
 }
 
+const SIGN_IN_TIMEOUT_MS = 15_000;
+
 export async function signInWithPasswordAction(
   email: string,
   password: string,
 ): Promise<{ success: boolean; error?: string; userId?: string }> {
-  const supabase = await createClient();
-  const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+  try {
+    const supabase = await createClient();
 
-  if (error || !data.user) {
-    return { success: false, error: "Invalid email or password" };
+    const { data, error } = await Promise.race([
+      supabase.auth.signInWithPassword({ email, password }),
+      new Promise<never>((_, reject) =>
+        setTimeout(
+          () => reject(new Error("timeout")),
+          SIGN_IN_TIMEOUT_MS,
+        ),
+      ),
+    ]);
+
+    if (error || !data.user) {
+      return { success: false, error: "Invalid email or password" };
+    }
+
+    return { success: true, userId: data.user.id };
+  } catch {
+    return {
+      success: false,
+      error: "Sign-in is taking too long to respond. Please try again in a moment.",
+    };
   }
-
-  return { success: true, userId: data.user.id };
 }
