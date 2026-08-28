@@ -7,8 +7,7 @@ import { ChevronLeft, Mail } from "lucide-react";
 import { toast } from "sonner";
 
 import { submitCompleteProfile } from "@/features/auth/lib/auth-client-api";
-import { signInWithPasswordAction } from "@/features/auth/actions";
-import { sendEmailOtp } from "@/features/auth/lib/email-otp.client";
+import { sendEmailOtpAction, signInWithPasswordAction } from "@/features/auth/actions";
 import { EmailOtpVerification } from "@/features/auth/components/email-otp-verification";
 import { isAdminLoginEmail } from "@/features/auth/config/auth.config";
 import { useAuthSession } from "@/features/auth/hooks";
@@ -104,11 +103,10 @@ export function AuthPage() {
 
     setLoading(true);
     try {
-      const supabase = createClient();
-      const { error } = await sendEmailOtp(supabase, parsed.data);
+      const result = await sendEmailOtpAction(parsed.data);
 
-      if (error) {
-        toast.error(error.message ?? "Failed to send OTP");
+      if (!result.success) {
+        toast.error(result.error ?? "Failed to send OTP");
         return;
       }
 

@@ -3,9 +3,8 @@
 import { useState } from "react";
 import { toast } from "sonner";
 
-import { sendEmailOtp, verifyEmailOtp } from "@/features/auth/lib/email-otp.client";
+import { sendEmailOtpAction, verifyEmailOtpAction } from "@/features/auth/actions";
 import { Button, FormField, FormInput, Text } from "@/components/design-system";
-import { createClient } from "@/lib/supabase/client";
 import { emailSchema } from "@/lib/validations/common";
 
 type EmailOtpVerificationProps = {
@@ -47,11 +46,10 @@ export function EmailOtpVerification({
 
     setLoading(true);
     try {
-      const supabase = createClient();
-      const { error } = await sendEmailOtp(supabase, parsed.data);
+      const result = await sendEmailOtpAction(parsed.data);
 
-      if (error) {
-        toast.error(error.message ?? "Failed to send OTP");
+      if (!result.success) {
+        toast.error(result.error ?? "Failed to send OTP");
         return;
       }
 
@@ -76,17 +74,14 @@ export function EmailOtpVerification({
 
     setLoading(true);
     try {
-      const supabase = createClient();
-      const { data, error } = await verifyEmailOtp(supabase, parsed.data, otp);
+      const result = await verifyEmailOtpAction(parsed.data, otp);
 
-      if (error) {
-        toast.error(error.message ?? "Invalid OTP");
+      if (!result.success || !result.userId) {
+        toast.error(result.error ?? "Invalid OTP");
         return;
       }
 
-      if (data.user) {
-        onVerified(data.user.id, parsed.data);
-      }
+      onVerified(result.userId, parsed.data);
     } finally {
       setLoading(false);
     }

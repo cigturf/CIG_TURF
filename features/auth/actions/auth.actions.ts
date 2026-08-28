@@ -95,3 +95,56 @@ export async function signInWithPasswordAction(
     };
   }
 }
+
+export async function sendEmailOtpAction(
+  email: string,
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const supabase = await createClient();
+
+    const { error } = await Promise.race([
+      supabase.auth.signInWithOtp({ email, options: { shouldCreateUser: true } }),
+      new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error("timeout")), SIGN_IN_TIMEOUT_MS),
+      ),
+    ]);
+
+    if (error) {
+      return { success: false, error: error.message ?? "Failed to send OTP" };
+    }
+
+    return { success: true };
+  } catch {
+    return {
+      success: false,
+      error: "Sending the code is taking too long. Please try again in a moment.",
+    };
+  }
+}
+
+export async function verifyEmailOtpAction(
+  email: string,
+  token: string,
+): Promise<{ success: boolean; error?: string; userId?: string }> {
+  try {
+    const supabase = await createClient();
+
+    const { data, error } = await Promise.race([
+      supabase.auth.verifyOtp({ email, token, type: "email" }),
+      new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error("timeout")), SIGN_IN_TIMEOUT_MS),
+      ),
+    ]);
+
+    if (error || !data.user) {
+      return { success: false, error: error?.message ?? "Invalid OTP" };
+    }
+
+    return { success: true, userId: data.user.id };
+  } catch {
+    return {
+      success: false,
+      error: "Verifying the code is taking too long. Please try again in a moment.",
+    };
+  }
+}
