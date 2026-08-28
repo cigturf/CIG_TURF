@@ -10,6 +10,8 @@ import {
 } from "@/features/auth/utils/auth-return-to.server";
 import { createClient } from "@/lib/supabase/server";
 
+const CALLBACK_TIMEOUT_MS = 15_000;
+
 export async function GET(request: NextRequest) {
   const { searchParams, origin } = new URL(request.url);
   const code = searchParams.get("code");
@@ -21,7 +23,12 @@ export async function GET(request: NextRequest) {
 
   try {
     const supabase = await createClient();
-    const { error } = await supabase.auth.exchangeCodeForSession(code);
+    const { error } = await Promise.race([
+      supabase.auth.exchangeCodeForSession(code),
+      new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error("timeout")), CALLBACK_TIMEOUT_MS),
+      ),
+    ]);
 
     if (error) {
       console.error("[Auth callback] Session exchange failed:", error.message);

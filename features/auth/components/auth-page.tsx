@@ -61,6 +61,13 @@ export function AuthPage() {
   }, [returnToParam]);
 
   useEffect(() => {
+    if (searchParams.get("error") === "auth") {
+      toast.error("That sign-in link didn't work or has expired. Please try again.");
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
     if (!isPending && isAuthenticated && user && mode !== "onboarding") {
       if (!user.profileComplete && !isBookingFlowReturn(returnTo)) {
         setMode("onboarding");
