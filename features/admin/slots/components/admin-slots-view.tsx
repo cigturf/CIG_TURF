@@ -41,6 +41,12 @@ type ManualBookingPayload = {
   notes?: string;
 };
 
+// Admins can view and block slots far beyond the customer-facing booking
+// window (e.g. pre-blocking a date for a tournament booked months out).
+// This is independent of config.bookingWindowDays, which only governs how
+// far ahead customers can book.
+const ADMIN_SLOT_VIEW_WINDOW_DAYS = 365;
+
 function clampDateToWindow(dateIso: string, windowDays: number) {
   const today = getTodayIso();
   const end = addDaysToIsoDate(today, Math.max(windowDays - 1, 0));
@@ -56,8 +62,8 @@ export function AdminSlotsView() {
   const today = getTodayIso();
   const [dateIso, setDateIso] = useState(() => today);
   const activeDate = useMemo(
-    () => clampDateToWindow(dateIso, config.bookingWindowDays),
-    [dateIso, config.bookingWindowDays],
+    () => clampDateToWindow(dateIso, ADMIN_SLOT_VIEW_WINDOW_DAYS),
+    [dateIso],
   );
 
   const { bookedSlotIds, heldSlotIds, blockedSlotIds, maintenanceSlotIds, slotReasons, isHoliday, hydrated } =
@@ -110,7 +116,7 @@ export function AdminSlotsView() {
   const handleDateNav = (direction: -1 | 1) => {
     setSelectedSlotIds([]);
     setSelectionMode(false);
-    setDateIso((current) => addDaysToIsoDate(clampDateToWindow(current, config.bookingWindowDays), direction));
+    setDateIso((current) => addDaysToIsoDate(clampDateToWindow(current, ADMIN_SLOT_VIEW_WINDOW_DAYS), direction));
   };
 
   const openBooking = useCallback(async (bookingId: string) => {
@@ -315,7 +321,7 @@ export function AdminSlotsView() {
               type="date"
               value={activeDate}
               min={today}
-              max={addDaysToIsoDate(today, config.bookingWindowDays - 1)}
+              max={addDaysToIsoDate(today, ADMIN_SLOT_VIEW_WINDOW_DAYS - 1)}
               onChange={(event) => setDateIso(event.target.value)}
               className="h-9 w-[160px]"
             />

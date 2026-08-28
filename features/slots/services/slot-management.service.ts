@@ -1,3 +1,4 @@
+import { getBookedSlotIdsForDate } from "@/features/booking/services/booked-slot.repository";
 import type { SlotBlockState, SlotAvailabilitySnapshot } from "@/features/slots/types/slot-management.types";
 import {
   deleteSlotBlock,
@@ -12,15 +13,35 @@ export async function getAvailabilityForDate(dateIso: string): Promise<SlotAvail
   return getSlotAvailabilitySnapshot(dateIso);
 }
 
+export type SlotBlockConflict = { bookingDate: string; slotId: string };
+
 export async function blockSlots(input: {
   items: Array<{ bookingDate: string; slotIds: string[] }>;
   state: SlotBlockState;
   reason?: string | null;
   adminUserId?: string | null;
-}) {
+}): Promise<{ blockedCount: number; conflicts: SlotBlockConflict[] }> {
+  const bookedSlotIdsByDate = new Map(
+    await Promise.all(
+      input.items.map(
+        async ({ bookingDate }) =>
+          [bookingDate, new Set(await getBookedSlotIdsForDate(bookingDate))] as const,
+      ),
+    ),
+  );
+
+  const conflicts: SlotBlockConflict[] = [];
   const tasks: Promise<unknown>[] = [];
+
   for (const { bookingDate, slotIds } of input.items) {
+    const bookedSlotIds = bookedSlotIdsByDate.get(bookingDate) ?? new Set<string>();
+
     for (const slotId of Array.from(new Set(slotIds))) {
+      if (bookedSlotIds.has(slotId)) {
+        conflicts.push({ bookingDate, slotId });
+        continue;
+      }
+
       tasks.push(
         upsertSlotBlock({
           bookingDate,
@@ -32,7 +53,9 @@ export async function blockSlots(input: {
       );
     }
   }
+
   await Promise.all(tasks);
+  return { blockedCount: tasks.length, conflicts };
 }
 
 export async function unblockSlots(input: { items: Array<{ bookingDate: string; slotIds: string[] }> }) {

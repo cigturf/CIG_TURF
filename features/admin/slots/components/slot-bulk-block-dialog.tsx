@@ -17,8 +17,21 @@ import {
   FormTextarea,
   Text,
 } from "@/components/design-system";
-import { addDaysToIsoDate } from "@/features/booking/utils/time";
+import { addDaysToIsoDate, formatMinutesAsTime } from "@/features/booking/utils/time";
+import { parseSlotId } from "@/features/booking/utils/slot-id";
 import { cn } from "@/lib/utils";
+
+type SlotBlockConflict = { bookingDate: string; slotId: string };
+
+function formatConflictLabel(conflict: SlotBlockConflict): string {
+  const parsed = parseSlotId(conflict.slotId);
+  const dateLabel = new Date(`${conflict.bookingDate}T00:00:00`).toLocaleDateString("en-IN", {
+    month: "short",
+    day: "numeric",
+  });
+  if (!parsed) return dateLabel;
+  return `${dateLabel} ${formatMinutesAsTime(parsed.startMinute)}`;
+}
 
 type SlotBulkBlockDialogProps = {
   open: boolean;
@@ -136,7 +149,33 @@ export function SlotBulkBlockDialog({
           const body = await response.json().catch(() => ({}));
           throw new Error(body.error ?? "Failed to update slots");
         }
-        toast.success(action === "maintenance" ? "Maintenance applied" : "Slots blocked");
+
+        const body = (await response.json()) as {
+          blockedCount?: number;
+          conflicts?: SlotBlockConflict[];
+        };
+        const blockedCount = body.blockedCount ?? 0;
+        const conflicts = body.conflicts ?? [];
+
+        if (conflicts.length > 0) {
+          const labels = conflicts.slice(0, 5).map(formatConflictLabel).join(", ");
+          const more = conflicts.length > 5 ? ` and ${conflicts.length - 5} more` : "";
+          toast.error(
+            `${conflicts.length} slot(s) already booked and could not be blocked: ${labels}${more}`,
+          );
+        }
+
+        if (blockedCount > 0) {
+          toast.success(
+            action === "maintenance"
+              ? `Maintenance applied to ${blockedCount} slot(s)`
+              : `${blockedCount} slot(s) blocked`,
+          );
+        }
+
+        if (blockedCount === 0) {
+          return;
+        }
       }
 
       onOpenChange(false);

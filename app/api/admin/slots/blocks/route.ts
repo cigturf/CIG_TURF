@@ -43,14 +43,18 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Invalid state" }, { status: 400 });
     }
 
-    await blockSlots({
+    const result = await blockSlots({
       items,
       state: body.state,
       reason: body.reason ?? null,
       adminUserId: auth.session.user.id,
     });
 
-    return NextResponse.json({ success: true });
+    return NextResponse.json({
+      success: true,
+      blockedCount: result.blockedCount,
+      conflicts: result.conflicts,
+    });
   } catch (error) {
     return NextResponse.json(
       { error: error instanceof Error ? error.message : "Failed to block slots" },
