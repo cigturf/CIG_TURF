@@ -49,7 +49,7 @@ export function EmailOtpVerification({
       const result = await sendEmailOtpAction(parsed.data);
 
       if (!result.success) {
-        toast.error(result.error ?? "Failed to send OTP");
+        toast.error(result.error || "Failed to send OTP");
         return;
       }
 
@@ -77,7 +77,7 @@ export function EmailOtpVerification({
       const result = await verifyEmailOtpAction(parsed.data, otp);
 
       if (!result.success || !result.userId) {
-        toast.error(result.error ?? "Invalid OTP");
+        toast.error(result.error || "Invalid OTP");
         return;
       }
 

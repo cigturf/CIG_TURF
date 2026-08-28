@@ -113,7 +113,7 @@ export function AuthPage() {
       const result = await sendEmailOtpAction(parsed.data);
 
       if (!result.success) {
-        toast.error(result.error ?? "Failed to send OTP");
+        toast.error(result.error || "Failed to send OTP");
         return;
       }
 
@@ -169,7 +169,7 @@ export function AuthPage() {
 
       if (!result.success) {
         publish(APP_EVENT_TYPES.AUTH_LOGIN_FAILED, { email: parsedEmail.data });
-        toast.error(result.error ?? "Invalid email or password");
+        toast.error(result.error || "Invalid email or password");
         return;
       }
 
@@ -230,7 +230,7 @@ export function AuthPage() {
         phone: parsedPhone.data,
       });
       if (!result.success) {
-        toast.error(result.error ?? "Failed to save profile");
+        toast.error(result.error || "Failed to save profile");
         return;
       }
       toast.success("Profile saved");

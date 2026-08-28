@@ -88,7 +88,8 @@ export async function signInWithPasswordAction(
     }
 
     return { success: true, userId: data.user.id };
-  } catch {
+  } catch (error) {
+    console.error("[signInWithPasswordAction] Unexpected error:", error);
     return {
       success: false,
       error: "Sign-in is taking too long to respond. Please try again in a moment.",
@@ -110,11 +111,17 @@ export async function sendEmailOtpAction(
     ]);
 
     if (error) {
-      return { success: false, error: error.message ?? "Failed to send OTP" };
+      console.error("[sendEmailOtpAction] Supabase error:", {
+        message: error.message,
+        status: error.status,
+        code: error.code,
+      });
+      return { success: false, error: error.message || "Failed to send OTP" };
     }
 
     return { success: true };
-  } catch {
+  } catch (error) {
+    console.error("[sendEmailOtpAction] Unexpected error:", error);
     return {
       success: false,
       error: "Sending the code is taking too long. Please try again in a moment.",
@@ -137,11 +144,19 @@ export async function verifyEmailOtpAction(
     ]);
 
     if (error || !data.user) {
-      return { success: false, error: error?.message ?? "Invalid OTP" };
+      if (error) {
+        console.error("[verifyEmailOtpAction] Supabase error:", {
+          message: error.message,
+          status: error.status,
+          code: error.code,
+        });
+      }
+      return { success: false, error: error?.message || "Invalid OTP" };
     }
 
     return { success: true, userId: data.user.id };
-  } catch {
+  } catch (error) {
+    console.error("[verifyEmailOtpAction] Unexpected error:", error);
     return {
       success: false,
       error: "Verifying the code is taking too long. Please try again in a moment.",
