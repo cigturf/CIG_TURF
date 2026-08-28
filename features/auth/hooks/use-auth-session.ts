@@ -49,8 +49,3 @@ export function useAuthSession() {
     isAuthenticated: Boolean(user),
   };
 }
-
-export async function signOutClient() {
-  const supabase = createClient();
-  await supabase.auth.signOut();
-}

@@ -5,7 +5,8 @@ import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import { Calendar, ChevronRight, LogOut, User } from "lucide-react";
 
-import { signOutClient, useAuthSession } from "@/features/auth/hooks";
+import { signOutAction } from "@/features/auth/actions";
+import { useAuthSession } from "@/features/auth/hooks";
 import { AUTH_ROUTES } from "@/features/auth/types";
 import { buildLoginUrl } from "@/features/auth/utils/redirect";
 import type { BookingRecord } from "@/features/booking/types/booking-record.types";
@@ -51,8 +52,8 @@ export function CustomerDashboard({
   }
 
   const handleLogout = async () => {
-    await signOutClient();
-    router.push("/");
+    await signOutAction();
+    window.location.href = "/";
   };
 
   return (

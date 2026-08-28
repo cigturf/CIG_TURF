@@ -5,7 +5,7 @@ export {
   signOutAction,
 } from "@/features/auth/actions";
 export { AuthPage, CustomerDashboard } from "@/features/auth/components";
-export { signOutClient, useAuthSession } from "@/features/auth/hooks";
+export { useAuthSession } from "@/features/auth/hooks";
 export { isProfileComplete } from "@/features/auth/utils/profile";
 export {
   AUTH_ROUTES,

@@ -26,7 +26,7 @@ import { ADMIN_NAV_ITEMS } from "@/features/admin/config/admin-navigation";
 import { hasAdminPermission } from "@/features/admin/config/admin-permissions";
 import { useAdminSidebar } from "@/features/admin/hooks/use-admin-sidebar";
 import { useAdminShell } from "@/features/admin/providers/admin-shell-provider";
-import { signOutClient } from "@/features/auth/hooks";
+import { signOutAction } from "@/features/auth/actions";
 import { APP_EVENT_TYPES } from "@/features/events/constants/event-types";
 import { useAppEventPublisher } from "@/features/events/hooks/use-app-event-publisher";
 import { Button, Text } from "@/components/design-system";
@@ -69,7 +69,7 @@ export function AdminSidebar({ className, onNavigate }: AdminSidebarProps) {
       email: admin.email,
       role: admin.role,
     });
-    await signOutClient();
+    await signOutAction();
     window.location.href = "/";
   };
 
