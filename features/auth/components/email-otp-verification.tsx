@@ -67,8 +67,8 @@ export function EmailOtpVerification({
   }, []);
 
   const handleVerifyOtp = async () => {
-    if (otp.length < 6) {
-      toast.error("Enter the 6-digit OTP");
+    if (otp.trim().length < 4) {
+      toast.error("Enter the OTP from your email");
       return;
     }
 
@@ -80,7 +80,7 @@ export function EmailOtpVerification({
 
     setLoading(true);
     try {
-      const result = await verifyEmailOtpAction(parsed.data, otp);
+      const result = await verifyEmailOtpAction(parsed.data, otp.trim());
 
       if (!result.success || !result.userId) {
         toast.error(result.error || "Invalid OTP");
@@ -97,7 +97,7 @@ export function EmailOtpVerification({
     <div className="space-y-4">
       <Text size="sm" className="text-muted-foreground">
         {otpSent
-          ? "Enter the 6-digit code we sent to your email."
+          ? "Enter the code we sent to your email."
           : "We will send a one-time code to your email."}
       </Text>
 
@@ -119,11 +119,10 @@ export function EmailOtpVerification({
           <FormField label="One-time password" htmlFor="otp">
             <FormInput
               id="otp"
-              inputMode="numeric"
-              maxLength={6}
-              placeholder="6-digit code"
+              maxLength={16}
+              placeholder="Enter the code from your email"
               value={otp}
-              onChange={(event) => setOtp(event.target.value.replace(/\D/g, ""))}
+              onChange={(event) => setOtp(event.target.value.replace(/\s/g, ""))}
               autoComplete="one-time-code"
             />
           </FormField>
