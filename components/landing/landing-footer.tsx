@@ -145,16 +145,15 @@ export function LandingFooter({ content }: LandingFooterProps) {
           <Text size="sm" className="text-white/40">
             {copyright}
           </Text>
-          <Text size="sm" className="text-white/35">
-            Powered by{" "}
-            <Link
-              href="mailto:smarthmehar@gmail.com"
-              className="text-white/55 hover:text-white hover:underline"
-            >
-              Smarth Singh
-            </Link>{" "}
-            · smarthmehar@gmail.com · +91 99969 10306
-          </Text>
+          <Link
+            href="https://wa.me/919996910306?text=Hi%20Smarth%2C%20I%20saw%20the%20website%20you%20built%20for%20Chandna%20Indoor%20Ground%20%E2%80%94%20I%27m%20interested%20in%20getting%20a%20website%20made%20too."
+            target="_blank"
+            rel="noopener noreferrer"
+            className="group inline-flex w-fit items-center gap-1.5 rounded-full border border-white/15 px-3 py-1.5 text-xs text-white/50 transition-colors hover:border-white/30 hover:text-white"
+          >
+            <span className="size-1.5 rounded-full bg-emerald-400" aria-hidden />
+            Website built by <span className="font-medium text-white/80 group-hover:text-white">Smarth Singh</span> — hire me
+          </Link>
         </div>
       </div>
     </footer>
