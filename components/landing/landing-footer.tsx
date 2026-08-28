@@ -147,7 +147,7 @@ export function LandingFooter({ content }: LandingFooterProps) {
           </Text>
           <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
             <Text size="sm" className="text-white/40">
-              Powered by <span className="text-white/60">SS Technologies</span>
+              Powered By - <span className="text-white/60">TechSS X Webstudio</span>
             </Text>
             <Link
               href="https://wa.me/919996910306?text=Hi%20Smarth%2C%20I%20saw%20the%20website%20you%20built%20for%20Chandna%20Indoor%20Ground%20%E2%80%94%20I%27m%20interested%20in%20getting%20a%20website%20made%20too."
@@ -156,7 +156,7 @@ export function LandingFooter({ content }: LandingFooterProps) {
               className="inline-flex w-fit items-center gap-1.5 rounded-full border border-white/15 px-3 py-1.5 text-xs font-medium text-white/70 transition-colors hover:border-white/30 hover:text-white"
             >
               <span className="size-1.5 rounded-full bg-emerald-400" aria-hidden />
-              Contact for website
+              Contact Smarth Singh
             </Link>
             <Link
               href="mailto:smarthmehar@gmail.com"
