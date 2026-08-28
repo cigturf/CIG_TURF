@@ -15,6 +15,10 @@ type EmailOtpVerificationProps = {
   onBack: () => void;
 };
 
+// Matches the provider's minimum resend interval per recipient, so the
+// countdown reflects a real constraint rather than an arbitrary UI delay.
+const RESEND_COOLDOWN_SECONDS = 60;
+
 export function EmailOtpVerification({
   email,
   loading: externalLoading = false,
@@ -25,6 +29,22 @@ export function EmailOtpVerification({
   const [otp, setOtp] = useState("");
   const [otpSent, setOtpSent] = useState(false);
   const [internalLoading, setInternalLoading] = useState(false);
+  const [cooldownUntil, setCooldownUntil] = useState<number | null>(null);
+  const [now, setNow] = useState(() => Date.now());
+
+  useEffect(() => {
+    if (!cooldownUntil) return;
+    const interval = setInterval(() => {
+      if (Date.now() >= cooldownUntil) {
+        setCooldownUntil(null);
+      } else {
+        setNow(Date.now());
+      }
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [cooldownUntil]);
+
+  const cooldownSeconds = cooldownUntil ? Math.max(0, Math.ceil((cooldownUntil - now) / 1000)) : 0;
 
   const loading = externalLoading || internalLoading;
 
@@ -52,6 +72,8 @@ export function EmailOtpVerification({
       }
 
       setOtpSent(true);
+      setNow(Date.now());
+      setCooldownUntil(Date.now() + RESEND_COOLDOWN_SECONDS * 1000);
       toast.success("OTP sent to your email");
     } finally {
       setLoading(false);
@@ -138,9 +160,9 @@ export function EmailOtpVerification({
             variant="outline"
             className="w-full"
             onClick={() => void handleSendOtp()}
-            disabled={loading}
+            disabled={loading || cooldownSeconds > 0}
           >
-            Resend OTP
+            {cooldownSeconds > 0 ? `Resend OTP in ${cooldownSeconds}s` : "Resend OTP"}
           </Button>
         </>
       )}
