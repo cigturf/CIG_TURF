@@ -63,3 +63,17 @@ export async function signOutAction(): Promise<void> {
   const supabase = await createClient();
   await supabase.auth.signOut();
 }
+
+export async function signInWithPasswordAction(
+  email: string,
+  password: string,
+): Promise<{ success: boolean; error?: string; userId?: string }> {
+  const supabase = await createClient();
+  const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+
+  if (error || !data.user) {
+    return { success: false, error: "Invalid email or password" };
+  }
+
+  return { success: true, userId: data.user.id };
+}

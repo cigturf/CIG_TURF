@@ -7,6 +7,7 @@ import { ChevronLeft, Mail } from "lucide-react";
 import { toast } from "sonner";
 
 import { submitCompleteProfile } from "@/features/auth/lib/auth-client-api";
+import { signInWithPasswordAction } from "@/features/auth/actions";
 import { sendEmailOtp } from "@/features/auth/lib/email-otp.client";
 import { EmailOtpVerification } from "@/features/auth/components/email-otp-verification";
 import { isAdminLoginEmail } from "@/features/auth/config/auth.config";
@@ -159,25 +160,19 @@ export function AuthPage() {
 
     setLoading(true);
     try {
-      const supabase = createClient();
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email: parsedEmail.data,
-        password: parsedPassword.data,
-      });
+      const result = await signInWithPasswordAction(parsedEmail.data, parsedPassword.data);
 
-      if (error) {
+      if (!result.success) {
         publish(APP_EVENT_TYPES.AUTH_LOGIN_FAILED, { email: parsedEmail.data });
-        toast.error("Invalid email or password");
+        toast.error(result.error ?? "Invalid email or password");
         return;
       }
 
-      if (data.user) {
-        publish(APP_EVENT_TYPES.AUTH_LOGIN_SUCCESS, {
-          userId: data.user.id,
-          email: parsedEmail.data,
-        });
-        continueAfterAuth();
-      }
+      publish(APP_EVENT_TYPES.AUTH_LOGIN_SUCCESS, {
+        userId: result.userId ?? "",
+        email: parsedEmail.data,
+      });
+      continueAfterAuth();
     } finally {
       setLoading(false);
     }
