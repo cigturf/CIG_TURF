@@ -145,15 +145,26 @@ export function LandingFooter({ content }: LandingFooterProps) {
           <Text size="sm" className="text-white/40">
             {copyright}
           </Text>
-          <Link
-            href="https://wa.me/919996910306?text=Hi%20Smarth%2C%20I%20saw%20the%20website%20you%20built%20for%20Chandna%20Indoor%20Ground%20%E2%80%94%20I%27m%20interested%20in%20getting%20a%20website%20made%20too."
-            target="_blank"
-            rel="noopener noreferrer"
-            className="group inline-flex w-fit items-center gap-1.5 rounded-full border border-white/15 px-3 py-1.5 text-xs text-white/50 transition-colors hover:border-white/30 hover:text-white"
-          >
-            <span className="size-1.5 rounded-full bg-emerald-400" aria-hidden />
-            Website built by <span className="font-medium text-white/80 group-hover:text-white">Smarth Singh</span> — hire me
-          </Link>
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+            <Text size="sm" className="text-white/40">
+              Powered by <span className="text-white/60">SS Technologies</span>
+            </Text>
+            <Link
+              href="https://wa.me/919996910306?text=Hi%20Smarth%2C%20I%20saw%20the%20website%20you%20built%20for%20Chandna%20Indoor%20Ground%20%E2%80%94%20I%27m%20interested%20in%20getting%20a%20website%20made%20too."
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex w-fit items-center gap-1.5 rounded-full border border-white/15 px-3 py-1.5 text-xs font-medium text-white/70 transition-colors hover:border-white/30 hover:text-white"
+            >
+              <span className="size-1.5 rounded-full bg-emerald-400" aria-hidden />
+              Contact for website
+            </Link>
+            <Link
+              href="mailto:smarthmehar@gmail.com"
+              className="text-xs text-white/40 transition-colors hover:text-white/70 hover:underline"
+            >
+              smarthmehar@gmail.com
+            </Link>
+          </div>
         </div>
       </div>
     </footer>
