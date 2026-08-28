@@ -13,21 +13,17 @@ export async function getAvailabilityForDate(dateIso: string): Promise<SlotAvail
 }
 
 export async function blockSlots(input: {
-  bookingDates: string[];
-  slotIds: string[];
+  items: Array<{ bookingDate: string; slotIds: string[] }>;
   state: SlotBlockState;
   reason?: string | null;
   adminUserId?: string | null;
 }) {
-  const uniqueDates = Array.from(new Set(input.bookingDates));
-  const uniqueSlotIds = Array.from(new Set(input.slotIds));
-
   const tasks: Promise<unknown>[] = [];
-  for (const dateIso of uniqueDates) {
-    for (const slotId of uniqueSlotIds) {
+  for (const { bookingDate, slotIds } of input.items) {
+    for (const slotId of Array.from(new Set(slotIds))) {
       tasks.push(
         upsertSlotBlock({
-          bookingDate: dateIso,
+          bookingDate,
           slotId,
           state: input.state,
           reason: input.reason ?? null,
@@ -39,14 +35,11 @@ export async function blockSlots(input: {
   await Promise.all(tasks);
 }
 
-export async function unblockSlots(input: { bookingDates: string[]; slotIds: string[] }) {
-  const uniqueDates = Array.from(new Set(input.bookingDates));
-  const uniqueSlotIds = Array.from(new Set(input.slotIds));
-
+export async function unblockSlots(input: { items: Array<{ bookingDate: string; slotIds: string[] }> }) {
   const tasks: Promise<unknown>[] = [];
-  for (const dateIso of uniqueDates) {
-    for (const slotId of uniqueSlotIds) {
-      tasks.push(deleteSlotBlock({ bookingDate: dateIso, slotId }));
+  for (const { bookingDate, slotIds } of input.items) {
+    for (const slotId of Array.from(new Set(slotIds))) {
+      tasks.push(deleteSlotBlock({ bookingDate, slotId }));
     }
   }
   await Promise.all(tasks);

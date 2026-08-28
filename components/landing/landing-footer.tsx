@@ -146,7 +146,14 @@ export function LandingFooter({ content }: LandingFooterProps) {
             {copyright}
           </Text>
           <Text size="sm" className="text-white/35">
-            Built with passion for cricket
+            Powered by{" "}
+            <Link
+              href="mailto:smarthmehar@gmail.com"
+              className="text-white/55 hover:text-white hover:underline"
+            >
+              Smarth Singh
+            </Link>{" "}
+            · smarthmehar@gmail.com · +91 99969 10306
           </Text>
         </div>
       </div>

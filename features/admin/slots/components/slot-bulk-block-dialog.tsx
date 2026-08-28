@@ -73,10 +73,27 @@ export function SlotBulkBlockDialog({
     while (cursor <= rangeEnd) {
       dates.push(cursor);
       cursor = addDaysToIsoDate(cursor, 1);
-      if (dates.length > 370) break;
+      if (dates.length > 366) break;
     }
     return dates;
   }, [scope, activeDate, rangeStart, rangeEnd]);
+
+  // Slot ids are date-scoped (`${dateIso}-${startMinute}`); strip the date the
+  // selection was made on so the same time-of-day can be re-applied to every
+  // date in the chosen range, including dates outside the 7-day booking window.
+  const slotTimeSuffixes = useMemo(
+    () => selectedSlotIds.map((id) => id.slice(activeDate.length + 1)),
+    [selectedSlotIds, activeDate],
+  );
+
+  const blockItems = useMemo(
+    () =>
+      bookingDates.map((bookingDate) => ({
+        bookingDate,
+        slotIds: slotTimeSuffixes.map((suffix) => `${bookingDate}-${suffix}`),
+      })),
+    [bookingDates, slotTimeSuffixes],
+  );
 
   const handleSubmit = async () => {
     if (selectedSlotIds.length === 0) {
@@ -98,7 +115,7 @@ export function SlotBulkBlockDialog({
         const response = await fetch("/api/admin/slots/blocks", {
           method: "DELETE",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ bookingDates, slotIds: selectedSlotIds }),
+          body: JSON.stringify({ items: blockItems }),
         });
         if (!response.ok) {
           const body = await response.json().catch(() => ({}));
@@ -110,8 +127,7 @@ export function SlotBulkBlockDialog({
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            bookingDates,
-            slotIds: selectedSlotIds,
+            items: blockItems,
             state: action === "maintenance" ? "maintenance" : "blocked",
             reason: reason.trim(),
           }),
