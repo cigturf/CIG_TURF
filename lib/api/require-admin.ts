@@ -12,7 +12,11 @@ export async function requireAdminSession(permission?: AdminPermission) {
     return { error: NextResponse.json({ error: "Unauthorized" }, { status: 401 }) };
   }
 
-  const admin = await getAdminContext(session.user.id);
+  const admin = await getAdminContext(session.user.id, {
+    email: session.user.email,
+    name: session.user.name,
+    image: session.user.image,
+  });
   if (!admin) {
     return { error: NextResponse.json({ error: "Forbidden" }, { status: 403 }) };
   }

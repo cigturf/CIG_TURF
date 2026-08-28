@@ -27,7 +27,11 @@ export default async function AdminLayout({
     redirect(`${AUTH_ROUTES.login}?returnTo=${encodeURIComponent("/admin")}`);
   }
 
-  const admin = await getAdminContext(session.user.id);
+  const admin = await getAdminContext(session.user.id, {
+    email: session.user.email,
+    name: session.user.name,
+    image: session.user.image,
+  });
 
   if (!admin) {
     redirect("/");

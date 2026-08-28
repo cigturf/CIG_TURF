@@ -9,7 +9,6 @@ import { SettingsService } from "@/server/settings";
 import { prisma } from "@/lib/prisma";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { getAppConfig } from "@/config/app.config";
-import { createClient } from "@/lib/supabase/server";
 
 type AdminRow = {
   id: string;
@@ -49,14 +48,12 @@ export async function getAdminRecordByUserId(userId: string): Promise<AdminRow |
   }
 }
 
-export async function getAdminContext(userId: string): Promise<AdminContext | null> {
+export async function getAdminContext(
+  userId: string,
+  identity?: { email?: string; name?: string; image?: string | null },
+): Promise<AdminContext | null> {
   const admin = await getAdminRecordByUserId(userId);
   if (!admin) return null;
-
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
 
   const profile = await getProfileById(userId);
 
@@ -64,13 +61,14 @@ export async function getAdminContext(userId: string): Promise<AdminContext | nu
     id: admin.id,
     userId: admin.user_id,
     role: admin.role,
-    email: user?.email ?? profile?.email ?? "",
+    email: identity?.email ?? profile?.email ?? "",
     name:
+      identity?.name ??
       profile?.name ??
-      (user?.user_metadata?.full_name as string | undefined) ??
-      user?.email?.split("@")[0] ??
+      identity?.email?.split("@")[0] ??
+      profile?.email?.split("@")[0] ??
       "Admin",
-    image: (user?.user_metadata?.avatar_url as string | undefined) ?? null,
+    image: identity?.image ?? null,
   };
 }
 

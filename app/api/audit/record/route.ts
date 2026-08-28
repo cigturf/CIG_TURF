@@ -30,7 +30,11 @@ export async function POST(request: Request) {
   if (!parsed.success) return parsed.response;
 
   try {
-    const admin = await getAdminContext(session.user.id);
+    const admin = await getAdminContext(session.user.id, {
+      email: session.user.email,
+      name: session.user.name,
+      image: session.user.image,
+    });
     const event = parsed.data as AppEventEnvelope;
 
     if (!admin && !isCustomerAuditEventType(event.type)) {

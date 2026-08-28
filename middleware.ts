@@ -50,7 +50,6 @@ export const config = {
   matcher: [
     "/api/:path*",
     "/customer/:path*",
-    "/admin/:path*",
     "/book/details/:path*",
     "/booking/:path*",
   ],
