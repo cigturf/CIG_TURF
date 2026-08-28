@@ -7,7 +7,7 @@ import { ChevronLeft, Mail } from "lucide-react";
 import { toast } from "sonner";
 
 import { submitCompleteProfile } from "@/features/auth/lib/auth-client-api";
-import { sendEmailOtpAction, signInWithPasswordAction } from "@/features/auth/actions";
+import { signInWithPasswordAction } from "@/features/auth/actions";
 import { EmailOtpVerification } from "@/features/auth/components/email-otp-verification";
 import { isAdminLoginEmail } from "@/features/auth/config/auth.config";
 import { useAuthSession } from "@/features/auth/hooks";
@@ -44,7 +44,6 @@ export function AuthPage() {
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [loading, setLoading] = useState(false);
-  const [otpSent, setOtpSent] = useState(false);
   const [resetLinkSent, setResetLinkSent] = useState(false);
 
   const continueAfterAuth = useCallback(() => {
@@ -101,29 +100,6 @@ export function AuthPage() {
     }
   };
 
-  const sendOtp = async (targetEmail = email) => {
-    const parsed = emailSchema.safeParse(targetEmail);
-    if (!parsed.success) {
-      toast.error("Enter a valid email");
-      return;
-    }
-
-    setLoading(true);
-    try {
-      const result = await sendEmailOtpAction(parsed.data);
-
-      if (!result.success) {
-        toast.error(result.error || "Failed to send OTP");
-        return;
-      }
-
-      setOtpSent(true);
-      toast.success("OTP sent to your email");
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const handleEmailContinue = async () => {
     const parsed = emailSchema.safeParse(email);
     if (!parsed.success) {
@@ -134,7 +110,6 @@ export function AuthPage() {
     const normalizedEmail = parsed.data.toLowerCase();
     setEmail(normalizedEmail);
     setPassword("");
-    setOtpSent(false);
 
     if (isAdminLoginEmail(normalizedEmail)) {
       setMode("admin-signin");
@@ -142,7 +117,6 @@ export function AuthPage() {
     }
 
     setMode("email-otp");
-    await sendOtp(normalizedEmail);
   };
 
   const handlePasswordSignIn = async () => {
@@ -154,8 +128,8 @@ export function AuthPage() {
     }
     if (!isAdminLoginEmail(parsedEmail.data)) {
       toast.error("Password sign-in is only available for admin accounts.");
+      setEmail(parsedEmail.data);
       setMode("email-otp");
-      await sendOtp(parsedEmail.data);
       return;
     }
     if (!parsedPassword.success) {
@@ -365,14 +339,10 @@ export function AuthPage() {
           {mode === "email-otp" && (
             <EmailOtpVerification
               email={email}
-              otpAlreadySent={otpSent}
               loading={loading}
               onLoadingChange={setLoading}
               onVerified={handleVerifyOtpSuccess}
-              onBack={() => {
-                setMode("choose");
-                setOtpSent(false);
-              }}
+              onBack={() => setMode("choose")}
             />
           )}
 

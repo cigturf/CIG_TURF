@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
 import { sendEmailOtpAction, verifyEmailOtpAction } from "@/features/auth/actions";
@@ -9,7 +9,6 @@ import { emailSchema } from "@/lib/validations/common";
 
 type EmailOtpVerificationProps = {
   email: string;
-  otpAlreadySent?: boolean;
   loading?: boolean;
   onLoadingChange?: (loading: boolean) => void;
   onVerified: (userId: string, email: string) => void;
@@ -18,14 +17,13 @@ type EmailOtpVerificationProps = {
 
 export function EmailOtpVerification({
   email,
-  otpAlreadySent = false,
   loading: externalLoading = false,
   onLoadingChange,
   onVerified,
   onBack,
 }: EmailOtpVerificationProps) {
   const [otp, setOtp] = useState("");
-  const [otpSent, setOtpSent] = useState(otpAlreadySent);
+  const [otpSent, setOtpSent] = useState(false);
   const [internalLoading, setInternalLoading] = useState(false);
 
   const loading = externalLoading || internalLoading;
@@ -59,6 +57,14 @@ export function EmailOtpVerification({
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    void handleSendOtp();
+    // Auto-send once when this screen mounts; handleSendOtp reads
+    // otp-independent state and setting otpSent itself, so it's safe to
+    // omit from deps — re-running it on every render would resend the OTP.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleVerifyOtp = async () => {
     if (otp.length < 6) {
