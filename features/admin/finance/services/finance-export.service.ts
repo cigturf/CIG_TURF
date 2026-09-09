@@ -15,9 +15,8 @@ export function buildFinanceCsv(data: FinanceDashboardData): string {
     ["Period", data.range.label],
     ["From", data.range.from],
     ["To", data.range.to],
-    ["Today's Revenue", data.overview.todaysRevenue],
-    ["This Week Revenue", data.overview.thisWeekRevenue],
-    ["This Month Revenue", data.overview.thisMonthRevenue],
+    ["Total Amount", data.overview.totalAmount],
+    ["Collected Amount", data.overview.collectedAmount],
     ["Pending Collections", data.overview.pendingCollections],
     ["Advance Collected", data.overview.advanceCollected],
     ["Offline Collections", data.overview.offlineCollections],
@@ -116,9 +115,7 @@ export function buildFinancePdfHtml(data: FinanceDashboardData, venueName: strin
   <h1>${venueName} — Finance</h1>
   <p>${data.range.label} · ${data.range.from} to ${data.range.to}</p>
   <div class="grid">
-    <div class="card"><div class="label">Today's Revenue</div><div class="value">${formatCurrency(data.overview.todaysRevenue)}</div></div>
-    <div class="card"><div class="label">This Week</div><div class="value">${formatCurrency(data.overview.thisWeekRevenue)}</div></div>
-    <div class="card"><div class="label">This Month</div><div class="value">${formatCurrency(data.overview.thisMonthRevenue)}</div></div>
+    <div class="card"><div class="label">Total Amount</div><div class="value">${formatCurrency(data.overview.totalAmount)}</div></div>
     <div class="card"><div class="label">Pending</div><div class="value">${formatCurrency(data.overview.pendingCollections)}</div></div>
     <div class="card"><div class="label">Collected (period)</div><div class="value">${formatCurrency(data.reconciliation.collectedRevenue)}</div></div>
     <div class="card"><div class="label">Outstanding</div><div class="value">${formatCurrency(data.reconciliation.outstandingRevenue)}</div></div>

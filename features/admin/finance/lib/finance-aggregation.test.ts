@@ -41,32 +41,8 @@ function createBooking(overrides: Partial<AdminBookingRecord> = {}): AdminBookin
 }
 
 describe("finance aggregation", () => {
-  it("builds overview from payment records", () => {
+  it("builds overview totals from the period's own bookings and payments", () => {
     const overview = buildFinanceOverview({
-      allPayments: [
-        {
-          id: "p1",
-          bookingId: "b1",
-          type: "advance",
-          amount: 200,
-          method: "online",
-          collectedBy: null,
-          notes: null,
-          referenceNumber: null,
-          createdAt: new Date("2026-07-07T10:00:00Z"),
-        },
-        {
-          id: "p2",
-          bookingId: "b1",
-          type: "remaining",
-          amount: 500,
-          method: "cash",
-          collectedBy: null,
-          notes: null,
-          referenceNumber: null,
-          createdAt: new Date("2026-07-06T10:00:00Z"),
-        },
-      ],
       periodBookingPayments: [
         {
           id: "p1",
@@ -80,11 +56,11 @@ describe("finance aggregation", () => {
           createdAt: new Date("2026-07-07T10:00:00Z"),
         },
       ],
-      periodBookings: [createBooking()],
-      today: "2026-07-07",
+      periodBookings: [createBooking({ totalPrice: 1200, remainingAmount: 1000 })],
     });
 
-    expect(overview.todaysRevenue).toBe(200);
+    expect(overview.totalAmount).toBe(1200);
+    expect(overview.collectedAmount).toBe(200);
     expect(overview.onlineCollections).toBe(200);
     expect(overview.pendingCollections).toBe(1000);
   });
@@ -94,7 +70,6 @@ describe("finance aggregation", () => {
     // days before the period started (a routine occurrence: customers pay to
     // book in advance). The period's payments must still be counted for it.
     const overview = buildFinanceOverview({
-      allPayments: [],
       periodBookingPayments: [
         {
           id: "p1",
@@ -109,7 +84,6 @@ describe("finance aggregation", () => {
         },
       ],
       periodBookings: [createBooking({ bookingDate: "2026-07-07", remainingAmount: 1000 })],
-      today: "2026-07-07",
     });
 
     expect(overview.onlineCollections).toBe(200);
@@ -117,17 +91,16 @@ describe("finance aggregation", () => {
     expect(overview.averageBookingValue).toBe(200);
   });
 
-  it("excludes cancelled bookings from period pending and average value", () => {
+  it("excludes cancelled bookings from period totals, pending, and average value", () => {
     const overview = buildFinanceOverview({
-      allPayments: [],
       periodBookingPayments: [],
       periodBookings: [
-        createBooking({ id: "b1", status: "cancelled", remainingAmount: 1000 }),
-        createBooking({ id: "b2", status: "confirmed", remainingAmount: 500 }),
+        createBooking({ id: "b1", status: "cancelled", totalPrice: 1200, remainingAmount: 1000 }),
+        createBooking({ id: "b2", status: "confirmed", totalPrice: 900, remainingAmount: 500 }),
       ],
-      today: "2026-07-07",
     });
 
+    expect(overview.totalAmount).toBe(900);
     expect(overview.pendingCollections).toBe(500);
     expect(overview.averageBookingValue).toBe(0);
   });

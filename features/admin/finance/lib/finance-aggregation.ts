@@ -12,7 +12,6 @@ import {
   buildPendingPaymentsSeries,
 } from "@/features/admin/reports/lib/reports-aggregation";
 import type { ReportSeriesPoint } from "@/features/admin/reports/types/reports.types";
-import { addDaysToIsoDate, getTodayIso } from "@/features/booking/utils/time";
 
 function paymentNetAmount(payment: BookingPaymentRecord): number {
   return payment.type === "refund" ? -payment.amount : payment.amount;
@@ -46,27 +45,18 @@ function shortDateLabel(iso: string): string {
 }
 
 export function buildFinanceOverview(input: {
-  allPayments: BookingPaymentRecord[];
   periodBookingPayments: BookingPaymentRecord[];
   periodBookings: AdminBookingRecord[];
-  today: string;
 }): FinanceOverview {
-  const weekFrom = addDaysToIsoDate(input.today, -6);
-  const monthFrom = getTodayIso(new Date(new Date(input.today).getFullYear(), new Date(input.today).getMonth(), 1));
-
-  const todaysPayments = paymentsInRange(input.allPayments, input.today, input.today);
-  const weekPayments = paymentsInRange(input.allPayments, weekFrom, input.today);
-  const monthPayments = paymentsInRange(input.allPayments, monthFrom, input.today);
-
   const activePeriodBookings = input.periodBookings.filter(
     (booking) => booking.status !== "cancelled",
   );
-  const collectedInPeriod = sumPayments(input.periodBookingPayments);
+  const totalAmount = activePeriodBookings.reduce((sum, booking) => sum + booking.totalPrice, 0);
+  const collectedAmount = sumPayments(input.periodBookingPayments);
 
   return {
-    todaysRevenue: sumPayments(todaysPayments),
-    thisWeekRevenue: sumPayments(weekPayments),
-    thisMonthRevenue: sumPayments(monthPayments),
+    totalAmount,
+    collectedAmount,
     pendingCollections: activePeriodBookings.reduce(
       (sum, booking) => sum + booking.remainingAmount,
       0,
@@ -85,7 +75,7 @@ export function buildFinanceOverview(input: {
     ),
     averageBookingValue:
       activePeriodBookings.length > 0
-        ? Math.round(collectedInPeriod / activePeriodBookings.length)
+        ? Math.round(collectedAmount / activePeriodBookings.length)
         : 0,
   };
 }

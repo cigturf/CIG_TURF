@@ -18,25 +18,67 @@ import { staggerContainerVariants, staggerItemVariants } from "@/lib/design-syst
 const OVERVIEW_DEFINITIONS: {
   key: keyof FinanceOverview;
   label: string;
-  hint: string;
+  hint: (rangeLabel: string) => string;
   icon: LucideIcon;
   format: "number" | "currency";
 }[] = [
-  { key: "todaysRevenue", label: "Today's Revenue", hint: "Collected today", icon: IndianRupee, format: "currency" },
-  { key: "thisWeekRevenue", label: "This Week", hint: "Last 7 days collected", icon: TrendingUp, format: "currency" },
-  { key: "thisMonthRevenue", label: "This Month", hint: "Month-to-date collected", icon: Wallet, format: "currency" },
-  { key: "pendingCollections", label: "Pending Collections", hint: "Outstanding across bookings", icon: CircleDollarSign, format: "currency" },
-  { key: "advanceCollected", label: "Advance Collected", hint: "Advance payments in period", icon: Wallet, format: "currency" },
-  { key: "offlineCollections", label: "Offline Collections", hint: "Cash, UPI, card at venue", icon: IndianRupee, format: "currency" },
-  { key: "onlineCollections", label: "Online Collections", hint: "Razorpay payments", icon: MonitorSmartphone, format: "currency" },
-  { key: "averageBookingValue", label: "Avg Booking Value", hint: "Collected per active booking", icon: TrendingUp, format: "currency" },
+  {
+    key: "totalAmount",
+    label: "Total Amount",
+    hint: (rangeLabel) => `Booking value for ${rangeLabel}`,
+    icon: IndianRupee,
+    format: "currency",
+  },
+  {
+    key: "collectedAmount",
+    label: "Collected",
+    hint: (rangeLabel) => `Collected for ${rangeLabel}`,
+    icon: TrendingUp,
+    format: "currency",
+  },
+  {
+    key: "pendingCollections",
+    label: "Pending Collections",
+    hint: (rangeLabel) => `Outstanding for ${rangeLabel}`,
+    icon: CircleDollarSign,
+    format: "currency",
+  },
+  {
+    key: "advanceCollected",
+    label: "Advance Collected",
+    hint: (rangeLabel) => `Advance payments for ${rangeLabel}`,
+    icon: Wallet,
+    format: "currency",
+  },
+  {
+    key: "offlineCollections",
+    label: "Offline Collections",
+    hint: () => "Cash, UPI, card at venue",
+    icon: IndianRupee,
+    format: "currency",
+  },
+  {
+    key: "onlineCollections",
+    label: "Online Collections",
+    hint: () => "Razorpay payments",
+    icon: MonitorSmartphone,
+    format: "currency",
+  },
+  {
+    key: "averageBookingValue",
+    label: "Avg Booking Value",
+    hint: () => "Collected per active booking",
+    icon: TrendingUp,
+    format: "currency",
+  },
 ];
 
 type FinanceOverviewGridProps = {
   overview: FinanceOverview;
+  rangeLabel: string;
 };
 
-export function FinanceOverviewGrid({ overview }: FinanceOverviewGridProps) {
+export function FinanceOverviewGrid({ overview, rangeLabel }: FinanceOverviewGridProps) {
   return (
     <motion.div
       className="grid gap-3 sm:grid-cols-2 sm:gap-4 xl:grid-cols-4"
@@ -62,7 +104,7 @@ export function FinanceOverviewGrid({ overview }: FinanceOverviewGridProps) {
               <CardBody>
                 <AnimatedStatValue value={value} format={definition.format} />
                 <Text size="sm" className="text-muted-foreground mt-1.5">
-                  {definition.hint}
+                  {definition.hint(rangeLabel)}
                 </Text>
               </CardBody>
             </Card>

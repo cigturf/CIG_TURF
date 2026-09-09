@@ -6,9 +6,8 @@ import type { ReportDatePreset, ReportDateRange } from "@/features/admin/reports
 import type { ReportPaymentBreakdown, ReportSeriesPoint } from "@/features/admin/reports/types/reports.types";
 
 export type FinanceOverview = {
-  todaysRevenue: number;
-  thisWeekRevenue: number;
-  thisMonthRevenue: number;
+  totalAmount: number;
+  collectedAmount: number;
   pendingCollections: number;
   advanceCollected: number;
   offlineCollections: number;

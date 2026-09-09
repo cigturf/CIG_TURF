@@ -166,7 +166,14 @@ export function AdminFinanceView({
         {exportActions}
       </div>
 
-      <FinanceOverviewGrid overview={data.overview} />
+      <FinanceOverviewGrid
+        overview={data.overview}
+        rangeLabel={
+          data.range.from === data.range.to
+            ? data.range.from
+            : `${data.range.from} to ${data.range.to}`
+        }
+      />
 
       <ReportsDateFilter
         preset={preset}

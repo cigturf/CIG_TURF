@@ -17,7 +17,7 @@ import {
 import type { FinanceDashboardData } from "@/features/admin/finance/types/finance.types";
 import { resolveReportDateRange } from "@/features/admin/reports/lib/report-date-range";
 import type { ReportDatePreset } from "@/features/admin/reports/types/reports.types";
-import { addDaysToIsoDate, getTodayIso } from "@/features/booking/utils/time";
+import { getTodayIso } from "@/features/booking/utils/time";
 
 export async function getFinanceDashboardData(
   preset: ReportDatePreset = "last_7_days",
@@ -27,11 +27,9 @@ export async function getFinanceDashboardData(
 ): Promise<FinanceDashboardData> {
   const range = resolveReportDateRange(preset, customFrom, customTo);
   const today = getTodayIso();
-  const overviewFrom = addDaysToIsoDate(today, -29);
 
-  const [periodPayments, overviewPayments, periodBookings, pendingBookings] = await Promise.all([
+  const [periodPayments, periodBookings, pendingBookings] = await Promise.all([
     listAllPaymentRecordsInRange(range.from, range.to),
-    listAllPaymentRecordsInRange(overviewFrom, today),
     listBookingsInRange(range.from, range.to),
     listPendingCollectionBookings(),
   ]);
@@ -46,10 +44,8 @@ export async function getFinanceDashboardData(
   return {
     range,
     overview: buildFinanceOverview({
-      allPayments: overviewPayments,
       periodBookingPayments,
       periodBookings,
-      today,
     }),
     paymentBreakdown: buildPaymentBreakdown(periodPayments),
     pendingBookings,
