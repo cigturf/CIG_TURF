@@ -73,6 +73,22 @@ function sumCollectedPayments(
 }
 
 /**
+ * Cancelled bookings never count toward revenue, whether or not a refund
+ * payment was actually logged for them (many cash/offline cancellations never
+ * get one) — so their payments are dropped from every revenue total, not just
+ * netted via a "refund" type row.
+ */
+function excludeCancelledBookingPayments(
+  bookings: AdminBookingRecord[],
+  payments: BookingPaymentRecord[],
+): BookingPaymentRecord[] {
+  const cancelledBookingIds = new Set(
+    bookings.filter((booking) => booking.status === "cancelled").map((booking) => booking.id),
+  );
+  return payments.filter((payment) => !cancelledBookingIds.has(payment.bookingId));
+}
+
+/**
  * `payments` must be every payment tied to a booking in `bookings` (regardless
  * of when the payment itself was made) — not payments merely dated inside the
  * selected range. Advances are routinely paid before the booking date, so
@@ -89,19 +105,20 @@ export function buildReportOverview(
   const cancelled = bookings.filter((booking) => booking.status === "cancelled");
   const manual = active.filter((booking) => booking.source === "manual");
   const online = active.filter((booking) => booking.source !== "manual");
+  const activeBookingPayments = excludeCancelledBookingPayments(bookings, payments);
 
   const totalAmount = active.reduce((sum, booking) => sum + booking.totalPrice, 0);
-  const totalRevenue = sumCollectedPayments(payments);
+  const totalRevenue = sumCollectedPayments(activeBookingPayments);
   const advanceCollected = sumCollectedPayments(
-    payments,
+    activeBookingPayments,
     (payment) => payment.type === "advance",
   );
   const offlineCollections = sumCollectedPayments(
-    payments,
+    activeBookingPayments,
     (payment) => payment.method !== "online",
   );
   const onlineCollections = sumCollectedPayments(
-    payments,
+    activeBookingPayments,
     (payment) => payment.method === "online",
   );
   const pendingCollections = active.reduce((sum, booking) => sum + booking.remainingAmount, 0);

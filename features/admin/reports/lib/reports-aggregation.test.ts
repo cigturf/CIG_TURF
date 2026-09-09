@@ -135,6 +135,46 @@ describe("reports aggregation", () => {
     expect(overview.totalRevenue).toBe(1200);
   });
 
+  it("drops a cancelled booking's collected money from revenue even when no refund was logged", () => {
+    // Regression: cash/offline cancellations routinely never get a "refund"
+    // payment row, so netting via payment type alone isn't enough — a
+    // cancelled booking's money must never count as revenue.
+    const bookings = [
+      createBooking({ id: "b1", status: "cancelled", totalPrice: 1200 }),
+      createBooking({ id: "b2", status: "confirmed", totalPrice: 900 }),
+    ];
+
+    const overview = buildReportOverview(bookings, [
+      {
+        id: "pay1",
+        bookingId: "b1", // cancelled, no refund ever recorded
+        type: "advance",
+        amount: 200,
+        method: "online",
+        collectedBy: null,
+        notes: null,
+        referenceNumber: null,
+        createdAt: new Date("2026-07-01T00:00:00Z"),
+      },
+      {
+        id: "pay2",
+        bookingId: "b2", // active
+        type: "advance",
+        amount: 300,
+        method: "cash",
+        collectedBy: null,
+        notes: null,
+        referenceNumber: null,
+        createdAt: new Date("2026-07-01T00:00:00Z"),
+      },
+    ]);
+
+    expect(overview.totalRevenue).toBe(300);
+    expect(overview.onlineCollections).toBe(0);
+    expect(overview.offlineCollections).toBe(300);
+    expect(overview.advanceCollected).toBe(300);
+  });
+
   it("builds bookings per day series", () => {
     const series = buildBookingsPerDay(
       [createBooking(), createBooking({ id: "b2", bookingDate: "2026-07-08" })],

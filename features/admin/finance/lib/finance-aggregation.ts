@@ -26,6 +26,22 @@ function sumPayments(
     .reduce((sum, payment) => sum + paymentNetAmount(payment), 0);
 }
 
+/**
+ * Cancelled bookings never count toward revenue, whether or not a refund
+ * payment was actually logged for them (many cash/offline cancellations never
+ * get one) — so their payments are dropped from every revenue total, not just
+ * netted via a "refund" type row.
+ */
+function excludeCancelledBookingPayments(
+  bookings: AdminBookingRecord[],
+  payments: BookingPaymentRecord[],
+): BookingPaymentRecord[] {
+  const cancelledBookingIds = new Set(
+    bookings.filter((booking) => booking.status === "cancelled").map((booking) => booking.id),
+  );
+  return payments.filter((payment) => !cancelledBookingIds.has(payment.bookingId));
+}
+
 function paymentsInRange(
   payments: BookingPaymentRecord[],
   from: string,
@@ -51,8 +67,12 @@ export function buildFinanceOverview(input: {
   const activePeriodBookings = input.periodBookings.filter(
     (booking) => booking.status !== "cancelled",
   );
+  const activeBookingPayments = excludeCancelledBookingPayments(
+    input.periodBookings,
+    input.periodBookingPayments,
+  );
   const totalAmount = activePeriodBookings.reduce((sum, booking) => sum + booking.totalPrice, 0);
-  const collectedAmount = sumPayments(input.periodBookingPayments);
+  const collectedAmount = sumPayments(activeBookingPayments);
 
   return {
     totalAmount,
@@ -62,15 +82,15 @@ export function buildFinanceOverview(input: {
       0,
     ),
     advanceCollected: sumPayments(
-      input.periodBookingPayments,
+      activeBookingPayments,
       (payment) => payment.type === "advance",
     ),
     offlineCollections: sumPayments(
-      input.periodBookingPayments,
+      activeBookingPayments,
       (payment) => payment.method !== "online",
     ),
     onlineCollections: sumPayments(
-      input.periodBookingPayments,
+      activeBookingPayments,
       (payment) => payment.method === "online",
     ),
     averageBookingValue:
@@ -138,8 +158,9 @@ export function buildReconciliation(input: {
   payments: BookingPaymentRecord[];
 }): FinanceReconciliation {
   const activeBookings = input.bookings.filter((booking) => booking.status !== "cancelled");
+  const activeBookingPayments = excludeCancelledBookingPayments(input.bookings, input.payments);
   const expectedRevenue = activeBookings.reduce((sum, booking) => sum + booking.totalPrice, 0);
-  const collectedRevenue = sumPayments(input.payments);
+  const collectedRevenue = sumPayments(activeBookingPayments);
   const outstandingRevenue = activeBookings.reduce(
     (sum, booking) => sum + booking.remainingAmount,
     0,

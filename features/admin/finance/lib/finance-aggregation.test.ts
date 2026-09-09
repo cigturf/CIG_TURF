@@ -105,6 +105,47 @@ describe("finance aggregation", () => {
     expect(overview.averageBookingValue).toBe(0);
   });
 
+  it("drops a cancelled booking's collected money even when no refund was logged", () => {
+    // Regression: cash/offline cancellations routinely never get a "refund"
+    // payment row, so netting via payment type alone isn't enough — a
+    // cancelled booking's money must never count as revenue.
+    const overview = buildFinanceOverview({
+      periodBookingPayments: [
+        {
+          id: "p1",
+          bookingId: "b1", // cancelled booking, no refund ever recorded
+          type: "advance",
+          amount: 200,
+          method: "online",
+          collectedBy: null,
+          notes: null,
+          referenceNumber: null,
+          createdAt: new Date("2026-07-01T00:00:00Z"),
+        },
+        {
+          id: "p2",
+          bookingId: "b2", // active booking
+          type: "advance",
+          amount: 300,
+          method: "cash",
+          collectedBy: null,
+          notes: null,
+          referenceNumber: null,
+          createdAt: new Date("2026-07-01T00:00:00Z"),
+        },
+      ],
+      periodBookings: [
+        createBooking({ id: "b1", status: "cancelled", totalPrice: 1200 }),
+        createBooking({ id: "b2", status: "confirmed", totalPrice: 900 }),
+      ],
+    });
+
+    expect(overview.collectedAmount).toBe(300);
+    expect(overview.onlineCollections).toBe(0);
+    expect(overview.offlineCollections).toBe(300);
+    expect(overview.advanceCollected).toBe(300);
+  });
+
   it("builds daily closing from payment methods", () => {
     const closing = buildDailyClosing({
       date: "2026-07-07",
@@ -199,6 +240,30 @@ describe("finance aggregation", () => {
     expect(reconciliation.expectedRevenue).toBe(1200);
     expect(reconciliation.collectedRevenue).toBe(200);
     expect(reconciliation.outstandingRevenue).toBe(1000);
+    expect(reconciliation.hasDiscrepancy).toBe(false);
+  });
+
+  it("does not treat an unrefunded cancelled booking's advance as a reconciliation discrepancy", () => {
+    const reconciliation = buildReconciliation({
+      bookings: [createBooking({ id: "b1", status: "cancelled", totalPrice: 1200, remainingAmount: 1000 })],
+      payments: [
+        {
+          id: "p1",
+          bookingId: "b1",
+          type: "advance",
+          amount: 200,
+          method: "cash",
+          collectedBy: null,
+          notes: null,
+          referenceNumber: null,
+          createdAt: new Date("2026-07-01T00:00:00Z"),
+        },
+      ],
+    });
+
+    expect(reconciliation.expectedRevenue).toBe(0);
+    expect(reconciliation.collectedRevenue).toBe(0);
+    expect(reconciliation.outstandingRevenue).toBe(0);
     expect(reconciliation.hasDiscrepancy).toBe(false);
   });
 
