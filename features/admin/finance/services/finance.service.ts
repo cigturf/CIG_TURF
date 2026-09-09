@@ -1,4 +1,5 @@
 import {
+  buildBookingCounts,
   buildDailyClosing,
   buildDailyCollectionsSeries,
   buildFinanceOverview,
@@ -10,13 +11,13 @@ import {
 import {
   listAllPaymentRecordsInRange,
   listBookingsInRange,
+  listPaymentRecordsForBookingIds,
   listPendingCollectionBookings,
 } from "@/features/admin/finance/services/finance-data.repository";
 import type { FinanceDashboardData } from "@/features/admin/finance/types/finance.types";
 import { resolveReportDateRange } from "@/features/admin/reports/lib/report-date-range";
 import type { ReportDatePreset } from "@/features/admin/reports/types/reports.types";
 import { addDaysToIsoDate, getTodayIso } from "@/features/booking/utils/time";
-import type { AdminBookingRecord } from "@/features/admin/bookings/types/admin-booking.types";
 
 export async function getFinanceDashboardData(
   preset: ReportDatePreset = "last_7_days",
@@ -35,11 +36,8 @@ export async function getFinanceDashboardData(
     listPendingCollectionBookings(),
   ]);
 
-  const pendingForOverview = pendingBookings.map(
-    (booking) =>
-      ({
-        remainingAmount: booking.outstanding,
-      }) as AdminBookingRecord,
+  const periodBookingPayments = await listPaymentRecordsForBookingIds(
+    periodBookings.map((booking) => booking.id),
   );
 
   const bookingsById = new Map(periodBookings.map((booking) => [booking.id, booking]));
@@ -49,8 +47,7 @@ export async function getFinanceDashboardData(
     range,
     overview: buildFinanceOverview({
       allPayments: overviewPayments,
-      periodPayments,
-      pendingBookings: pendingForOverview,
+      periodBookingPayments,
       periodBookings,
       today,
     }),
@@ -64,8 +61,9 @@ export async function getFinanceDashboardData(
     }),
     reconciliation: buildReconciliation({
       bookings: periodBookings,
-      payments: periodPayments,
+      payments: periodBookingPayments,
     }),
+    bookingCounts: buildBookingCounts(periodBookings),
     revenueTrend: buildDailyCollectionsSeries(periodPayments, range.from, range.to),
     dailyCollections: buildDailyCollectionsSeries(periodPayments, range.from, range.to),
     pendingCollectionsTrend: buildPendingCollectionsTrend(periodBookings, range.from, range.to),

@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import type { AdminBookingRecord } from "@/features/admin/bookings/types/admin-booking.types";
 import {
+  buildBookingCounts,
   buildDailyClosing,
   buildFinanceOverview,
   buildReconciliation,
@@ -66,7 +67,7 @@ describe("finance aggregation", () => {
           createdAt: new Date("2026-07-06T10:00:00Z"),
         },
       ],
-      periodPayments: [
+      periodBookingPayments: [
         {
           id: "p1",
           bookingId: "b1",
@@ -79,7 +80,6 @@ describe("finance aggregation", () => {
           createdAt: new Date("2026-07-07T10:00:00Z"),
         },
       ],
-      pendingBookings: [createBooking()],
       periodBookings: [createBooking()],
       today: "2026-07-07",
     });
@@ -87,6 +87,49 @@ describe("finance aggregation", () => {
     expect(overview.todaysRevenue).toBe(200);
     expect(overview.onlineCollections).toBe(200);
     expect(overview.pendingCollections).toBe(1000);
+  });
+
+  it("scopes pending and collected totals to the selected period's bookings, not the payment date", () => {
+    // Booking is scheduled inside the selected period, but its advance was paid
+    // days before the period started (a routine occurrence: customers pay to
+    // book in advance). The period's payments must still be counted for it.
+    const overview = buildFinanceOverview({
+      allPayments: [],
+      periodBookingPayments: [
+        {
+          id: "p1",
+          bookingId: "b1",
+          type: "advance",
+          amount: 200,
+          method: "online",
+          collectedBy: null,
+          notes: null,
+          referenceNumber: null,
+          createdAt: new Date("2026-06-20T10:00:00Z"),
+        },
+      ],
+      periodBookings: [createBooking({ bookingDate: "2026-07-07", remainingAmount: 1000 })],
+      today: "2026-07-07",
+    });
+
+    expect(overview.onlineCollections).toBe(200);
+    expect(overview.pendingCollections).toBe(1000);
+    expect(overview.averageBookingValue).toBe(200);
+  });
+
+  it("excludes cancelled bookings from period pending and average value", () => {
+    const overview = buildFinanceOverview({
+      allPayments: [],
+      periodBookingPayments: [],
+      periodBookings: [
+        createBooking({ id: "b1", status: "cancelled", remainingAmount: 1000 }),
+        createBooking({ id: "b2", status: "confirmed", remainingAmount: 500 }),
+      ],
+      today: "2026-07-07",
+    });
+
+    expect(overview.pendingCollections).toBe(500);
+    expect(overview.averageBookingValue).toBe(0);
   });
 
   it("builds daily closing from payment methods", () => {
@@ -158,5 +201,47 @@ describe("finance aggregation", () => {
     expect(reconciliation.collectedRevenue).toBe(100);
     expect(reconciliation.outstandingRevenue).toBe(1000);
     expect(reconciliation.hasDiscrepancy).toBe(true);
+  });
+
+  it("reconciles cleanly when a booking's advance was paid before the selected period", () => {
+    // Regression: reconciliation must compare a booking's own payments against
+    // its own totals, not payments that merely fall inside the date range.
+    const reconciliation = buildReconciliation({
+      bookings: [createBooking({ totalPrice: 1200, advancePaid: 200, remainingAmount: 1000 })],
+      payments: [
+        {
+          id: "p1",
+          bookingId: "b1",
+          type: "advance",
+          amount: 200,
+          method: "online",
+          collectedBy: null,
+          notes: null,
+          referenceNumber: null,
+          createdAt: new Date("2026-06-01T00:00:00Z"),
+        },
+      ],
+    });
+
+    expect(reconciliation.expectedRevenue).toBe(1200);
+    expect(reconciliation.collectedRevenue).toBe(200);
+    expect(reconciliation.outstandingRevenue).toBe(1000);
+    expect(reconciliation.hasDiscrepancy).toBe(false);
+  });
+
+  it("counts bookings in the period by status and source", () => {
+    const counts = buildBookingCounts([
+      createBooking({ id: "b1", status: "confirmed", source: "online" }),
+      createBooking({ id: "b2", status: "completed", source: "online" }),
+      createBooking({ id: "b3", status: "completed", source: "manual" }),
+      createBooking({ id: "b4", status: "cancelled", source: "online" }),
+    ]);
+
+    expect(counts.totalBookings).toBe(4);
+    expect(counts.activeBookings).toBe(3);
+    expect(counts.completedBookings).toBe(2);
+    expect(counts.cancelledBookings).toBe(1);
+    expect(counts.onlineBookings).toBe(2);
+    expect(counts.manualBookings).toBe(1);
   });
 });

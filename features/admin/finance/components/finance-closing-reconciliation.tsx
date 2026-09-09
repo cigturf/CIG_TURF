@@ -1,6 +1,10 @@
 "use client";
 
-import type { FinanceDailyClosing, FinanceReconciliation } from "@/features/admin/finance/types/finance.types";
+import type {
+  FinanceBookingCounts,
+  FinanceDailyClosing,
+  FinanceReconciliation,
+} from "@/features/admin/finance/types/finance.types";
 import { AnalyticsCard, StatsCard } from "@/components/design-system";
 import { formatCurrency } from "@/utils";
 import { cn } from "@/lib/utils";
@@ -59,6 +63,28 @@ export function FinanceReconciliationCard({ reconciliation }: FinanceReconciliat
           Collections reconcile with booking totals for this period.
         </p>
       )}
+    </AnalyticsCard>
+  );
+}
+
+type FinanceBookingCountsCardProps = {
+  counts: FinanceBookingCounts;
+};
+
+export function FinanceBookingCountsCard({ counts }: FinanceBookingCountsCardProps) {
+  return (
+    <AnalyticsCard
+      title="Bookings"
+      description="How bookings in the selected period were made"
+    >
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <StatsCard label="Total Bookings" value={String(counts.totalBookings)} />
+        <StatsCard label="Active" value={String(counts.activeBookings)} />
+        <StatsCard label="Completed" value={String(counts.completedBookings)} />
+        <StatsCard label="Cancelled" value={String(counts.cancelledBookings)} />
+        <StatsCard label="Online" value={String(counts.onlineBookings)} />
+        <StatsCard label="Manual (Front Desk)" value={String(counts.manualBookings)} />
+      </div>
     </AnalyticsCard>
   );
 }

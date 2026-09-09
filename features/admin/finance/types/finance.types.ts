@@ -70,6 +70,15 @@ export type FinanceReconciliation = {
   hasDiscrepancy: boolean;
 };
 
+export type FinanceBookingCounts = {
+  totalBookings: number;
+  activeBookings: number;
+  completedBookings: number;
+  cancelledBookings: number;
+  onlineBookings: number;
+  manualBookings: number;
+};
+
 export type FinanceDashboardData = {
   range: ReportDateRange;
   overview: FinanceOverview;
@@ -78,6 +87,7 @@ export type FinanceDashboardData = {
   transactions: FinanceTransaction[];
   dailyClosing: FinanceDailyClosing;
   reconciliation: FinanceReconciliation;
+  bookingCounts: FinanceBookingCounts;
   revenueTrend: ReportSeriesPoint[];
   dailyCollections: ReportSeriesPoint[];
   pendingCollectionsTrend: ReportSeriesPoint[];

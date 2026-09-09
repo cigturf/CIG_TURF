@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { CollectPaymentDialog } from "@/features/admin/bookings/components/collect-payment-dialog";
 import type { OfflinePaymentMethod } from "@/features/admin/bookings/types/admin-booking.types";
 import {
+  FinanceBookingCountsCard,
   FinanceDailyClosingCard,
   FinanceReconciliationCard,
 } from "@/features/admin/finance/components/finance-closing-reconciliation";
@@ -217,6 +218,7 @@ export function AdminFinanceView({
       </ReportsSection>
 
       <FinanceReconciliationCard reconciliation={data.reconciliation} />
+      <FinanceBookingCountsCard counts={data.bookingCounts} />
       <FinanceDailyClosingCard closing={data.dailyClosing} />
 
       <ReportsSection title="Pending Collections" description="Bookings with outstanding balance">

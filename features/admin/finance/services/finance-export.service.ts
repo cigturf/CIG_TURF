@@ -27,6 +27,12 @@ export function buildFinanceCsv(data: FinanceDashboardData): string {
     ["Collected Revenue", data.reconciliation.collectedRevenue],
     ["Outstanding Revenue", data.reconciliation.outstandingRevenue],
     ["Discrepancy", data.reconciliation.discrepancy],
+    ["Total Bookings", data.bookingCounts.totalBookings],
+    ["Active Bookings", data.bookingCounts.activeBookings],
+    ["Completed Bookings", data.bookingCounts.completedBookings],
+    ["Cancelled Bookings", data.bookingCounts.cancelledBookings],
+    ["Online Bookings", data.bookingCounts.onlineBookings],
+    ["Manual Bookings", data.bookingCounts.manualBookings],
   ];
 
   const sections = [
@@ -116,6 +122,8 @@ export function buildFinancePdfHtml(data: FinanceDashboardData, venueName: strin
     <div class="card"><div class="label">Pending</div><div class="value">${formatCurrency(data.overview.pendingCollections)}</div></div>
     <div class="card"><div class="label">Collected (period)</div><div class="value">${formatCurrency(data.reconciliation.collectedRevenue)}</div></div>
     <div class="card"><div class="label">Outstanding</div><div class="value">${formatCurrency(data.reconciliation.outstandingRevenue)}</div></div>
+    <div class="card"><div class="label">Total Bookings</div><div class="value">${data.bookingCounts.totalBookings}</div></div>
+    <div class="card"><div class="label">Online / Manual</div><div class="value">${data.bookingCounts.onlineBookings} / ${data.bookingCounts.manualBookings}</div></div>
   </div>
   <h2>Recent Transactions</h2>
   <table>

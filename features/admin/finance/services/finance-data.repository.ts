@@ -162,8 +162,7 @@ export async function listBookingsInRange(
       .select(BOOKING_LIST_COLUMNS)
       .gte("booking_date", fromIso)
       .lte("booking_date", toIso)
-      .order("booking_date", { ascending: false })
-      .limit(ADMIN_LIST_LIMIT);
+      .order("booking_date", { ascending: false });
 
     if (!error && data) {
       return (data as BookingRow[]).map(mapBooking).map(toAdminBookingRecord);
@@ -174,7 +173,6 @@ export async function listBookingsInRange(
     const rows = await prisma.booking.findMany({
       where: { bookingDate: { gte: fromIso, lte: toIso } },
       orderBy: { bookingDate: "desc" },
-      take: ADMIN_LIST_LIMIT,
     });
     return rows.map((row) =>
       toAdminBookingRecord({
@@ -370,8 +368,7 @@ export async function listPendingCollectionBookings(): Promise<FinancePendingBoo
       .select(PENDING_BOOKING_COLUMNS)
       .neq("status", "cancelled")
       .gt("remaining_amount", 0)
-      .order("booking_date", { ascending: true })
-      .limit(ADMIN_LIST_LIMIT);
+      .order("booking_date", { ascending: true });
 
     if (!error && data) {
       return (data as Parameters<typeof mapPendingBooking>[0][]).map(mapPendingBooking);
@@ -397,7 +394,6 @@ export async function listPendingCollectionBookings(): Promise<FinancePendingBoo
         remainingAmount: true,
       },
       orderBy: [{ bookingDate: "asc" }, { startTime: "asc" }],
-      take: ADMIN_LIST_LIMIT,
     });
 
     return rows.map((row) => ({

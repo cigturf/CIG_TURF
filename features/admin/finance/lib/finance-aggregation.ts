@@ -1,5 +1,6 @@
 import type { AdminBookingRecord, BookingPaymentRecord } from "@/features/admin/bookings/types/admin-booking.types";
 import type {
+  FinanceBookingCounts,
   FinanceDailyClosing,
   FinanceOverview,
   FinanceReconciliation,
@@ -46,8 +47,7 @@ function shortDateLabel(iso: string): string {
 
 export function buildFinanceOverview(input: {
   allPayments: BookingPaymentRecord[];
-  periodPayments: BookingPaymentRecord[];
-  pendingBookings: AdminBookingRecord[];
+  periodBookingPayments: BookingPaymentRecord[];
   periodBookings: AdminBookingRecord[];
   today: string;
 }): FinanceOverview {
@@ -61,26 +61,26 @@ export function buildFinanceOverview(input: {
   const activePeriodBookings = input.periodBookings.filter(
     (booking) => booking.status !== "cancelled",
   );
-  const collectedInPeriod = sumPayments(input.periodPayments);
+  const collectedInPeriod = sumPayments(input.periodBookingPayments);
 
   return {
     todaysRevenue: sumPayments(todaysPayments),
     thisWeekRevenue: sumPayments(weekPayments),
     thisMonthRevenue: sumPayments(monthPayments),
-    pendingCollections: input.pendingBookings.reduce(
+    pendingCollections: activePeriodBookings.reduce(
       (sum, booking) => sum + booking.remainingAmount,
       0,
     ),
     advanceCollected: sumPayments(
-      input.periodPayments,
+      input.periodBookingPayments,
       (payment) => payment.type === "advance",
     ),
     offlineCollections: sumPayments(
-      input.periodPayments,
+      input.periodBookingPayments,
       (payment) => payment.method !== "online",
     ),
     onlineCollections: sumPayments(
-      input.periodPayments,
+      input.periodBookingPayments,
       (payment) => payment.method === "online",
     ),
     averageBookingValue:
@@ -162,6 +162,19 @@ export function buildReconciliation(input: {
     outstandingRevenue,
     discrepancy,
     hasDiscrepancy: Math.abs(discrepancy) > 0,
+  };
+}
+
+export function buildBookingCounts(bookings: AdminBookingRecord[]): FinanceBookingCounts {
+  const activeBookings = bookings.filter((booking) => booking.status !== "cancelled");
+
+  return {
+    totalBookings: bookings.length,
+    activeBookings: activeBookings.length,
+    completedBookings: bookings.filter((booking) => booking.status === "completed").length,
+    cancelledBookings: bookings.filter((booking) => booking.status === "cancelled").length,
+    onlineBookings: activeBookings.filter((booking) => booking.source !== "manual").length,
+    manualBookings: activeBookings.filter((booking) => booking.source === "manual").length,
   };
 }
 
