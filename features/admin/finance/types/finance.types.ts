@@ -75,7 +75,9 @@ export type FinanceBookingCounts = {
   completedBookings: number;
   cancelledBookings: number;
   onlineBookings: number;
+  onlineBookingsValue: number;
   manualBookings: number;
+  manualBookingsValue: number;
 };
 
 export type FinanceDashboardData = {

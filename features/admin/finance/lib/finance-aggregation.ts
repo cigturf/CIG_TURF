@@ -157,14 +157,18 @@ export function buildReconciliation(input: {
 
 export function buildBookingCounts(bookings: AdminBookingRecord[]): FinanceBookingCounts {
   const activeBookings = bookings.filter((booking) => booking.status !== "cancelled");
+  const onlineBookings = activeBookings.filter((booking) => booking.source !== "manual");
+  const manualBookings = activeBookings.filter((booking) => booking.source === "manual");
 
   return {
     totalBookings: bookings.length,
     activeBookings: activeBookings.length,
     completedBookings: bookings.filter((booking) => booking.status === "completed").length,
     cancelledBookings: bookings.filter((booking) => booking.status === "cancelled").length,
-    onlineBookings: activeBookings.filter((booking) => booking.source !== "manual").length,
-    manualBookings: activeBookings.filter((booking) => booking.source === "manual").length,
+    onlineBookings: onlineBookings.length,
+    onlineBookingsValue: onlineBookings.reduce((sum, booking) => sum + booking.totalPrice, 0),
+    manualBookings: manualBookings.length,
+    manualBookingsValue: manualBookings.reduce((sum, booking) => sum + booking.totalPrice, 0),
   };
 }
 

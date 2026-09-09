@@ -82,8 +82,16 @@ export function FinanceBookingCountsCard({ counts }: FinanceBookingCountsCardPro
         <StatsCard label="Active" value={String(counts.activeBookings)} />
         <StatsCard label="Completed" value={String(counts.completedBookings)} />
         <StatsCard label="Cancelled" value={String(counts.cancelledBookings)} />
-        <StatsCard label="Online" value={String(counts.onlineBookings)} />
-        <StatsCard label="Manual (Front Desk)" value={String(counts.manualBookings)} />
+        <StatsCard
+          label="Online"
+          value={String(counts.onlineBookings)}
+          change={`Worth ${formatCurrency(counts.onlineBookingsValue)}`}
+        />
+        <StatsCard
+          label="Manual (Front Desk)"
+          value={String(counts.manualBookings)}
+          change={`Worth ${formatCurrency(counts.manualBookingsValue)}`}
+        />
       </div>
     </AnalyticsCard>
   );

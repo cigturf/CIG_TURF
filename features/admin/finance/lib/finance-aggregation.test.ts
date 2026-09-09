@@ -202,12 +202,13 @@ describe("finance aggregation", () => {
     expect(reconciliation.hasDiscrepancy).toBe(false);
   });
 
-  it("counts bookings in the period by status and source", () => {
+  it("counts bookings in the period by status and source, with value by source", () => {
     const counts = buildBookingCounts([
-      createBooking({ id: "b1", status: "confirmed", source: "online" }),
-      createBooking({ id: "b2", status: "completed", source: "online" }),
-      createBooking({ id: "b3", status: "completed", source: "manual" }),
-      createBooking({ id: "b4", status: "cancelled", source: "online" }),
+      createBooking({ id: "b1", status: "confirmed", source: "online", totalPrice: 1200 }),
+      createBooking({ id: "b2", status: "completed", source: "online", totalPrice: 1200 }),
+      createBooking({ id: "b3", status: "completed", source: "manual", totalPrice: 800 }),
+      // Cancelled bookings must not count toward active totals or source values.
+      createBooking({ id: "b4", status: "cancelled", source: "manual", totalPrice: 5000 }),
     ]);
 
     expect(counts.totalBookings).toBe(4);
@@ -215,6 +216,8 @@ describe("finance aggregation", () => {
     expect(counts.completedBookings).toBe(2);
     expect(counts.cancelledBookings).toBe(1);
     expect(counts.onlineBookings).toBe(2);
+    expect(counts.onlineBookingsValue).toBe(2400);
     expect(counts.manualBookings).toBe(1);
+    expect(counts.manualBookingsValue).toBe(800);
   });
 });
