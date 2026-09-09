@@ -4,6 +4,7 @@ import type { AdminBookingRecord } from "@/features/admin/bookings/types/admin-b
 import {
   buildBookingCounts,
   buildDailyClosing,
+  buildFinanceBookingDetails,
   buildFinanceOverview,
   buildReconciliation,
 } from "@/features/admin/finance/lib/finance-aggregation";
@@ -284,5 +285,72 @@ describe("finance aggregation", () => {
     expect(counts.onlineBookingsValue).toBe(2400);
     expect(counts.manualBookings).toBe(1);
     expect(counts.manualBookingsValue).toBe(800);
+  });
+
+  it("builds a full per-booking detail row with advance/balance method and reference id", () => {
+    const [detail] = buildFinanceBookingDetails(
+      [createBooking({ id: "b1", totalPrice: 1200, advancePaid: 200, remainingAmount: 0 })],
+      [
+        {
+          id: "p1",
+          bookingId: "b1",
+          type: "advance",
+          amount: 200,
+          method: "online",
+          collectedBy: null,
+          notes: null,
+          referenceNumber: "pay_RZP123",
+          createdAt: new Date("2026-07-01T00:00:00Z"),
+        },
+        {
+          id: "p2",
+          bookingId: "b1",
+          type: "remaining",
+          amount: 1000,
+          method: "cash",
+          collectedBy: "admin1",
+          notes: null,
+          referenceNumber: null,
+          createdAt: new Date("2026-07-07T18:00:00Z"),
+        },
+      ],
+    );
+
+    expect(detail?.advanceAmount).toBe(200);
+    expect(detail?.advanceMethod).toBe("Online (Razorpay)");
+    expect(detail?.advanceReferenceId).toBe("pay_RZP123");
+    expect(detail?.balanceDue).toBe(0);
+    expect(detail?.balancePaidAmount).toBe(1000);
+    expect(detail?.balanceStatus).toBe("paid");
+    expect(detail?.balanceMethod).toBe("Cash");
+    expect(detail?.isCompleted).toBe(false);
+  });
+
+  it("marks a booking's balance as pending or not required depending on what's left owing", () => {
+    const [pendingBooking, fullyAdvancePaidBooking] = buildFinanceBookingDetails(
+      [
+        createBooking({ id: "b1", totalPrice: 1200, advancePaid: 200, remainingAmount: 1000 }),
+        createBooking({ id: "b2", totalPrice: 200, advancePaid: 200, remainingAmount: 0 }),
+      ],
+      [
+        {
+          id: "p1",
+          bookingId: "b2",
+          type: "advance",
+          amount: 200,
+          method: "upi",
+          collectedBy: null,
+          notes: null,
+          referenceNumber: null,
+          createdAt: new Date("2026-07-01T00:00:00Z"),
+        },
+      ],
+    );
+
+    expect(pendingBooking?.balanceStatus).toBe("pending");
+    expect(pendingBooking?.balanceMethod).toBe("—");
+    // Advance alone covered the full price — no "remaining" payment was ever needed.
+    expect(fullyAdvancePaidBooking?.balanceStatus).toBe("not_required");
+    expect(fullyAdvancePaidBooking?.balanceMethod).toBe("—");
   });
 });

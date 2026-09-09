@@ -1,6 +1,7 @@
 import type { AdminBookingRecord, BookingPaymentRecord } from "@/features/admin/bookings/types/admin-booking.types";
 import type {
   FinanceBookingCounts,
+  FinanceBookingDetail,
   FinanceDailyClosing,
   FinanceOverview,
   FinanceReconciliation,
@@ -10,6 +11,7 @@ import { enumerateIsoDates } from "@/features/admin/reports/lib/report-date-rang
 import {
   buildPaymentBreakdown,
   buildPendingPaymentsSeries,
+  PAYMENT_METHOD_LABELS,
 } from "@/features/admin/reports/lib/reports-aggregation";
 import type { ReportSeriesPoint } from "@/features/admin/reports/types/reports.types";
 
@@ -174,6 +176,67 @@ export function buildReconciliation(input: {
     discrepancy,
     hasDiscrepancy: Math.abs(discrepancy) > 0,
   };
+}
+
+function methodLabel(method: BookingPaymentRecord["method"]): string {
+  return PAYMENT_METHOD_LABELS[method] ?? method;
+}
+
+/** Picks the payment that best represents a leg (advance/remaining) of a booking's cost. */
+function describeLeg(payments: BookingPaymentRecord[], type: BookingPaymentRecord["type"]) {
+  const matches = payments.filter((payment) => payment.type === type);
+  if (matches.length === 0) {
+    return { amountPaid: 0, method: "—", referenceId: null as string | null };
+  }
+  const amountPaid = matches.reduce((sum, payment) => sum + payment.amount, 0);
+  const withReference = matches.find((payment) => payment.referenceNumber);
+  const primary = withReference ?? matches[0]!;
+  return { amountPaid, method: methodLabel(primary.method), referenceId: primary.referenceNumber };
+}
+
+export function buildFinanceBookingDetails(
+  bookings: AdminBookingRecord[],
+  payments: BookingPaymentRecord[],
+): FinanceBookingDetail[] {
+  const paymentsByBooking = new Map<string, BookingPaymentRecord[]>();
+  for (const payment of payments) {
+    const list = paymentsByBooking.get(payment.bookingId) ?? [];
+    list.push(payment);
+    paymentsByBooking.set(payment.bookingId, list);
+  }
+
+  return bookings.map((booking) => {
+    const bookingPayments = paymentsByBooking.get(booking.id) ?? [];
+    const advance = describeLeg(bookingPayments, "advance");
+    const remaining = describeLeg(bookingPayments, "remaining");
+
+    const balanceStatus: FinanceBookingDetail["balanceStatus"] =
+      booking.remainingAmount > 0 ? "pending" : remaining.amountPaid > 0 ? "paid" : "not_required";
+
+    return {
+      bookingReference: booking.bookingReference,
+      customerName: booking.customerName,
+      customerPhone: booking.customerPhone,
+      customerEmail: booking.customerEmail,
+      source: booking.source,
+      status: booking.status,
+      isCompleted: booking.status === "completed",
+      bookingDate: booking.bookingDate,
+      startTime: booking.startTime,
+      endTime: booking.endTime,
+      durationMinutes: booking.durationMinutes,
+      totalPrice: booking.totalPrice,
+      advanceAmount: booking.advancePaid,
+      advanceMethod: advance.amountPaid > 0 ? advance.method : "—",
+      advanceReferenceId: advance.amountPaid > 0 ? advance.referenceId : null,
+      balanceStatus,
+      balanceDue: booking.remainingAmount,
+      balancePaidAmount: remaining.amountPaid,
+      balanceMethod: balanceStatus === "paid" ? remaining.method : "—",
+      balanceReferenceId: balanceStatus === "paid" ? remaining.referenceId : null,
+      notes: booking.notes,
+    };
+  });
 }
 
 export function buildBookingCounts(bookings: AdminBookingRecord[]): FinanceBookingCounts {

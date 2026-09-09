@@ -1,7 +1,9 @@
 import type {
   BookingPaymentRecordType,
+  BookingSource,
   OfflinePaymentMethod,
 } from "@/features/admin/bookings/types/admin-booking.types";
+import type { BookingStatus } from "@/features/booking/types/booking-record.types";
 import type { ReportDatePreset, ReportDateRange } from "@/features/admin/reports/types/reports.types";
 import type { ReportPaymentBreakdown, ReportSeriesPoint } from "@/features/admin/reports/types/reports.types";
 
@@ -80,6 +82,32 @@ export type FinanceBookingCounts = {
   manualBookingsValue: number;
 };
 
+export type FinanceBalanceStatus = "paid" | "pending" | "not_required";
+
+export type FinanceBookingDetail = {
+  bookingReference: string;
+  customerName: string;
+  customerPhone: string;
+  customerEmail: string;
+  source: BookingSource;
+  status: BookingStatus;
+  isCompleted: boolean;
+  bookingDate: string;
+  startTime: string;
+  endTime: string;
+  durationMinutes: number;
+  totalPrice: number;
+  advanceAmount: number;
+  advanceMethod: string;
+  advanceReferenceId: string | null;
+  balanceStatus: FinanceBalanceStatus;
+  balanceDue: number;
+  balancePaidAmount: number;
+  balanceMethod: string;
+  balanceReferenceId: string | null;
+  notes: string | null;
+};
+
 export type FinanceDashboardData = {
   range: ReportDateRange;
   overview: FinanceOverview;
@@ -89,6 +117,7 @@ export type FinanceDashboardData = {
   dailyClosing: FinanceDailyClosing;
   reconciliation: FinanceReconciliation;
   bookingCounts: FinanceBookingCounts;
+  bookingDetails: FinanceBookingDetail[];
   revenueTrend: ReportSeriesPoint[];
   dailyCollections: ReportSeriesPoint[];
   pendingCollectionsTrend: ReportSeriesPoint[];

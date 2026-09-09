@@ -1,4 +1,7 @@
-import type { FinanceDashboardData } from "@/features/admin/finance/types/finance.types";
+import type {
+  FinanceBookingDetail,
+  FinanceDashboardData,
+} from "@/features/admin/finance/types/finance.types";
 import { formatCurrency } from "@/utils";
 
 function escapeCsv(value: string | number) {
@@ -15,6 +18,62 @@ function section(title: string, headerRow: string[], rows: (string | number)[][]
     headerRow.map(escapeCsv).join(","),
     ...rows.map((row) => row.map(escapeCsv).join(",")),
   ].join("\n");
+}
+
+const BALANCE_STATUS_LABELS: Record<FinanceBookingDetail["balanceStatus"], string> = {
+  paid: "Paid",
+  pending: "Pending",
+  not_required: "Not Required",
+};
+
+const BOOKING_DETAIL_HEADERS = [
+  "Booking Reference",
+  "Customer Name",
+  "Phone",
+  "Email",
+  "Source",
+  "Status",
+  "Completed",
+  "Booking Date",
+  "Start Time",
+  "End Time",
+  "Duration (min)",
+  "Total Amount",
+  "Advance Amount",
+  "Advance Method",
+  "Advance Reference ID",
+  "Balance Due",
+  "Balance Paid",
+  "Balance Status",
+  "Balance Method",
+  "Balance Reference ID",
+  "Notes",
+];
+
+function bookingDetailRow(booking: FinanceBookingDetail): (string | number)[] {
+  return [
+    booking.bookingReference,
+    booking.customerName,
+    booking.customerPhone,
+    booking.customerEmail,
+    booking.source === "manual" ? "Manual (Front Desk)" : "Online",
+    booking.status,
+    booking.isCompleted ? "Yes" : "No",
+    booking.bookingDate,
+    booking.startTime,
+    booking.endTime,
+    booking.durationMinutes,
+    booking.totalPrice,
+    booking.advanceAmount,
+    booking.advanceMethod,
+    booking.advanceReferenceId ?? "",
+    booking.balanceDue,
+    booking.balancePaidAmount,
+    BALANCE_STATUS_LABELS[booking.balanceStatus],
+    booking.balanceMethod,
+    booking.balanceReferenceId ?? "",
+    booking.notes ?? "",
+  ];
 }
 
 export function buildFinanceCsv(data: FinanceDashboardData): string {
@@ -54,6 +113,8 @@ export function buildFinanceCsv(data: FinanceDashboardData): string {
       ["Manual Bookings (Front Desk)", data.bookingCounts.manualBookings],
       ["Manual Bookings Value", data.bookingCounts.manualBookingsValue],
     ]),
+    "",
+    section("BOOKING DETAILS", BOOKING_DETAIL_HEADERS, data.bookingDetails.map(bookingDetailRow)),
     "",
     section(
       "PAYMENT METHOD BREAKDOWN",
@@ -131,6 +192,23 @@ export function buildFinancePdfHtml(data: FinanceDashboardData, venueName: strin
     )
     .join("");
 
+  const bookingDetailRows = data.bookingDetails
+    .slice(0, 300)
+    .map(
+      (booking) => `
+      <tr>
+        <td>${booking.bookingReference}</td>
+        <td>${booking.customerName}<br/><span style="color:#888">${booking.customerPhone}</span></td>
+        <td>${booking.source === "manual" ? "Manual" : "Online"}</td>
+        <td>${booking.status}${booking.isCompleted ? " ✓" : ""}</td>
+        <td>${booking.bookingDate}<br/><span style="color:#888">${booking.startTime}–${booking.endTime}</span></td>
+        <td>${formatCurrency(booking.totalPrice)}</td>
+        <td>${formatCurrency(booking.advanceAmount)}<br/><span style="color:#888">${booking.advanceMethod}${booking.advanceReferenceId ? ` · ${booking.advanceReferenceId}` : ""}</span></td>
+        <td>${formatCurrency(booking.balanceDue)}<br/><span style="color:#888">${BALANCE_STATUS_LABELS[booking.balanceStatus]}${booking.balanceMethod !== "—" ? ` · ${booking.balanceMethod}` : ""}</span></td>
+      </tr>`,
+    )
+    .join("");
+
   return `<!DOCTYPE html>
 <html>
 <head>
@@ -175,6 +253,11 @@ export function buildFinancePdfHtml(data: FinanceDashboardData, venueName: strin
         <td>${data.bookingCounts.manualBookings} (${formatCurrency(data.bookingCounts.manualBookingsValue)})</td>
       </tr>
     </tbody>
+  </table>
+  <h2>Booking Details</h2>
+  <table>
+    <thead><tr><th>Reference</th><th>Customer</th><th>Source</th><th>Status</th><th>Date &amp; Time</th><th>Total</th><th>Advance</th><th>Balance</th></tr></thead>
+    <tbody>${bookingDetailRows}</tbody>
   </table>
   <h2>Payment Method Breakdown</h2>
   <table>

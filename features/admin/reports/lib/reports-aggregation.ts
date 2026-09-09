@@ -291,7 +291,7 @@ export function buildPendingPaymentsSeries(
   }));
 }
 
-const PAYMENT_METHOD_LABELS: Record<string, string> = {
+export const PAYMENT_METHOD_LABELS: Record<string, string> = {
   cash: "Cash",
   upi: "UPI",
   card: "Card",
