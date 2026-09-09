@@ -46,6 +46,14 @@ export function useBookingSelection() {
 
   const [selection, setSelection] = useState<BookingSelectionState>(INITIAL_SELECTION);
   const [hydrated, setHydrated] = useState(false);
+  const [now, setNow] = useState(() => new Date());
+
+  // Keep cutting today's slots as their end time passes, even if nothing else
+  // (no booking/hold change elsewhere) would otherwise trigger a re-render.
+  useEffect(() => {
+    const interval = setInterval(() => setNow(new Date()), 60_000);
+    return () => clearInterval(interval);
+  }, []);
 
   const bridgeDateIso = selection.dateIso ? getBridgeDateIso(selection.dateIso) : null;
 
@@ -66,7 +74,9 @@ export function useBookingSelection() {
     return buildBookingViewSlots({
       dateIso: selection.dateIso,
       config,
+      now,
       selectedSlotIds: selection.selectedSlotIds,
+      hidePastSlots: true,
       primaryAvailability: {
         bookedSlotIds: primaryRealtime.bookedSlotIds,
         heldSlotIds: primaryRealtime.heldSlotIds,
@@ -89,6 +99,7 @@ export function useBookingSelection() {
     selection.dateIso,
     selection.selectedSlotIds,
     config,
+    now,
     primaryRealtime.bookedSlotIds,
     primaryRealtime.heldSlotIds,
     primaryRealtime.blockedSlotIds,

@@ -30,6 +30,13 @@ type BuildBookingViewSlotsOptions = {
   primaryAvailability: SlotAvailability;
   bridgeAvailability?: SlotAvailability;
   pricing?: PricingSnapshot;
+  /**
+   * Drop today's already-ended slots from the result instead of returning
+   * them disabled. Only the customer-facing booking flow sets this — admin
+   * (slot management, the manual/walk-in booking dialog, order validation)
+   * must keep seeing every slot, past included, to look up who booked what.
+   */
+  hidePastSlots?: boolean;
 };
 
 export function buildBookingViewSlots({
@@ -40,6 +47,7 @@ export function buildBookingViewSlots({
   primaryAvailability,
   bridgeAvailability,
   pricing,
+  hidePastSlots = false,
 }: BuildBookingViewSlotsOptions): BookingViewSlotsResult {
   const primarySlots = generateSlots({
     dateIso,
@@ -71,23 +79,31 @@ export function buildBookingViewSlots({
     pricing,
   });
 
+  const visiblePrimarySlots = hidePastSlots
+    ? primarySlots.filter((slot) => !slot.isPast)
+    : primarySlots;
+
   const bridgeSlots = bridgeSource
     .filter((slot) => {
       const parsed = parseSlotId(slot.id);
       return parsed !== null && parsed.startMinute < bridgeEndMinute;
     })
+    .filter((slot) => !hidePastSlots || !slot.isPast)
     .map((slot, index) => ({
       ...slot,
+      // Offset by the original (unfiltered) primary count so sortOrder stays
+      // chronologically ahead of every primary slot, even when some of the
+      // earliest ones were dropped for being in the past.
       sortOrder: primarySlots.length + index,
     }));
 
   if (bridgeSlots.length === 0) {
-    return { slots: primarySlots, bridgeDateIso: null, bridgeStartIndex: -1 };
+    return { slots: visiblePrimarySlots, bridgeDateIso: null, bridgeStartIndex: -1 };
   }
 
   return {
-    slots: [...primarySlots, ...bridgeSlots],
+    slots: [...visiblePrimarySlots, ...bridgeSlots],
     bridgeDateIso,
-    bridgeStartIndex: primarySlots.length,
+    bridgeStartIndex: visiblePrimarySlots.length,
   };
 }

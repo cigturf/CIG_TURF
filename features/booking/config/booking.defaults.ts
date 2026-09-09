@@ -11,7 +11,7 @@ export const BOOKING_DEFAULTS = {
     openTime: "00:00",
     closeTime: "23:59",
   } satisfies BookingBusinessHours,
-  bookingWindowDays: 7,
+  bookingWindowDays: 10,
   fixedAdvanceAmount: 200,
   defaultSlotPrice: DEFAULT_SLOT_PRICE,
   currency: "INR",
