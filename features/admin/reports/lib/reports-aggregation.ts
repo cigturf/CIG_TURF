@@ -72,6 +72,14 @@ function sumCollectedPayments(
     .reduce((sum, payment) => sum + paymentNetAmount(payment), 0);
 }
 
+/**
+ * `payments` must be every payment tied to a booking in `bookings` (regardless
+ * of when the payment itself was made) — not payments merely dated inside the
+ * selected range. Advances are routinely paid before the booking date, so
+ * filtering payments by their own date instead of their booking's date would
+ * split a booking's money from its total and produce a false pending/collected
+ * split for the period.
+ */
 export function buildReportOverview(
   bookings: AdminBookingRecord[],
   payments: BookingPaymentRecord[],
@@ -79,29 +87,37 @@ export function buildReportOverview(
   const active = bookings.filter((booking) => booking.status !== "cancelled");
   const completed = bookings.filter((booking) => booking.status === "completed");
   const cancelled = bookings.filter((booking) => booking.status === "cancelled");
-  const manual = bookings.filter((booking) => booking.source === "manual");
-  const online = bookings.filter((booking) => booking.source === "online");
+  const manual = active.filter((booking) => booking.source === "manual");
+  const online = active.filter((booking) => booking.source !== "manual");
 
+  const totalAmount = active.reduce((sum, booking) => sum + booking.totalPrice, 0);
   const totalRevenue = sumCollectedPayments(payments);
   const advanceCollected = sumCollectedPayments(
     payments,
-    (payment) => payment.type === "advance" || payment.type === "remaining",
+    (payment) => payment.type === "advance",
   );
   const offlineCollections = sumCollectedPayments(
     payments,
     (payment) => payment.method !== "online",
   );
+  const onlineCollections = sumCollectedPayments(
+    payments,
+    (payment) => payment.method === "online",
+  );
   const pendingCollections = active.reduce((sum, booking) => sum + booking.remainingAmount, 0);
 
   return {
     totalBookings: bookings.length,
+    activeBookings: active.length,
     completedBookings: completed.length,
     cancelledBookings: cancelled.length,
     manualBookings: manual.length,
     onlineBookings: online.length,
+    totalAmount,
     totalRevenue,
     advanceCollected,
     offlineCollections,
+    onlineCollections,
     pendingCollections,
     averageBookingValue:
       active.length > 0 ? Math.round(totalRevenue / active.length) : 0,

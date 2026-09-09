@@ -17,13 +17,16 @@ export type ReportDateRange = {
 
 export type ReportOverview = {
   totalBookings: number;
+  activeBookings: number;
   completedBookings: number;
   cancelledBookings: number;
   manualBookings: number;
   onlineBookings: number;
+  totalAmount: number;
   totalRevenue: number;
   advanceCollected: number;
   offlineCollections: number;
+  onlineCollections: number;
   pendingCollections: number;
   averageBookingValue: number;
   occupancyRate: number;

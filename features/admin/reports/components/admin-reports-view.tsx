@@ -34,17 +34,34 @@ type AdminReportsViewProps = {
   isRefreshing?: boolean;
 };
 
+type ReportExportKind = "daily" | "weekly" | "monthly" | "custom";
+
+// "Quick Reports" (daily/weekly/monthly) must export that exact window, not
+// whatever range happens to be selected on screen — otherwise a "Daily
+// Report" button can silently download last month's numbers.
+function resolvePresetForKind(kind: ReportExportKind): ReportDatePreset | null {
+  switch (kind) {
+    case "daily":
+      return "today";
+    case "weekly":
+      return "last_7_days";
+    case "monthly":
+      return "this_month";
+    case "custom":
+      return null;
+  }
+}
+
 function buildExportUrl(
   data: ReportsAnalyticsData,
   format: "csv" | "xlsx" | "pdf",
-  kind: "daily" | "weekly" | "monthly" | "custom",
+  kind: ReportExportKind,
 ) {
-  const params = new URLSearchParams({
-    preset: data.range.preset,
-    format,
-    kind,
-  });
-  if (data.range.preset === "custom") {
+  const overridePreset = resolvePresetForKind(kind);
+  const preset = overridePreset ?? data.range.preset;
+  const params = new URLSearchParams({ preset, format, kind });
+
+  if (preset === "custom") {
     params.set("from", data.range.from);
     params.set("to", data.range.to);
   }

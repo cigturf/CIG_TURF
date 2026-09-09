@@ -85,13 +85,54 @@ describe("reports aggregation", () => {
       },
     ]);
 
+    // b2 is cancelled, so only b1 (online, 1200) and b3 (manual, 1500) count
+    // toward active totals, source counts, and total booking value.
     expect(overview.totalBookings).toBe(3);
+    expect(overview.activeBookings).toBe(2);
     expect(overview.cancelledBookings).toBe(1);
-    expect(overview.manualBookings).toBe(2);
+    expect(overview.manualBookings).toBe(1);
     expect(overview.onlineBookings).toBe(1);
+    expect(overview.totalAmount).toBe(2700);
     expect(overview.totalRevenue).toBe(700);
+    expect(overview.advanceCollected).toBe(200);
     expect(overview.offlineCollections).toBe(500);
+    expect(overview.onlineCollections).toBe(200);
     expect(overview.pendingCollections).toBe(1000);
+  });
+
+  it("scopes advance collected to advance-type payments only, not remaining/final payments", () => {
+    // Regression: a booking's final "remaining" payment must not be counted
+    // as an advance, or the Advance Collected figure is inflated.
+    const overview = buildReportOverview(
+      [createBooking({ totalPrice: 1200, remainingAmount: 0 })],
+      [
+        {
+          id: "pay1",
+          bookingId: "b1",
+          type: "advance",
+          amount: 200,
+          method: "online",
+          collectedBy: null,
+          notes: null,
+          referenceNumber: null,
+          createdAt: new Date("2026-07-01T00:00:00Z"),
+        },
+        {
+          id: "pay2",
+          bookingId: "b1",
+          type: "remaining",
+          amount: 1000,
+          method: "cash",
+          collectedBy: null,
+          notes: null,
+          referenceNumber: null,
+          createdAt: new Date("2026-07-07T00:00:00Z"),
+        },
+      ],
+    );
+
+    expect(overview.advanceCollected).toBe(200);
+    expect(overview.totalRevenue).toBe(1200);
   });
 
   it("builds bookings per day series", () => {

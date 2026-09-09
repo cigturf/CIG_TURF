@@ -18,6 +18,7 @@ import {
   countBookedSlotsInRange,
   countSlotBlocksInRange,
   listBookingsInRange,
+  listPaymentRecordsForBookingIds,
   listPaymentRecordsInRange,
 } from "@/features/admin/reports/services/reports-data.repository";
 import type {
@@ -43,12 +44,16 @@ export async function getReportsAnalyticsData(
     SettingsService.getPublic(),
   ]);
 
+  const periodBookingPayments = await listPaymentRecordsForBookingIds(
+    bookings.map((booking) => booking.id),
+  );
+
   const publicSettings =
     settings ?? toPublicBusinessSettings(createEmptyBusinessSettings());
   const config = resolveBookingEngineConfig(publicSettings);
   const slotsPerDay = resolveSlotsPerDay(config.slotDurationMinutes, config.businessHours);
 
-  const overview = buildReportOverview(bookings, payments);
+  const overview = buildReportOverview(bookings, periodBookingPayments);
   const occupancy = buildOccupancySummary({
     from: range.from,
     to: range.to,

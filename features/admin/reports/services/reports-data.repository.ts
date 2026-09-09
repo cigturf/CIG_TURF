@@ -191,6 +191,51 @@ export async function listPaymentRecordsInRange(
   }
 }
 
+export async function listPaymentRecordsForBookingIds(
+  bookingIds: string[],
+): Promise<BookingPaymentRecord[]> {
+  if (bookingIds.length === 0) return [];
+
+  const supabase = createServiceRoleClient();
+  if (supabase) {
+    const { data, error } = await supabase
+      .from("booking_payment_records")
+      .select(REPORTS_PAYMENT_COLUMNS)
+      .in("booking_id", bookingIds)
+      .order("created_at", { ascending: true });
+
+    if (!error && data) return (data as PaymentRecordRow[]).map(mapRow);
+  }
+
+  try {
+    const rows = await prisma.bookingPaymentRecord.findMany({
+      where: { bookingId: { in: bookingIds } },
+      orderBy: { createdAt: "asc" },
+      select: {
+        id: true,
+        bookingId: true,
+        type: true,
+        amount: true,
+        method: true,
+        createdAt: true,
+      },
+    });
+    return rows.map((row) => ({
+      id: row.id,
+      bookingId: row.bookingId,
+      type: row.type,
+      amount: row.amount,
+      method: row.method as BookingPaymentRecord["method"],
+      collectedBy: null,
+      notes: null,
+      referenceNumber: null,
+      createdAt: row.createdAt,
+    }));
+  } catch {
+    return [];
+  }
+}
+
 export async function countBookedSlotsInRange(fromIso: string, toIso: string): Promise<number> {
   const supabase = createServiceRoleClient();
   if (supabase) {
