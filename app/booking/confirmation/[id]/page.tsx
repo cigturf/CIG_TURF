@@ -24,7 +24,16 @@ export default async function ConfirmationPage({ params }: ConfirmationPageProps
 
   const booking = await getBookingById(id);
 
-  if (!booking || booking.userId !== user.id) {
+  // Manual bookings are created under the admin's user_id (there's no
+  // customer session to attribute them to), so ownership also has to allow
+  // an email match — otherwise a customer can never open a booking an admin
+  // entered under their email, even though it now shows in their list.
+  const ownsBooking =
+    booking &&
+    (booking.userId === user.id ||
+      booking.customerEmail.toLowerCase() === user.email.toLowerCase());
+
+  if (!ownsBooking) {
     redirect(AUTH_ROUTES.customer);
   }
 
