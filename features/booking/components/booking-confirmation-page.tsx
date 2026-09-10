@@ -31,7 +31,7 @@ export function BookingConfirmationPage({ booking, venueName }: BookingConfirmat
   const timeRange = `${booking.startTime} – ${booking.endTime}`;
   const { publicSettings, app } = useConfigContext();
   const googleMapsLink = publicSettings.contact.googleMapsLink;
-  const bookingUrl = `${app.url}/booking/confirmation/${booking.id}`;
+  const bookingUrl = `${app.url}/booking/summary/${booking.id}`;
 
   const handleDownloadReceipt = useCallback(() => {
     window.open(`/api/bookings/${booking.id}/receipt`, "_blank", "noopener,noreferrer");

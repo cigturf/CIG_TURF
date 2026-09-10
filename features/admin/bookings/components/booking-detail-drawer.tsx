@@ -101,7 +101,7 @@ export function BookingDetailDrawer({
                 startTime={detail.startTime}
                 endTime={detail.endTime}
                 googleMapsLink={googleMapsLink}
-                bookingUrl={`${app.url}/booking/confirmation/${detail.id}`}
+                bookingUrl={`${app.url}/booking/summary/${detail.id}`}
                 customerName={detail.customerName}
                 recipientPhone={detail.customerPhone}
                 mode="admin-to-customer"

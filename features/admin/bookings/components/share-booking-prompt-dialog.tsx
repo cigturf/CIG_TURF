@@ -29,7 +29,7 @@ export function ShareBookingPromptDialog({
   if (!booking) return null;
 
   const googleMapsLink = publicSettings.contact.googleMapsLink;
-  const bookingUrl = `${app.url}/booking/confirmation/${booking.id}`;
+  const bookingUrl = `${app.url}/booking/summary/${booking.id}`;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>

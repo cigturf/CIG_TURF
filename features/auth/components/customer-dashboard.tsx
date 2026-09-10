@@ -115,7 +115,7 @@ export function CustomerDashboard({
                         startTime={booking.startTime}
                         endTime={booking.endTime}
                         googleMapsLink={googleMapsLink}
-                        bookingUrl={`${app.url}/booking/confirmation/${booking.id}`}
+                        bookingUrl={`${app.url}/booking/summary/${booking.id}`}
                         iconOnly
                         variant="ghost"
                         label="Share with Friends"

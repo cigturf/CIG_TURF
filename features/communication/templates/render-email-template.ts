@@ -100,7 +100,7 @@ function renderWhatsAppShareBlock(
     startTime: booking.startTime,
     endTime: booking.endTime,
     googleMapsLink: mapsLink(branding),
-    bookingUrl: `${branding.appUrl}/booking/confirmation/${booking.id}`,
+    bookingUrl: `${branding.appUrl}/booking/summary/${booking.id}`,
   });
   const shareHref = buildWhatsAppShareLink(message);
 
