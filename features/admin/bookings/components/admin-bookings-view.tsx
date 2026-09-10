@@ -66,6 +66,14 @@ const CompleteBookingDialog = dynamic(
   { ssr: false },
 );
 
+const ShareBookingPromptDialog = dynamic(
+  () =>
+    import("@/features/admin/bookings/components/share-booking-prompt-dialog").then(
+      (module) => module.ShareBookingPromptDialog,
+    ),
+  { ssr: false },
+);
+
 function buildExportUrl(format: "csv" | "xlsx" | "pdf", query: ReturnType<typeof useAdminBookings>["query"]) {
   const params = new URLSearchParams();
   if (query.search) params.set("search", query.search);
@@ -98,6 +106,7 @@ export function AdminBookingsView() {
   const [cancelOpen, setCancelOpen] = useState(false);
   const [collectOpen, setCollectOpen] = useState(false);
   const [completeOpen, setCompleteOpen] = useState(false);
+  const [shareBooking, setShareBooking] = useState<AdminBookingRecord | null>(null);
 
   const slotViewDate = useMemo(() => resolveSlotViewDate(query), [query]);
 
@@ -158,7 +167,7 @@ export function AdminBookingsView() {
     }
     const booking = await response.json();
     await refresh();
-    setSelectedBookingId(booking.id);
+    setShareBooking(booking);
   };
 
   const updateBooking = async (payload: {
@@ -344,6 +353,14 @@ export function AdminBookingsView() {
         onOpenChange={setManualOpen}
         defaultDateIso={slotViewDate}
         onSubmit={createManualBooking}
+      />
+
+      <ShareBookingPromptDialog
+        open={Boolean(shareBooking)}
+        onOpenChange={(open) => {
+          if (!open) setShareBooking(null);
+        }}
+        booking={shareBooking}
       />
 
       <EditBookingDialog

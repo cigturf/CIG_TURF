@@ -31,7 +31,7 @@ export function CustomerDashboard({
 }: CustomerDashboardProps) {
   const router = useRouter();
   const { user, isPending, isAuthenticated } = useAuthSession();
-  const { displayName: businessName, publicSettings } = useConfigContext();
+  const { displayName: businessName, publicSettings, app } = useConfigContext();
   const googleMapsLink = publicSettings.contact.googleMapsLink;
 
   const displayName = user?.name || initialName || "Player";
@@ -115,9 +115,10 @@ export function CustomerDashboard({
                         startTime={booking.startTime}
                         endTime={booking.endTime}
                         googleMapsLink={googleMapsLink}
+                        bookingUrl={`${app.url}/booking/confirmation/${booking.id}`}
                         iconOnly
                         variant="ghost"
-                        label="Share on WhatsApp"
+                        label="Share with Friends"
                       />
                       <Link href={`/booking/confirmation/${booking.id}`} aria-label="View booking">
                         <ChevronRight className="text-muted-foreground size-5" />

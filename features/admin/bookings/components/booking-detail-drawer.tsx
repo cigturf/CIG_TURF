@@ -56,7 +56,7 @@ export function BookingDetailDrawer({
   const [activeTab, setActiveTab] = useState<
     "customer" | "booking" | "payment" | "timeline" | "notes"
   >("booking");
-  const { displayName: venueName, publicSettings } = useConfigContext();
+  const { displayName: venueName, publicSettings, app } = useConfigContext();
   const googleMapsLink = publicSettings.contact.googleMapsLink;
 
   return (
@@ -94,19 +94,20 @@ export function BookingDetailDrawer({
               <Button size="sm" variant="outline" onClick={onPrint}>
                 Print Receipt
               </Button>
-              {detail.customerPhone ? (
-                <ShareBookingWhatsAppButton
-                  venueName={venueName}
-                  bookingReference={detail.bookingReference}
-                  bookingDate={detail.bookingDate}
-                  startTime={detail.startTime}
-                  endTime={detail.endTime}
-                  googleMapsLink={googleMapsLink}
-                  recipientPhone={detail.customerPhone}
-                  label="Share with Customer"
-                  size="sm"
-                />
-              ) : null}
+              <ShareBookingWhatsAppButton
+                venueName={venueName}
+                bookingReference={detail.bookingReference}
+                bookingDate={detail.bookingDate}
+                startTime={detail.startTime}
+                endTime={detail.endTime}
+                googleMapsLink={googleMapsLink}
+                bookingUrl={`${app.url}/booking/confirmation/${detail.id}`}
+                customerName={detail.customerName}
+                recipientPhone={detail.customerPhone}
+                mode="admin-to-customer"
+                label="Share with Customer"
+                size="sm"
+              />
             </div>
 
             <div className="flex flex-wrap gap-2">

@@ -1,5 +1,9 @@
 import type { ReportDatePreset, ReportDateRange } from "@/features/admin/reports/types/reports.types";
 import { addDaysToIsoDate, getTodayIso } from "@/features/booking/utils/time";
+import {
+  DEFAULT_VENUE_TIMEZONE,
+  getTodayIsoInTimezone,
+} from "@/features/booking/utils/venue-timezone";
 
 function startOfMonthIso(date: Date): string {
   return getTodayIso(new Date(date.getFullYear(), date.getMonth(), 1));
@@ -9,12 +13,25 @@ function endOfMonthIso(date: Date): string {
   return getTodayIso(new Date(date.getFullYear(), date.getMonth() + 1, 0));
 }
 
+/**
+ * `now`'s own getFullYear/getMonth/getDate reflect whatever timezone the
+ * process happens to run in (UTC on most servers), not the venue's. Re-derive
+ * a Date whose local getters match the venue's (Asia/Kolkata) calendar date,
+ * so "today"/"this month" never drift a day off for admins in IST.
+ */
+function toVenueLocalDate(now: Date): Date {
+  const iso = getTodayIsoInTimezone(now, DEFAULT_VENUE_TIMEZONE);
+  const [year, month, day] = iso.split("-").map(Number);
+  return new Date(year, month - 1, day);
+}
+
 export function resolveReportDateRange(
   preset: ReportDatePreset = "last_7_days",
   customFrom?: string,
   customTo?: string,
-  now = new Date(),
+  rawNow = new Date(),
 ): ReportDateRange {
+  const now = toVenueLocalDate(rawNow);
   const today = getTodayIso(now);
 
   switch (preset) {

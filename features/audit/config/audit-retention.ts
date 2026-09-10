@@ -1,4 +1,5 @@
-import { addDaysToIsoDate, getTodayIso } from "@/features/booking/utils/time";
+import { addDaysToIsoDate } from "@/features/booking/utils/time";
+import { DEFAULT_VENUE_TIMEZONE, getTodayIsoInTimezone } from "@/features/booking/utils/venue-timezone";
 
 /** Rolling retention window — only the last 3 calendar days of audit logs are kept. */
 export const AUDIT_RETENTION_DAYS = 3;
@@ -14,7 +15,7 @@ export function getAuditRetentionConfig() {
 
 /** Earliest date (inclusive) still within the retention window. */
 export function getAuditRetentionCutoffIso(now = new Date()): string {
-  const today = getTodayIso(now);
+  const today = getTodayIsoInTimezone(now, DEFAULT_VENUE_TIMEZONE);
   return addDaysToIsoDate(today, -(AUDIT_RETENTION_DAYS - 1));
 }
 

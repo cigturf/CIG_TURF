@@ -3,7 +3,15 @@ import type {
   BookingDateFilter,
   BookingSortField,
 } from "@/features/admin/bookings/types/admin-booking.types";
-import { addDaysToIsoDate, getTodayIso } from "@/features/booking/utils/time";
+import { addDaysToIsoDate } from "@/features/booking/utils/time";
+import {
+  DEFAULT_VENUE_TIMEZONE,
+  getTodayIsoInTimezone,
+} from "@/features/booking/utils/venue-timezone";
+
+function getTodayIso(): string {
+  return getTodayIsoInTimezone(new Date(), DEFAULT_VENUE_TIMEZONE);
+}
 
 export function resolveDateRange(filter?: BookingDateFilter, customDate?: string) {
   if (!filter) return null;

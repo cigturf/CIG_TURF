@@ -100,12 +100,13 @@ function renderWhatsAppShareBlock(
     startTime: booking.startTime,
     endTime: booking.endTime,
     googleMapsLink: mapsLink(branding),
+    bookingUrl: `${branding.appUrl}/booking/confirmation/${booking.id}`,
   });
   const shareHref = buildWhatsAppShareLink(message);
 
   return `
     <div style="margin:20px 0 0;text-align:center;">
-      <a href="${escapeHtml(shareHref)}" style="display:inline-block;padding:12px 24px;border-radius:8px;background:#25D366;color:#ffffff;font-weight:600;text-decoration:none;font-size:14px;">💬 Share on WhatsApp</a>
+      <a href="${escapeHtml(shareHref)}" style="display:inline-block;padding:12px 24px;border-radius:8px;background:#25D366;color:#ffffff;font-weight:600;text-decoration:none;font-size:14px;">💬 Share with Friends!</a>
     </div>
   `;
 }

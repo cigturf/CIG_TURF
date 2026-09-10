@@ -29,8 +29,9 @@ type BookingConfirmationPageProps = {
 
 export function BookingConfirmationPage({ booking, venueName }: BookingConfirmationPageProps) {
   const timeRange = `${booking.startTime} – ${booking.endTime}`;
-  const { publicSettings } = useConfigContext();
+  const { publicSettings, app } = useConfigContext();
   const googleMapsLink = publicSettings.contact.googleMapsLink;
+  const bookingUrl = `${app.url}/booking/confirmation/${booking.id}`;
 
   const handleDownloadReceipt = useCallback(() => {
     window.open(`/api/bookings/${booking.id}/receipt`, "_blank", "noopener,noreferrer");
@@ -114,6 +115,8 @@ export function BookingConfirmationPage({ booking, venueName }: BookingConfirmat
             startTime={booking.startTime}
             endTime={booking.endTime}
             googleMapsLink={googleMapsLink}
+            bookingUrl={bookingUrl}
+            label="Share with Friends"
             className="touch-target min-h-12 w-full sm:w-auto sm:min-w-[11rem]"
           />
           <Link href="/book" className="w-full sm:w-auto">
