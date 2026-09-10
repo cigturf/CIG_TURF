@@ -281,14 +281,34 @@ export async function deleteBookingById(id: string): Promise<void> {
   }
 }
 
-export async function listBookingsByUserId(userId: string): Promise<BookingRecord[]> {
+/** A bare, comma/paren-free string is safe to inline into a PostgREST `.or()` filter. */
+function isSafeOrFilterValue(value: string): boolean {
+  return /^[^,()]+$/.test(value);
+}
+
+/**
+ * Bookings a customer should see: their own online bookings (matched by
+ * `user_id`), plus any manual booking an admin entered under their email —
+ * those are created against the admin's account, not the customer's, since
+ * no session exists to attribute them to at creation time. Matching by email
+ * here is what makes those show up once the customer logs in, including
+ * bookings entered before they ever signed up.
+ */
+export async function listBookingsByUserId(
+  userId: string,
+  email?: string | null,
+): Promise<BookingRecord[]> {
+  const normalizedEmail = email?.trim().toLowerCase();
+  const canFilterByEmail = Boolean(normalizedEmail && isSafeOrFilterValue(normalizedEmail));
+
   const supabase = createServiceRoleClient();
   if (supabase) {
-    const { data, error } = await supabase
-      .from("bookings")
-      .select("*")
-      .eq("user_id", userId)
-      .order("created_at", { ascending: false });
+    let query = supabase.from("bookings").select("*");
+    query = canFilterByEmail
+      ? query.or(`user_id.eq.${userId},customer_email.ilike.${normalizedEmail}`)
+      : query.eq("user_id", userId);
+
+    const { data, error } = await query.order("created_at", { ascending: false });
 
     if (!error && data) {
       return (data as BookingRow[]).map(mapBooking);
@@ -297,7 +317,14 @@ export async function listBookingsByUserId(userId: string): Promise<BookingRecor
 
   try {
     const rows = await prisma.booking.findMany({
-      where: { userId },
+      where: canFilterByEmail
+        ? {
+            OR: [
+              { userId },
+              { customerEmail: { equals: normalizedEmail, mode: "insensitive" } },
+            ],
+          }
+        : { userId },
       orderBy: { createdAt: "desc" },
     });
 

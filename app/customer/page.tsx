@@ -24,7 +24,7 @@ export default async function CustomerPage() {
     redirect(`${AUTH_ROUTES.login}?returnTo=${encodeURIComponent(AUTH_ROUTES.customer)}`);
   }
 
-  const bookings = await listBookingsByUserId(user.id);
+  const bookings = await listBookingsByUserId(user.id, user.email);
 
   return (
     <div className="surface-public min-h-screen">
