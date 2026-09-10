@@ -74,7 +74,7 @@ export function LandingLocation({ content }: LandingLocationProps) {
                 </div>
               ))}
 
-              <div className="flex flex-wrap gap-3 pt-1">
+              <div className="flex flex-wrap justify-center gap-3 pt-1 lg:justify-start">
                 {contact.whatsapps.map((whatsapp) => (
                   <Link
                     key={whatsapp}

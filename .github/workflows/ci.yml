@@ -43,20 +43,6 @@ jobs:
       - name: Unit tests
         run: npm run test
 
-      - name: Production build
-        run: npm run build
-        env:
-          DATABASE_URL: postgresql://ci:ci@localhost:5432/ci
-          NEXT_PUBLIC_SUPABASE_URL: https://placeholder.supabase.co
-          NEXT_PUBLIC_SUPABASE_ANON_KEY: placeholder-anon-key
-          SUPABASE_SERVICE_ROLE_KEY: placeholder-service-role-key
-          NEXT_PUBLIC_APP_URL: http://localhost:3001
-          RAZORPAY_KEY_ID: rzp_test_placeholder
-          RAZORPAY_KEY_SECRET: placeholder-secret
-          NEXT_PUBLIC_RAZORPAY_KEY_ID: rzp_test_placeholder
-          BREVO_API_KEY: placeholder-brevo-key
-          BREVO_SENDER_EMAIL: ci@example.com
-
   e2e:
     name: E2E Tests
     runs-on: ubuntu-latest

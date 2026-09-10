@@ -82,7 +82,7 @@ export function LandingStory({ content }: LandingStoryProps) {
             <PitchLineAccent progress={scrollYProgress} />
             <FadeUp>
               <Overline className="text-primary mb-4 block">The Experience</Overline>
-              <Display size="lg" className="mb-5 leading-[0.92] text-white">
+              <Display size="lg" className="mb-5 leading-[1.1] text-white sm:leading-[1] lg:leading-[0.92]">
                 <span className="block">{LANDING_PLACEHOLDERS.storyHeading.line1}</span>
                 <span className="text-primary block">{LANDING_PLACEHOLDERS.storyHeading.line2}</span>
               </Display>

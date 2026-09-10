@@ -121,7 +121,7 @@ export function LandingHero({ content }: LandingHeroProps) {
                       {content.tagline}
                     </Overline>
 
-                    <h1 className="font-display text-[2.25rem] leading-[0.9] font-semibold tracking-tight text-white uppercase sm:text-5xl md:text-6xl lg:text-7xl">
+                    <h1 className="font-display text-[2.25rem] leading-[1.15] font-semibold tracking-tight text-white uppercase sm:text-5xl sm:leading-[1.05] md:text-6xl md:leading-[0.95] lg:text-7xl lg:leading-[0.9]">
                       <span className="block">{headline.line1}</span>
                       <span className="text-primary block">{headline.line2}</span>
                     </h1>
