@@ -147,7 +147,7 @@ export function LandingHero({ content }: LandingHeroProps) {
                       priority
                       onDarkSurface
                       alt={content.displayName}
-                      imageClassName="h-full max-h-full w-auto max-w-full scale-[1.45] translate-x-[3%] object-contain object-top drop-shadow-[0_10px_40px_rgba(0,0,0,0.6)] mx-auto lg:mx-0 lg:-translate-y-[5%] lg:translate-x-[28%] lg:scale-[1.38] lg:object-left-top"
+                      imageClassName="h-full max-h-full w-auto max-w-full scale-[1.45] translate-x-[3%] object-contain object-top drop-shadow-[0_10px_40px_rgba(0,0,0,0.6)] mx-auto lg:mx-0 lg:translate-y-[4%] lg:translate-x-[35%] lg:scale-[1.46] lg:object-left-top"
                     />
                   </motion.div>
                 </div>

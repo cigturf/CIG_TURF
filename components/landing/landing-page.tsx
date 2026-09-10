@@ -4,7 +4,6 @@ import { LandingBookingCta } from "@/components/landing/landing-booking-cta";
 import { CricketSeamDivider } from "@/components/landing/cricket-divider";
 import { LandingEvents } from "@/components/landing/landing-events";
 import { LandingFacilities } from "@/components/landing/landing-facilities";
-import { LandingFaq } from "@/components/landing/landing-faq";
 import { LandingFooter } from "@/components/landing/landing-footer";
 import { LandingGallery } from "@/components/landing/landing-gallery";
 import { GrainOverlay } from "@/components/landing/grain-overlay";
@@ -44,7 +43,6 @@ export function LandingPage({ initialBusinessSettings, liveStats }: LandingPageP
         <LandingStats content={content} />
         <LandingBookingCta />
         <LandingLocation content={content} />
-        <LandingFaq content={content} />
       </main>
       <LandingFooter content={content} />
     </div>

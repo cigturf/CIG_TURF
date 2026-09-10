@@ -7,6 +7,10 @@ import type { EmailBrandingContext } from "@/features/communication/types/email.
 import { EMAIL_TEMPLATES, type EmailTemplateId } from "@/features/communication/types/email.types";
 import { formatCurrency } from "@/utils/format";
 import type { BookingRecord } from "@/features/booking/types/booking-record.types";
+import {
+  buildBookingShareMessage,
+  buildWhatsAppShareLink,
+} from "@/features/booking/lib/whatsapp-share";
 
 export type BookingEmailContext = {
   booking: Pick<
@@ -85,6 +89,27 @@ function mapsLink(branding: EmailBrandingContext): string | null {
   return branding.googleMapsLink;
 }
 
+function renderWhatsAppShareBlock(
+  booking: BookingEmailContext["booking"],
+  branding: EmailBrandingContext,
+): string {
+  const message = buildBookingShareMessage({
+    venueName: branding.businessName,
+    bookingReference: booking.bookingReference,
+    bookingDate: booking.bookingDate,
+    startTime: booking.startTime,
+    endTime: booking.endTime,
+    googleMapsLink: mapsLink(branding),
+  });
+  const shareHref = buildWhatsAppShareLink(message);
+
+  return `
+    <div style="margin:20px 0 0;text-align:center;">
+      <a href="${escapeHtml(shareHref)}" style="display:inline-block;padding:12px 24px;border-radius:8px;background:#25D366;color:#ffffff;font-weight:600;text-decoration:none;font-size:14px;">💬 Share on WhatsApp</a>
+    </div>
+  `;
+}
+
 function buildBookingRows(
   booking: BookingEmailContext["booking"],
   branding: EmailBrandingContext,
@@ -138,6 +163,7 @@ export function renderEmailTemplate(input: RenderEmailInput): { subject: string;
       const body = `
         <p style="margin:0 0 16px;font-size:15px;line-height:1.6;color:#334155;">Hi ${escapeHtml(booking.customerName)}, your turf booking is confirmed. We look forward to seeing you on the ground.</p>
         ${renderDetailTable(buildBookingRows(booking, branding, input.paymentStatus))}
+        ${renderWhatsAppShareBlock(booking, branding)}
       `;
       return {
         subject,

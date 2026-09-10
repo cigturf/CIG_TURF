@@ -15,6 +15,8 @@ import {
   StatusBadge,
   Text,
 } from "@/components/design-system";
+import { useConfigContext } from "@/components/providers/config-provider";
+import { ShareBookingWhatsAppButton } from "@/features/booking/components/share-booking-whatsapp-button";
 import type { BookingRecord } from "@/features/booking/types/booking-record.types";
 import { formatCurrency } from "@/utils";
 import { formatDate, formatPhoneNumber } from "@/utils/format";
@@ -27,6 +29,8 @@ type BookingConfirmationPageProps = {
 
 export function BookingConfirmationPage({ booking, venueName }: BookingConfirmationPageProps) {
   const timeRange = `${booking.startTime} – ${booking.endTime}`;
+  const { publicSettings } = useConfigContext();
+  const googleMapsLink = publicSettings.contact.googleMapsLink;
 
   const handleDownloadReceipt = useCallback(() => {
     window.open(`/api/bookings/${booking.id}/receipt`, "_blank", "noopener,noreferrer");
@@ -103,6 +107,15 @@ export function BookingConfirmationPage({ booking, venueName }: BookingConfirmat
             <Download className="size-4" />
             Download Booking Receipt
           </Button>
+          <ShareBookingWhatsAppButton
+            venueName={venueName}
+            bookingReference={booking.bookingReference}
+            bookingDate={booking.bookingDate}
+            startTime={booking.startTime}
+            endTime={booking.endTime}
+            googleMapsLink={googleMapsLink}
+            className="touch-target min-h-12 w-full sm:w-auto sm:min-w-[11rem]"
+          />
           <Link href="/book" className="w-full sm:w-auto">
             <Button variant="outline" size="lg" className="touch-target min-h-12 w-full sm:min-w-[11rem]">
               Book Another Slot

@@ -24,6 +24,8 @@ import {
   StatusBadge,
   Text,
 } from "@/components/design-system";
+import { useConfigContext } from "@/components/providers/config-provider";
+import { ShareBookingWhatsAppButton } from "@/features/booking/components/share-booking-whatsapp-button";
 import { formatCurrency } from "@/utils";
 
 type BookingDetailDrawerProps = {
@@ -54,6 +56,8 @@ export function BookingDetailDrawer({
   const [activeTab, setActiveTab] = useState<
     "customer" | "booking" | "payment" | "timeline" | "notes"
   >("booking");
+  const { displayName: venueName, publicSettings } = useConfigContext();
+  const googleMapsLink = publicSettings.contact.googleMapsLink;
 
   return (
     <DrawerRoot open={open} onOpenChange={onOpenChange}>
@@ -90,6 +94,19 @@ export function BookingDetailDrawer({
               <Button size="sm" variant="outline" onClick={onPrint}>
                 Print Receipt
               </Button>
+              {detail.customerPhone ? (
+                <ShareBookingWhatsAppButton
+                  venueName={venueName}
+                  bookingReference={detail.bookingReference}
+                  bookingDate={detail.bookingDate}
+                  startTime={detail.startTime}
+                  endTime={detail.endTime}
+                  googleMapsLink={googleMapsLink}
+                  recipientPhone={detail.customerPhone}
+                  label="Share with Customer"
+                  size="sm"
+                />
+              ) : null}
             </div>
 
             <div className="flex flex-wrap gap-2">

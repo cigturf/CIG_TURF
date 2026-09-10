@@ -9,6 +9,7 @@ import { signOutAction } from "@/features/auth/actions";
 import { useAuthSession } from "@/features/auth/hooks";
 import { AUTH_ROUTES } from "@/features/auth/types";
 import { buildLoginUrl } from "@/features/auth/utils/redirect";
+import { ShareBookingWhatsAppButton } from "@/features/booking/components/share-booking-whatsapp-button";
 import type { BookingRecord } from "@/features/booking/types/booking-record.types";
 import { Button, Display, LAYOUT, StatusBadge, Text } from "@/components/design-system";
 import { useConfigContext } from "@/components/providers/config-provider";
@@ -30,7 +31,8 @@ export function CustomerDashboard({
 }: CustomerDashboardProps) {
   const router = useRouter();
   const { user, isPending, isAuthenticated } = useAuthSession();
-  const { displayName: businessName } = useConfigContext();
+  const { displayName: businessName, publicSettings } = useConfigContext();
+  const googleMapsLink = publicSettings.contact.googleMapsLink;
 
   const displayName = user?.name || initialName || "Player";
   const displayEmail = user?.email || initialEmail || "";
@@ -89,12 +91,11 @@ export function CustomerDashboard({
             ) : (
               <div className="space-y-3">
                 {upcomingBookings.map((booking) => (
-                  <Link
+                  <div
                     key={booking.id}
-                    href={`/booking/confirmation/${booking.id}`}
                     className="border-border/60 hover:border-primary/30 hover:bg-muted/30 flex items-center justify-between gap-3 rounded-[var(--radius-lg)] border p-4 transition-colors"
                   >
-                    <div className="min-w-0">
+                    <Link href={`/booking/confirmation/${booking.id}`} className="min-w-0 flex-1">
                       <div className="mb-1 flex flex-wrap items-center gap-2">
                         <Text className="font-semibold">{booking.bookingReference}</Text>
                         <StatusBadge status="confirmed" label="Confirmed" />
@@ -105,9 +106,24 @@ export function CustomerDashboard({
                       <Text size="sm" className="text-muted-foreground">
                         Advance paid {formatCurrency(booking.advancePaid)}
                       </Text>
+                    </Link>
+                    <div className="flex shrink-0 items-center gap-1">
+                      <ShareBookingWhatsAppButton
+                        venueName={businessName}
+                        bookingReference={booking.bookingReference}
+                        bookingDate={booking.bookingDate}
+                        startTime={booking.startTime}
+                        endTime={booking.endTime}
+                        googleMapsLink={googleMapsLink}
+                        iconOnly
+                        variant="ghost"
+                        label="Share on WhatsApp"
+                      />
+                      <Link href={`/booking/confirmation/${booking.id}`} aria-label="View booking">
+                        <ChevronRight className="text-muted-foreground size-5" />
+                      </Link>
                     </div>
-                    <ChevronRight className="text-muted-foreground size-5 shrink-0" />
-                  </Link>
+                  </div>
                 ))}
               </div>
             )}
