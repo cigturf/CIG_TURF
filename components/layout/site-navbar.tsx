@@ -87,13 +87,15 @@ export function SiteNavbar({ className }: SiteNavbarProps) {
         >
           <Link href={logoHref} className="group flex min-w-0 items-center gap-2.5">
             {logoUrl ? (
-              <Image
-                src={logoUrl}
-                alt={displayName}
-                width={36}
-                height={36}
-                className="size-8 shrink-0 rounded-[var(--radius-sm)] object-contain sm:size-9"
-              />
+              <span className="relative inline-flex size-10 shrink-0 overflow-hidden rounded-[var(--radius-sm)] sm:size-11">
+                <Image
+                  src={logoUrl}
+                  alt={displayName}
+                  fill
+                  sizes="44px"
+                  className="scale-[1.45] object-cover object-[50%_30%]"
+                />
+              </span>
             ) : (
               <BrandLogo
                 size="nav"
