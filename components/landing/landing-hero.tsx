@@ -2,26 +2,19 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import {
-  AnimatePresence,
-  motion,
-  useMotionValueEvent,
-  useReducedMotion,
-  useScroll,
-} from "framer-motion";
+import { motion, useReducedMotion, useScroll, useTransform } from "framer-motion";
 import { ChevronDown, ChevronRight } from "lucide-react";
-import { useRef, useState } from "react";
+import { useRef } from "react";
 
 import { BrandLogo } from "@/components/landing/brand-logo";
 import { HeroBackgroundCarousel } from "@/components/landing/hero-background-carousel";
+import { HeroCricketScrub } from "@/components/landing/hero-cricket-scrub";
 import { Button, LAYOUT, Overline, Text } from "@/components/design-system";
 import { LANDING_HERO_ARTWORK, LANDING_PLACEHOLDERS } from "@/features/landing";
 import type { LandingContent } from "@/features/landing";
-import { DURATION, EASING } from "@/lib/design-system/motion";
 import { cn } from "@/lib/utils";
 
 const TRUST_BADGES = ["Premium Turf", "Flood Lights", "Match Ready"] as const;
-const TEXT_REVEAL_PROGRESS = 0.28;
 
 type LandingHeroProps = {
   content: LandingContent;
@@ -31,17 +24,26 @@ export function LandingHero({ content }: LandingHeroProps) {
   const headline = LANDING_PLACEHOLDERS.heroHeadline;
   const reduced = useReducedMotion();
   const heroRef = useRef<HTMLElement>(null);
-  const [revealText, setRevealText] = useState(reduced === true);
 
   const { scrollYProgress } = useScroll({
     target: heroRef,
     offset: ["start start", "end end"],
   });
 
-  useMotionValueEvent(scrollYProgress, "change", (progress) => {
-    if (reduced) return;
-    setRevealText(progress >= TEXT_REVEAL_PROGRESS);
-  });
+  // Every value below is driven directly by scroll position, not a timer or
+  // a threshold snap — scrubbing the page scrubs the reveal, frame by frame.
+  // The logo and headline share the same on-screen slot, so their fades must
+  // not overlap — otherwise both are half-visible at once mid-scroll and the
+  // crest shows through the headline text.
+  const rawLogoOpacity = useTransform(scrollYProgress, [0.06, 0.17], [1, 0]);
+  const rawLogoScale = useTransform(scrollYProgress, [0, 0.17], [1, 1.05]);
+  const rawContentOpacity = useTransform(scrollYProgress, [0.17, 0.3], [0, 1]);
+  const rawContentY = useTransform(scrollYProgress, [0.17, 0.3], [20, 0]);
+
+  const logoOpacity = reduced ? 0 : rawLogoOpacity;
+  const logoScale = reduced ? 1 : rawLogoScale;
+  const contentOpacity = reduced ? 1 : rawContentOpacity;
+  const contentY = reduced ? 0 : rawContentY;
 
   return (
     <section
@@ -60,6 +62,8 @@ export function LandingHero({ content }: LandingHeroProps) {
         <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-black/70 via-black/20 to-transparent" />
         <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_70%_50%,transparent_0%,black/50_100%)]" />
 
+        {reduced ? null : <HeroCricketScrub progress={scrollYProgress} />}
+
         <div
           className={cn(
             LAYOUT.containerXl,
@@ -70,13 +74,9 @@ export function LandingHero({ content }: LandingHeroProps) {
             <div className="lg:col-span-7">
               <div className="w-full text-center lg:text-left">
                 <div className="relative w-full">
-                  {/* Text always in flow — fixes button/badge position; opacity toggles on scroll */}
-                  <motion.div
-                    animate={{ opacity: revealText ? 1 : 0 }}
-                    transition={{ duration: DURATION.moderate, ease: EASING.smooth }}
-                    className={cn(!revealText && "pointer-events-none select-none")}
-                    aria-hidden={!revealText}
-                  >
+                  {/* Both layers are pinned to the same scroll position — scrubbing
+                      the page scrubs the logo out and the headline in, in lockstep. */}
+                  <motion.div style={{ opacity: contentOpacity, y: contentY }}>
                     <Overline className="text-primary mb-4 block tracking-[0.28em] sm:mb-5">
                       {content.tagline}
                     </Overline>
@@ -94,26 +94,18 @@ export function LandingHero({ content }: LandingHeroProps) {
                     </Text>
                   </motion.div>
 
-                  <AnimatePresence initial={false}>
-                    {!revealText ? (
-                      <motion.div
-                        key="hero-logo"
-                        className="absolute inset-0 flex items-start justify-center lg:justify-start"
-                        initial={{ opacity: 0, scale: 0.98 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        exit={{ opacity: 0, scale: 0.99 }}
-                        transition={{ duration: DURATION.moderate, ease: EASING.premium }}
-                      >
-                        <BrandLogo
-                          size="hero"
-                          priority
-                          onDarkSurface
-                          alt={content.displayName}
-                          imageClassName="h-full max-h-full w-auto max-w-full scale-[1.27] object-contain object-top drop-shadow-[0_10px_40px_rgba(0,0,0,0.6)] mx-auto lg:mx-0 lg:-translate-y-[5%] lg:translate-x-[28%] lg:scale-[1.38] lg:object-left-top"
-                        />
-                      </motion.div>
-                    ) : null}
-                  </AnimatePresence>
+                  <motion.div
+                    style={{ opacity: logoOpacity, scale: logoScale }}
+                    className="pointer-events-none absolute inset-0 flex items-start justify-center lg:justify-start"
+                  >
+                    <BrandLogo
+                      size="hero"
+                      priority
+                      onDarkSurface
+                      alt={content.displayName}
+                      imageClassName="h-full max-h-full w-auto max-w-full scale-[1.27] object-contain object-top drop-shadow-[0_10px_40px_rgba(0,0,0,0.6)] mx-auto lg:mx-0 lg:-translate-y-[5%] lg:translate-x-[28%] lg:scale-[1.38] lg:object-left-top"
+                    />
+                  </motion.div>
                 </div>
 
                 <div className="mt-8 flex w-full flex-col gap-3 sm:flex-row sm:justify-center lg:justify-start">
