@@ -1,7 +1,6 @@
 "use client";
 
 import { Menu, Moon, Sun } from "lucide-react";
-import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -39,13 +38,12 @@ export function SiteNavbar({ className }: SiteNavbarProps) {
   const pathname = usePathname();
   const isAdminRoute = pathname?.startsWith("/admin");
   const isLanding = pathname === "/";
-  const { displayName, publicSettings } = useConfigContext();
+  const { displayName } = useConfigContext();
   const { isAuthenticated, isPending } = useAuthSession();
   const { toggleTheme, isDark, isReady } = useColorMode();
   const [scrolled, setScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
 
-  const logoUrl = publicSettings.branding.logoUrl;
   const navLinks = isLanding ? LANDING_LINKS : APP_LINKS;
   const loginHref = buildLoginUrl(resolveLoginReturnTo(pathname));
 
@@ -93,24 +91,7 @@ export function SiteNavbar({ className }: SiteNavbarProps) {
           className={cn(LAYOUT.containerXl, "flex h-14 items-center justify-between gap-3 sm:h-16")}
         >
           <Link href={logoHref} className="group flex min-w-0 items-center gap-2.5">
-            {logoUrl ? (
-              <span className="relative inline-flex size-10 shrink-0 overflow-hidden rounded-[var(--radius-sm)] sm:size-11">
-                <Image
-                  src={logoUrl}
-                  alt={displayName}
-                  fill
-                  sizes="44px"
-                  className="scale-[1.45] object-cover object-[50%_30%]"
-                />
-              </span>
-            ) : (
-              <BrandLogo
-                size="nav"
-                onDarkSurface={isLanding && !scrolled}
-                alt={displayName}
-                logoUrl={logoUrl}
-              />
-            )}
+            <BrandLogo size="nav" onDarkSurface={isLanding && !scrolled} alt={displayName} />
             <span
               className={cn(
                 "truncate text-xs font-semibold tracking-wide uppercase sm:text-sm",
@@ -222,7 +203,7 @@ export function SiteNavbar({ className }: SiteNavbarProps) {
       <DrawerRoot open={menuOpen} onOpenChange={setMenuOpen}>
         <DrawerPanel title={displayName}>
           <div className="mb-6 flex items-center justify-center gap-2.5">
-            <BrandLogo size="nav" alt={displayName} logoUrl={logoUrl} />
+            <BrandLogo size="nav" alt={displayName} />
             <span className="text-sm font-semibold tracking-wide uppercase">{displayName}</span>
           </div>
           <nav className="flex flex-col gap-0.5">
