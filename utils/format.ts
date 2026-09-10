@@ -33,3 +33,15 @@ export function formatPhoneNumber(phone: string) {
 
   return phone;
 }
+
+/**
+ * WhatsApp click-to-chat links (wa.me / api.whatsapp.com) need the full
+ * international number — a bare 10-digit number fails with "this link
+ * couldn't be opened". Numbers are entered/stored without a country code
+ * throughout this app, so a 10-digit number is assumed Indian; any other
+ * length is passed through as-is (already has a country code).
+ */
+export function toWhatsAppDigits(phone: string): string {
+  const digits = phone.replace(/\D/g, "");
+  return digits.length === 10 ? `91${digits}` : digits;
+}

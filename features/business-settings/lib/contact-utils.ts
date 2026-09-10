@@ -1,4 +1,5 @@
 import type { ContactSettings } from "@/features/business-settings/types";
+import { toWhatsAppDigits } from "@/utils/format";
 
 /** Splits comma-separated contact tokens from admin settings into individual numbers. */
 export function splitDelimitedContactValues(values: string[] | null | undefined): string[] {
@@ -33,6 +34,6 @@ export function resolveWhatsappNumbers(
 }
 
 export function toWhatsAppHref(number: string): string {
-  const digits = number.replace(/\D/g, "");
+  const digits = toWhatsAppDigits(number);
   return digits ? `https://wa.me/${digits}` : "#";
 }

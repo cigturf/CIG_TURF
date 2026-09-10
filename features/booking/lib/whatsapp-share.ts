@@ -1,4 +1,4 @@
-import { formatDate } from "@/utils/format";
+import { formatDate, toWhatsAppDigits } from "@/utils/format";
 
 export type BookingShareDetails = {
   venueName: string;
@@ -61,6 +61,6 @@ export function buildBookingShareMessage(
  */
 export function buildWhatsAppShareLink(message: string, recipientPhone?: string | null): string {
   const text = encodeURIComponent(message);
-  const digits = recipientPhone?.replace(/\D/g, "");
+  const digits = recipientPhone ? toWhatsAppDigits(recipientPhone) : "";
   return digits ? `https://wa.me/${digits}?text=${text}` : `https://wa.me/?text=${text}`;
 }

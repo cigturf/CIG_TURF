@@ -67,6 +67,11 @@ export function SiteNavbar({ className }: SiteNavbarProps) {
 
   const logoHref = isLanding ? "/#top" : "/";
   const bookHref = isLanding ? "/#book" : "/book";
+  // The landing header floats over the (always-dark) hero when unscrolled,
+  // so it stays light-on-dark there regardless of theme. Once scrolled past
+  // it, the header should read like the rest of the page — dark-on-light in
+  // light theme, light-on-dark in dark theme — instead of staying frozen.
+  const useDarkNavStyle = isLanding && (!scrolled || isDark);
 
   return (
     <>
@@ -75,7 +80,9 @@ export function SiteNavbar({ className }: SiteNavbarProps) {
           "fixed inset-x-0 top-0 z-50 transition-all duration-300",
           isLanding
             ? scrolled
-              ? "border-b border-white/10 bg-black/75 shadow-lg shadow-black/20 backdrop-blur-xl"
+              ? isDark
+                ? "border-b border-white/10 bg-black/75 shadow-lg shadow-black/20 backdrop-blur-xl"
+                : "border-border/60 bg-white/85 border-b shadow-sm backdrop-blur-xl"
               : "border-transparent bg-transparent"
             : "border-border/60 bg-background/90 border-b shadow-sm backdrop-blur-md",
           className,
@@ -99,7 +106,7 @@ export function SiteNavbar({ className }: SiteNavbarProps) {
             ) : (
               <BrandLogo
                 size="nav"
-                onDarkSurface={isLanding}
+                onDarkSurface={isLanding && !scrolled}
                 alt={displayName}
                 logoUrl={logoUrl}
               />
@@ -107,7 +114,7 @@ export function SiteNavbar({ className }: SiteNavbarProps) {
             <span
               className={cn(
                 "truncate text-xs font-semibold tracking-wide uppercase sm:text-sm",
-                isLanding ? "text-white" : "text-foreground",
+                useDarkNavStyle ? "text-white" : "text-foreground",
               )}
             >
               {displayName}
@@ -127,7 +134,7 @@ export function SiteNavbar({ className }: SiteNavbarProps) {
                   href={link.href}
                   className={cn(
                     "rounded-[var(--radius-md)] px-2.5 py-2 text-sm font-medium transition-colors lg:px-3",
-                    isLanding
+                    useDarkNavStyle
                       ? "text-white/70 hover:text-white"
                       : active
                         ? "bg-muted text-foreground"
@@ -149,7 +156,7 @@ export function SiteNavbar({ className }: SiteNavbarProps) {
                 aria-label="Toggle theme"
                 className={cn(
                   "touch-target",
-                  isLanding
+                  useDarkNavStyle
                     ? "text-white/75 hover:bg-white/10 hover:text-white"
                     : "text-muted-foreground",
                 )}
@@ -164,7 +171,7 @@ export function SiteNavbar({ className }: SiteNavbarProps) {
                   variant="ghost"
                   size="sm"
                   className={cn(
-                    isLanding
+                    useDarkNavStyle
                       ? "text-white/75 hover:bg-white/10 hover:text-white"
                       : undefined,
                   )}
@@ -180,7 +187,7 @@ export function SiteNavbar({ className }: SiteNavbarProps) {
                   variant="ghost"
                   size="sm"
                   className={cn(
-                    isLanding
+                    useDarkNavStyle
                       ? "text-white/75 hover:bg-white/10 hover:text-white"
                       : undefined,
                   )}
@@ -201,7 +208,7 @@ export function SiteNavbar({ className }: SiteNavbarProps) {
               size="icon-sm"
               className={cn(
                 "touch-target sm:hidden",
-                isLanding ? "text-white hover:bg-white/10" : "text-foreground",
+                useDarkNavStyle ? "text-white hover:bg-white/10" : "text-foreground",
               )}
               onClick={() => setMenuOpen(true)}
               aria-label="Open menu"
