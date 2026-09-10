@@ -36,9 +36,24 @@ function renderTransactionalFooter(branding: EmailBrandingContext): string {
       Support Hours:<br />
       ${escapeHtml(TRANSACTIONAL_EMAIL_SUPPORT_HOURS)}
     </div>
-    <div class="email-footer-line" style="margin:0 0 12px;font-size:13px;line-height:1.7;color:#64748b;">
+    <div class="email-footer-line" style="margin:0 0 16px;font-size:13px;line-height:1.7;color:#64748b;">
       Thank you for choosing ${escapeHtml(TRANSACTIONAL_EMAIL_SENDER_NAME)}.
     </div>
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 16px;">
+      <tr>
+        <td align="center" class="email-branding-cell" style="padding:16px 0 0;border-top:1px solid #e2e8f0;">
+          <div class="email-footer-muted" style="margin:0 0 10px;font-size:11px;line-height:1.5;color:#94a3b8;">
+            Powered by <span class="email-branding-name" style="color:#475569;font-weight:600;">TechSS X Webstudio</span>
+          </div>
+          <a href="https://wa.me/919996910306?text=Hi%20Smarth%2C%20I%20got%20your%20contact%20from%20a%20booking%20email%20%E2%80%94%20I%27m%20interested%20in%20getting%20a%20website%20made%20too." target="_blank" rel="noopener noreferrer" class="email-branding-pill" style="display:inline-block;padding:8px 18px;border-radius:999px;border:1px solid #cbd5e1;color:#334155;text-decoration:none;font-size:12px;font-weight:600;">
+            💬 Want a website like this?
+          </a>
+          <div class="email-footer-muted" style="margin:10px 0 0;font-size:11px;line-height:1.5;color:#94a3b8;">
+            or email <a href="mailto:smarthmehar@gmail.com" class="email-footer-link" style="color:#16a34a;text-decoration:none;">smarthmehar@gmail.com</a>
+          </div>
+        </td>
+      </tr>
+    </table>
     <div class="email-footer-muted" style="margin:0;font-size:12px;line-height:1.6;color:#94a3b8;">
       This is an automated email. Please do not share your OTP or payment information with anyone.
     </div>`;
@@ -97,6 +112,9 @@ export function renderEmailLayout(options: EmailLayoutOptions): string {
       .email-footer-link { color:#4ade80 !important; }
       .email-detail-label { color:#94a3b8 !important; border-bottom-color:#334155 !important; }
       .email-detail-value { color:#f1f5f9 !important; border-bottom-color:#334155 !important; }
+      .email-branding-cell { border-top-color:#334155 !important; }
+      .email-branding-name { color:#cbd5e1 !important; }
+      .email-branding-pill { border-color:#475569 !important; color:#e2e8f0 !important; }
     }
   </style>
 </head>

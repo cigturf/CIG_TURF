@@ -37,6 +37,21 @@ describe("renderEmailLayout", () => {
     expect(html).toContain('meta name="color-scheme" content="light dark"');
   });
 
+  it("includes the studio branding and contact links on every layout", () => {
+    const settings = createEmptyBusinessSettings();
+    const branding = buildEmailBrandingFromSettings(settings);
+
+    const html = renderEmailLayout({
+      branding,
+      title: "Booking Confirmed",
+      bodyHtml: "<p>Test body</p>",
+    });
+
+    expect(html).toContain("TechSS X Webstudio");
+    expect(html).toContain("https://wa.me/919996910306");
+    expect(html).toContain("mailto:smarthmehar@gmail.com");
+  });
+
   it("includes configured whatsapp numbers in the shared footer", () => {
     const settings = createEmptyBusinessSettings();
     settings.contact.whatsappNumbers = ["+91 9193919798", "+91 9368332353"];

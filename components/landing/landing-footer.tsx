@@ -156,7 +156,7 @@ export function LandingFooter({ content }: LandingFooterProps) {
               className="inline-flex w-fit items-center gap-1.5 rounded-full border border-white/15 px-3 py-1.5 text-xs font-medium text-white/70 transition-colors hover:border-white/30 hover:text-white"
             >
               <span className="size-1.5 rounded-full bg-emerald-400" aria-hidden />
-              Contact Smarth Singh
+              Want a website like this?
             </Link>
             <Link
               href="mailto:smarthmehar@gmail.com"
