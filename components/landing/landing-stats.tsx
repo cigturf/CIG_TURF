@@ -41,7 +41,7 @@ export function LandingStats({ content }: LandingStatsProps) {
               const Icon = resolveLandingIcon(stat.icon, Trophy);
               return (
                 <StaggerItem key={stat.id}>
-                  <div className="flex items-start gap-3 sm:flex-col sm:items-center sm:text-center">
+                  <div className="flex flex-col items-center gap-3 text-center">
                     <div className="bg-warning/15 text-warning flex size-11 shrink-0 items-center justify-center rounded-full">
                       <Icon className="size-5" strokeWidth={1.5} />
                     </div>

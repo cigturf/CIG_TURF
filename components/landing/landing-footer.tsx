@@ -46,10 +46,10 @@ export function LandingFooter({ content }: LandingFooterProps) {
       </div>
       <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black via-black/95 to-black/90" />
 
-      <div className={cn(LAYOUT.containerXl, SPACING.section.md, "relative")}>
+      <div className={cn(LAYOUT.containerXl, SPACING.section.md, "relative text-center sm:text-left")}>
         <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-12 lg:gap-8">
           <div className="lg:col-span-5">
-            <div className="mb-4 flex items-center gap-2.5">
+            <div className="mb-4 flex items-center justify-center gap-2.5 sm:justify-start">
               <BrandLogo size="nav" onDarkSurface alt={content.displayName} />
               <span className="text-sm font-semibold tracking-wide text-white uppercase sm:text-base">
                 {content.displayName}
@@ -105,7 +105,7 @@ export function LandingFooter({ content }: LandingFooterProps) {
 
           <div className="lg:col-span-4">
             <p className="mb-4 text-[0.65rem] tracking-[0.2em] text-white/40 uppercase">Follow</p>
-            <div className="flex flex-wrap gap-x-5 gap-y-2">
+            <div className="flex flex-wrap justify-center gap-x-5 gap-y-2 sm:justify-start">
               {socialLinks.map(([key, url]) => (
                 <Link
                   key={key}
@@ -127,7 +127,7 @@ export function LandingFooter({ content }: LandingFooterProps) {
         </div>
 
         {content.footer.links.length > 0 ? (
-          <div className="mt-8 flex flex-wrap gap-5">
+          <div className="mt-8 flex flex-wrap justify-center gap-5 sm:justify-start">
             {content.footer.links.map((link) => (
               <Link
                 key={link.url}
@@ -141,14 +141,13 @@ export function LandingFooter({ content }: LandingFooterProps) {
         ) : null}
 
         <Separator className="my-8 bg-white/10" />
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-col items-center gap-2 sm:flex-row sm:items-center sm:justify-between">
           <Text size="sm" className="text-white/40">
             {copyright}
           </Text>
-          <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+          <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-2 sm:justify-start">
             <Text size="sm" className="text-white/40">
-              Powered By - <span className="text-white/60">TechSS X Webstudio</span> · Contact
-              Smarth Singh
+              Powered By - <span className="text-white/60">TechSS X Webstudio</span>
             </Text>
             <Link
               href="https://wa.me/919996910306?text=Hi%20Smarth%2C%20I%20saw%20the%20website%20you%20built%20for%20Chandna%20Indoor%20Ground%20%E2%80%94%20I%27m%20interested%20in%20getting%20a%20website%20made%20too."
@@ -157,7 +156,7 @@ export function LandingFooter({ content }: LandingFooterProps) {
               className="inline-flex w-fit items-center gap-1.5 rounded-full border border-white/15 px-3 py-1.5 text-xs font-medium text-white/70 transition-colors hover:border-white/30 hover:text-white"
             >
               <span className="size-1.5 rounded-full bg-emerald-400" aria-hidden />
-              Want a website like this?
+              Need your website? - Contact Smarth Singh
             </Link>
             <Link
               href="mailto:smarthmehar@gmail.com"

@@ -39,8 +39,8 @@ export function LandingSocialProof({ content }: LandingSocialProofProps) {
             const Icon = resolveLandingIcon(item.icon, Star);
             return (
               <StaggerItem key={item.id}>
-                <article className="group h-full rounded-[var(--radius-xl)] border border-white/10 bg-white/[0.03] p-5 transition-colors duration-300 hover:border-primary/25 hover:bg-white/[0.05] sm:p-6">
-                  <div className="bg-primary/15 text-primary mb-4 flex size-11 items-center justify-center rounded-full transition-transform duration-300 group-hover:scale-105">
+                <article className="group h-full rounded-[var(--radius-xl)] border border-white/10 bg-white/[0.03] p-5 text-center transition-colors duration-300 hover:border-primary/25 hover:bg-white/[0.05] sm:p-6 sm:text-left">
+                  <div className="bg-primary/15 text-primary mx-auto mb-4 flex size-11 items-center justify-center rounded-full transition-transform duration-300 group-hover:scale-105 sm:mx-0">
                     <Icon className="size-5" strokeWidth={1.5} />
                   </div>
                   <h3 className="font-display mb-2 text-center text-base tracking-tight text-white uppercase sm:text-left">

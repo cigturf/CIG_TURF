@@ -60,7 +60,7 @@ export function LandingBookingCta() {
           <div className="text-center lg:col-span-7 lg:text-left">
             <Reveal>
               <Overline className="text-primary mb-4 block">Ready to play?</Overline>
-              <h2 className="font-display text-3xl leading-[0.92] font-semibold tracking-tight text-white uppercase sm:text-4xl md:text-5xl lg:text-6xl">
+              <h2 className="font-display text-3xl leading-[1.08] font-semibold tracking-tight text-white uppercase sm:text-4xl sm:leading-[0.98] md:text-5xl md:leading-[0.92] lg:text-6xl">
                 <span className="block">{cta.heading}</span>
                 <span className="text-primary block">{cta.headingAccent}</span>
               </h2>

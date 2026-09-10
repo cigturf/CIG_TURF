@@ -34,11 +34,13 @@ export function LandingHero({ content }: LandingHeroProps) {
   // a threshold snap — scrubbing the page scrubs the reveal, frame by frame.
   // Cinematic open: dark → floodlights flicker on → logo → headline → a
   // ball/impact/"FOUR" beat (see HeroCricketScrub) → settle.
-  const rawDarknessOpacity = useTransform(scrollYProgress, [0, 0.1], [0.92, 0]);
+  // Dim, not black — the stadium should read as "lights not on yet", not a
+  // blackout, so there's something to see even before any scrolling happens.
+  const rawDarknessOpacity = useTransform(scrollYProgress, [0, 0.1], [0.55, 0]);
   const rawLightBeamOpacity = useTransform(
     scrollYProgress,
     [0.02, 0.04, 0.06, 0.08, 0.12],
-    [0, 0.5, 0.2, 0.6, 1],
+    [0, 0.6, 0.3, 0.75, 1],
   );
 
   // The logo and headline share the same on-screen slot, so their fades must
@@ -46,6 +48,10 @@ export function LandingHero({ content }: LandingHeroProps) {
   // crest shows through the headline text.
   const rawLogoOpacity = useTransform(scrollYProgress, [0.13, 0.2], [1, 0]);
   const rawLogoScale = useTransform(scrollYProgress, [0, 0.2], [1, 1.05]);
+  // Belt-and-braces on top of the opacity fade: once it's done, stop the
+  // logo from painting at all. Without this a residual "ghost" of the crest
+  // can remain faintly visible well past where opacity should have hit 0.
+  const rawLogoVisibility = useTransform(scrollYProgress, [0.199, 0.2], ["visible", "hidden"]);
   const rawContentOpacity = useTransform(scrollYProgress, [0.2, 0.3], [0, 1]);
   const rawContentY = useTransform(scrollYProgress, [0.2, 0.3], [20, 0]);
 
@@ -53,6 +59,7 @@ export function LandingHero({ content }: LandingHeroProps) {
   const lightBeamOpacity = reduced ? 1 : rawLightBeamOpacity;
   const logoOpacity = reduced ? 0 : rawLogoOpacity;
   const logoScale = reduced ? 1 : rawLogoScale;
+  const logoVisibility = reduced ? "hidden" : rawLogoVisibility;
   const contentOpacity = reduced ? 1 : rawContentOpacity;
   const contentY = reduced ? 0 : rawContentY;
 
@@ -70,22 +77,29 @@ export function LandingHero({ content }: LandingHeroProps) {
 
         <div className="pointer-events-none absolute inset-0 bg-black/50" />
         <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black via-black/40 to-black/30" />
-        <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-black/70 via-black/20 to-transparent" />
+        {/* Keeps the headline column readable regardless of which carousel
+            photo is showing — a plain linear fade wasn't dark enough by the
+            time it reached the text; this holds a flat, strong tone across
+            the whole column instead of fading the moment it starts. */}
+        <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(to_right,rgba(0,0,0,0.92)_0%,rgba(0,0,0,0.88)_45%,rgba(0,0,0,0.45)_65%,rgba(0,0,0,0.1)_100%)]" />
         <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_70%_50%,transparent_0%,black/50_100%)]" />
 
         {/* Cold open: floodlights are off, then flicker on as the user starts scrolling.
-            Must sit above the foreground content (z-10) too, or the logo/headline stay
-            fully lit while only the background photo behind them dims. */}
+            Darkness must sit above the foreground content (z-10) too, or the
+            logo/headline stay fully lit while only the background photo dims.
+            The beams sit ABOVE the darkness layer — they're the thing turning
+            on, so they need to read clearly even while the dim veil is still
+            present, not be muted underneath it. */}
         <motion.div
           style={{ opacity: darknessOpacity }}
           className="pointer-events-none absolute inset-0 z-20 bg-black"
         />
         <motion.div
           style={{ opacity: lightBeamOpacity }}
-          className="pointer-events-none absolute inset-0 z-[4]"
+          className="pointer-events-none absolute inset-0 z-[21]"
         >
-          <div className="absolute -top-1/4 left-[8%] h-[140%] w-40 -rotate-[18deg] bg-gradient-to-b from-white/25 via-white/5 to-transparent blur-2xl" />
-          <div className="absolute -top-1/4 right-[15%] h-[140%] w-32 rotate-[14deg] bg-gradient-to-b from-white/20 via-white/5 to-transparent blur-2xl" />
+          <div className="absolute -top-1/4 left-[4%] h-[140%] w-24 -rotate-[18deg] bg-gradient-to-b from-white/40 via-white/10 to-transparent blur-2xl sm:left-[8%] sm:w-40" />
+          <div className="absolute -top-1/4 right-[8%] h-[140%] w-20 rotate-[14deg] bg-gradient-to-b from-white/35 via-white/10 to-transparent blur-2xl sm:right-[15%] sm:w-32" />
         </motion.div>
 
         {reduced ? null : <HeroCricketScrub progress={scrollYProgress} />}
@@ -121,7 +135,11 @@ export function LandingHero({ content }: LandingHeroProps) {
                   </motion.div>
 
                   <motion.div
-                    style={{ opacity: logoOpacity, scale: logoScale }}
+                    style={{
+                      opacity: logoOpacity,
+                      scale: logoScale,
+                      visibility: logoVisibility,
+                    }}
                     className="pointer-events-none absolute inset-0 flex items-start justify-center lg:justify-start"
                   >
                     <BrandLogo
@@ -129,7 +147,7 @@ export function LandingHero({ content }: LandingHeroProps) {
                       priority
                       onDarkSurface
                       alt={content.displayName}
-                      imageClassName="h-full max-h-full w-auto max-w-full scale-[1.27] object-contain object-top drop-shadow-[0_10px_40px_rgba(0,0,0,0.6)] mx-auto lg:mx-0 lg:-translate-y-[5%] lg:translate-x-[28%] lg:scale-[1.38] lg:object-left-top"
+                      imageClassName="h-full max-h-full w-auto max-w-full scale-[1.45] translate-x-[3%] object-contain object-top drop-shadow-[0_10px_40px_rgba(0,0,0,0.6)] mx-auto lg:mx-0 lg:-translate-y-[5%] lg:translate-x-[28%] lg:scale-[1.38] lg:object-left-top"
                     />
                   </motion.div>
                 </div>

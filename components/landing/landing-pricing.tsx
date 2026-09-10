@@ -47,7 +47,7 @@ export function LandingPricing({ content }: LandingPricingProps) {
                   padding="lg"
                   radius="xl"
                   className={cn(
-                    "h-full border-white/10 bg-white/[0.04] text-white",
+                    "h-full border-white/10 bg-white/[0.04] text-center text-white sm:text-left",
                     index === 0 && "ring-primary/30 ring-1",
                   )}
                 >
