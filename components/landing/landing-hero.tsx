@@ -47,7 +47,10 @@ export function LandingHero({ content }: LandingHeroProps) {
     <section
       ref={heroRef}
       id="top"
-      className={cn("relative bg-black", reduced ? "h-[100dvh] min-h-[100vh]" : "h-[200dvh]")}
+      className={cn(
+        "relative scroll-mt-14 bg-black sm:scroll-mt-16",
+        reduced ? "h-[100dvh] min-h-[100vh]" : "h-[200dvh]",
+      )}
     >
       <div className="sticky top-0 flex h-[100dvh] min-h-[100vh] flex-col overflow-hidden">
         <HeroBackgroundCarousel slides={LANDING_HERO_ARTWORK} />

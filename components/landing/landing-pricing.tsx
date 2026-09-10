@@ -24,7 +24,7 @@ export function LandingPricing({ content }: LandingPricingProps) {
   const hasTiers = content.pricingTiers.length > 0;
 
   return (
-    <section id="pricing" className={cn("bg-black", SPACING.section.md)}>
+    <section id="pricing" className={cn("scroll-mt-14 bg-black sm:scroll-mt-16", SPACING.section.md)}>
       <div className={LAYOUT.containerXl}>
         <Reveal className="mb-6 text-center sm:mb-8 lg:text-left">
           <Overline className="text-primary mb-3 block">Pricing</Overline>

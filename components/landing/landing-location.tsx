@@ -29,7 +29,7 @@ export function LandingLocation({ content }: LandingLocationProps) {
   const hasAddress = Boolean(contact.fullAddress);
 
   return (
-    <section id="contact" className={cn("surface-public", SPACING.section.md)}>
+    <section id="contact" className={cn("surface-public scroll-mt-14 sm:scroll-mt-16", SPACING.section.md)}>
       <div className={LAYOUT.containerXl}>
         <Reveal className="mb-6 text-center sm:mb-8 lg:text-left">
           <Overline className="text-primary mb-3 block">Location</Overline>

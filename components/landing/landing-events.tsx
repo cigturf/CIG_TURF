@@ -71,7 +71,7 @@ export function LandingEvents({ content }: LandingEventsProps) {
   if (events.length === 0) return null;
 
   return (
-    <section id="events" className={cn("bg-black", SPACING.section.md)}>
+    <section id="events" className={cn("scroll-mt-14 bg-black sm:scroll-mt-16", SPACING.section.md)}>
       <div className={LAYOUT.containerXl}>
         <FadeUp className={cn("mb-8 sm:mb-10", SECTION_HEADING)}>
           <Overline className="text-primary mb-3 block">Upcoming Events</Overline>

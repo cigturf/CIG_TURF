@@ -97,9 +97,15 @@ export function BookingSummaryPanel({
         <div className="border-border/60 mt-5 border-t pt-4">
           <PriceSummary
             lines={[
-              { label: "Total price", amount: formatCurrency(summary.totalPrice) },
+              {
+                label: "Total price",
+                amount: summary.slotCount > 0 ? formatCurrency(summary.totalPrice) : "—",
+              },
               { label: "Advance (fixed)", amount: formatCurrency(summary.advanceAmount), emphasis: true },
-              { label: "Remaining", amount: formatCurrency(summary.remainingAmount) },
+              {
+                label: "Remaining",
+                amount: summary.slotCount > 0 ? formatCurrency(summary.remainingAmount) : "—",
+              },
             ]}
             total={{ label: "Pay now", amount: formatCurrency(summary.advanceAmount) }}
           />

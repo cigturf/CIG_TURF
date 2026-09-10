@@ -17,7 +17,10 @@ export function LandingFaq({ content }: LandingFaqProps) {
   return (
     <section
       id="faq"
-      className={cn("surface-public border-border/60 border-t", SPACING.section.md)}
+      className={cn(
+        "surface-public border-border/60 scroll-mt-14 border-t sm:scroll-mt-16",
+        SPACING.section.md,
+      )}
     >
       <div className={LAYOUT.containerMd}>
         <Reveal className="mb-6 text-center sm:mb-8 lg:text-left">

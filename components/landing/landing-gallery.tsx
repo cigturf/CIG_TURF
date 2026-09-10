@@ -200,7 +200,7 @@ export function LandingGallery({ content }: LandingGalleryProps) {
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
 
   return (
-    <section id="gallery" className={cn("bg-black", SPACING.section.md)}>
+    <section id="gallery" className={cn("scroll-mt-14 bg-black sm:scroll-mt-16", SPACING.section.md)}>
       <div className={LAYOUT.containerXl}>
         <Reveal className="mb-4 text-center sm:mb-5 lg:mb-6 lg:text-left">
           <Overline className="text-primary mb-3 block">Gallery</Overline>

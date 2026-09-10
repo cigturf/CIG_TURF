@@ -25,7 +25,7 @@ type LandingFacilitiesProps = {
 
 export function LandingFacilities({ content }: LandingFacilitiesProps) {
   return (
-    <section id="facilities" className="bg-black">
+    <section id="facilities" className="scroll-mt-14 bg-black sm:scroll-mt-16">
       <div className="border-y border-white/10 bg-white/[0.03] backdrop-blur-md">
         <div className={cn(LAYOUT.containerXl, "py-3 sm:py-5")}>
           <div className="sm:hidden -mx-4 px-4">

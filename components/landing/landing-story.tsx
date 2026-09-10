@@ -14,7 +14,7 @@ export function LandingStory({ content }: LandingStoryProps) {
   const usesPlaceholderDescription = content.description === LANDING_PLACEHOLDERS.heroDescription;
 
   return (
-    <section id="experience" className="relative overflow-hidden bg-black py-10 sm:py-14 md:py-16">
+    <section id="experience" className="relative scroll-mt-14 overflow-hidden bg-black py-10 sm:scroll-mt-16 sm:py-14 md:py-16">
       <div className="pointer-events-none absolute inset-x-0 -top-px h-px bg-gradient-to-r from-transparent via-white/15 to-transparent" />
 
       <div className={LAYOUT.containerXl}>

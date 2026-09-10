@@ -26,7 +26,7 @@ export function LandingBookingCta() {
   const cta = LANDING_PLACEHOLDERS.bookingCta;
 
   return (
-    <section id="book" className="relative overflow-hidden bg-black">
+    <section id="book" className="relative scroll-mt-14 overflow-hidden bg-black sm:scroll-mt-16">
       <div className="absolute inset-0">
         <Image
           src={LANDING_CTA_ARTWORK.src}
