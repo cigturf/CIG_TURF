@@ -3,11 +3,13 @@
 import { useMemo } from "react";
 
 import { resolveLandingContent } from "@/features/landing/lib/landing-content";
+import type { LiveLandingStats } from "@/features/landing/services/landing-stats.service";
 import type { BusinessSettingsPublic } from "@/features/business-settings/types";
 import { useConfig } from "@/hooks/use-config";
 
 type UseLandingContentOptions = {
   initialBusinessSettings?: BusinessSettingsPublic | null;
+  liveStats?: LiveLandingStats | null;
 };
 
 export function useLandingContent(options: UseLandingContentOptions = {}) {
@@ -16,8 +18,8 @@ export function useLandingContent(options: UseLandingContentOptions = {}) {
   });
 
   const content = useMemo(
-    () => resolveLandingContent(publicSettings, displayName, shortName),
-    [publicSettings, displayName, shortName],
+    () => resolveLandingContent(publicSettings, displayName, shortName, options.liveStats),
+    [publicSettings, displayName, shortName, options.liveStats],
   );
 
   return { content, isLoading, isConfigured };

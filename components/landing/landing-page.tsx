@@ -15,14 +15,16 @@ import { LandingPricing } from "@/components/landing/landing-pricing";
 import { LandingStats } from "@/components/landing/landing-stats";
 import { LandingStory } from "@/components/landing/landing-story";
 import { useLandingContent } from "@/features/landing";
+import type { LiveLandingStats } from "@/features/landing/services/landing-stats.service";
 import type { BusinessSettingsPublic } from "@/features/business-settings/types";
 
 type LandingPageProps = {
   initialBusinessSettings?: BusinessSettingsPublic | null;
+  liveStats?: LiveLandingStats | null;
 };
 
-export function LandingPage({ initialBusinessSettings }: LandingPageProps) {
-  const { content } = useLandingContent({ initialBusinessSettings });
+export function LandingPage({ initialBusinessSettings, liveStats }: LandingPageProps) {
+  const { content } = useLandingContent({ initialBusinessSettings, liveStats });
 
   return (
     <div className="min-h-screen bg-black">

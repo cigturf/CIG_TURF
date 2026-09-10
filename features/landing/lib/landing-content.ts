@@ -6,6 +6,7 @@ import {
 import { normalizeAppMediaUrl } from "@/features/media/lib/normalize-media-url";
 
 import { resolveGoogleMapsEmbedUrl } from "@/features/landing/lib/google-maps-embed";
+import type { LiveLandingStats } from "@/features/landing/services/landing-stats.service";
 
 /** Generic placeholders — used only when Business Settings fields are empty */
 export const LANDING_PLACEHOLDERS = {
@@ -239,6 +240,7 @@ export function resolveLandingContent(
   settings: BusinessSettingsPublic,
   displayName: string,
   shortName: string,
+  liveStats?: LiveLandingStats | null,
 ): LandingContent {
   const { branding, media, contact, booking, pricing, content } = settings;
 
@@ -294,10 +296,22 @@ export function resolveLandingContent(
         configured: true,
       })) ?? [];
 
+  const livePlaceholderValues: Record<string, number> = liveStats
+    ? {
+        "stat-1": liveStats.matchesPlayed,
+        "stat-2": liveStats.happyPlayers,
+        "stat-3": liveStats.teamsHosted,
+      }
+    : {};
+
   const stats =
     configuredStats.length > 0
       ? configuredStats
-      : LANDING_PLACEHOLDERS.stats.map((s) => ({ ...s, configured: false }));
+      : LANDING_PLACEHOLDERS.stats.map((s) => ({
+          ...s,
+          value: livePlaceholderValues[s.id] ?? s.value,
+          configured: false,
+        }));
 
   const configuredSocialProof: LandingSocialProof[] =
     content.socialProof
