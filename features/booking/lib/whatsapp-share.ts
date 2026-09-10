@@ -48,7 +48,7 @@ export function buildBookingShareMessage(
 
   lines.push(
     "",
-    mode === "admin-to-customer" ? "See you on the turf! 🏆" : "Join me — see you there! 🏆",
+    mode === "admin-to-customer" ? "See you on the turf! 🏆" : "Join me, see you there! 🏆",
   );
 
   return lines.join("\n");
