@@ -7,6 +7,7 @@ import { LandingFacilities } from "@/components/landing/landing-facilities";
 import { LandingFaq } from "@/components/landing/landing-faq";
 import { LandingFooter } from "@/components/landing/landing-footer";
 import { LandingGallery } from "@/components/landing/landing-gallery";
+import { GrainOverlay } from "@/components/landing/grain-overlay";
 import { LandingHero } from "@/components/landing/landing-hero";
 import { LandingLocation } from "@/components/landing/landing-location";
 import { LandingSocialProof } from "@/components/landing/landing-social-proof";
@@ -28,6 +29,7 @@ export function LandingPage({ initialBusinessSettings, liveStats }: LandingPageP
 
   return (
     <div className="min-h-screen bg-black">
+      <GrainOverlay />
       <LandingSocialRail content={content} />
       <main>
         <LandingHero content={content} />

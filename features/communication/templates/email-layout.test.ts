@@ -48,6 +48,7 @@ describe("renderEmailLayout", () => {
     });
 
     expect(html).toContain("TechSS X Webstudio");
+    expect(html).toContain("Contact Smarth Singh");
     expect(html).toContain("https://wa.me/919996910306");
     expect(html).toContain("mailto:smarthmehar@gmail.com");
   });

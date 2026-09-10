@@ -43,7 +43,7 @@ function renderTransactionalFooter(branding: EmailBrandingContext): string {
       <tr>
         <td align="center" class="email-branding-cell" style="padding:16px 0 0;border-top:1px solid #e2e8f0;">
           <div class="email-footer-muted" style="margin:0 0 10px;font-size:11px;line-height:1.5;color:#94a3b8;">
-            Powered by <span class="email-branding-name" style="color:#475569;font-weight:600;">TechSS X Webstudio</span>
+            Powered by <span class="email-branding-name" style="color:#475569;font-weight:600;">TechSS X Webstudio</span> &middot; Contact Smarth Singh
           </div>
           <a href="https://wa.me/919996910306?text=Hi%20Smarth%2C%20I%20got%20your%20contact%20from%20a%20booking%20email%20%E2%80%94%20I%27m%20interested%20in%20getting%20a%20website%20made%20too." target="_blank" rel="noopener noreferrer" class="email-branding-pill" style="display:inline-block;padding:8px 18px;border-radius:999px;border:1px solid #cbd5e1;color:#334155;text-decoration:none;font-size:12px;font-weight:600;">
             💬 Want a website like this?

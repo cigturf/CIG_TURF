@@ -2,7 +2,9 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import { motion, useReducedMotion, useScroll, useTransform } from "framer-motion";
 import { ChevronRight, Clock, CreditCard, Zap } from "lucide-react";
+import { useRef } from "react";
 
 import {
   Button,
@@ -24,10 +26,24 @@ const VALUE_PROPS = [
 
 export function LandingBookingCta() {
   const cta = LANDING_PLACEHOLDERS.bookingCta;
+  const reduced = useReducedMotion();
+  const sectionRef = useRef<HTMLElement>(null);
+  const { scrollYProgress } = useScroll({
+    target: sectionRef,
+    offset: ["start end", "end start"],
+  });
+  const rawImageY = useTransform(scrollYProgress, [0, 1], ["-6%", "6%"]);
+  const imageY = reduced ? "0%" : rawImageY;
 
   return (
-    <section id="book" className="relative scroll-mt-14 overflow-hidden bg-black sm:scroll-mt-16">
-      <div className="absolute inset-0">
+    <section
+      ref={sectionRef}
+      id="book"
+      className="relative scroll-mt-14 overflow-hidden bg-black sm:scroll-mt-16"
+    >
+      {/* Overscanned by 10% top/bottom so the ±6% parallax drift never
+          exposes an edge. */}
+      <motion.div style={{ y: imageY }} className="absolute inset-x-0 -inset-y-[10%]">
         <Image
           src={LANDING_CTA_ARTWORK.src}
           alt={LANDING_CTA_ARTWORK.alt}
@@ -35,9 +51,9 @@ export function LandingBookingCta() {
           sizes="100vw"
           className="object-cover"
         />
-        <div className="absolute inset-0 bg-black/75" />
-        <div className="absolute inset-0 bg-gradient-to-r from-black/90 via-black/70 to-black/50" />
-      </div>
+      </motion.div>
+      <div className="absolute inset-0 bg-black/75" />
+      <div className="absolute inset-0 bg-gradient-to-r from-black/90 via-black/70 to-black/50" />
 
       <div className={cn(LAYOUT.containerXl, SPACING.section.md, "relative")}>
         <div className="grid items-center gap-8 lg:grid-cols-12 lg:gap-10">

@@ -32,14 +32,25 @@ export function LandingHero({ content }: LandingHeroProps) {
 
   // Every value below is driven directly by scroll position, not a timer or
   // a threshold snap — scrubbing the page scrubs the reveal, frame by frame.
+  // Cinematic open: dark → floodlights flicker on → logo → headline → a
+  // ball/impact/"FOUR" beat (see HeroCricketScrub) → settle.
+  const rawDarknessOpacity = useTransform(scrollYProgress, [0, 0.1], [0.92, 0]);
+  const rawLightBeamOpacity = useTransform(
+    scrollYProgress,
+    [0.02, 0.04, 0.06, 0.08, 0.12],
+    [0, 0.5, 0.2, 0.6, 1],
+  );
+
   // The logo and headline share the same on-screen slot, so their fades must
   // not overlap — otherwise both are half-visible at once mid-scroll and the
   // crest shows through the headline text.
-  const rawLogoOpacity = useTransform(scrollYProgress, [0.06, 0.17], [1, 0]);
-  const rawLogoScale = useTransform(scrollYProgress, [0, 0.17], [1, 1.05]);
-  const rawContentOpacity = useTransform(scrollYProgress, [0.17, 0.3], [0, 1]);
-  const rawContentY = useTransform(scrollYProgress, [0.17, 0.3], [20, 0]);
+  const rawLogoOpacity = useTransform(scrollYProgress, [0.13, 0.2], [1, 0]);
+  const rawLogoScale = useTransform(scrollYProgress, [0, 0.2], [1, 1.05]);
+  const rawContentOpacity = useTransform(scrollYProgress, [0.2, 0.3], [0, 1]);
+  const rawContentY = useTransform(scrollYProgress, [0.2, 0.3], [20, 0]);
 
+  const darknessOpacity = reduced ? 0 : rawDarknessOpacity;
+  const lightBeamOpacity = reduced ? 1 : rawLightBeamOpacity;
   const logoOpacity = reduced ? 0 : rawLogoOpacity;
   const logoScale = reduced ? 1 : rawLogoScale;
   const contentOpacity = reduced ? 1 : rawContentOpacity;
@@ -51,7 +62,7 @@ export function LandingHero({ content }: LandingHeroProps) {
       id="top"
       className={cn(
         "relative scroll-mt-14 bg-black sm:scroll-mt-16",
-        reduced ? "h-[100dvh] min-h-[100vh]" : "h-[200dvh]",
+        reduced ? "h-[100dvh] min-h-[100vh]" : "h-[280dvh]",
       )}
     >
       <div className="sticky top-0 flex h-[100dvh] min-h-[100vh] flex-col overflow-hidden">
@@ -61,6 +72,21 @@ export function LandingHero({ content }: LandingHeroProps) {
         <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black via-black/40 to-black/30" />
         <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-black/70 via-black/20 to-transparent" />
         <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_70%_50%,transparent_0%,black/50_100%)]" />
+
+        {/* Cold open: floodlights are off, then flicker on as the user starts scrolling.
+            Must sit above the foreground content (z-10) too, or the logo/headline stay
+            fully lit while only the background photo behind them dims. */}
+        <motion.div
+          style={{ opacity: darknessOpacity }}
+          className="pointer-events-none absolute inset-0 z-20 bg-black"
+        />
+        <motion.div
+          style={{ opacity: lightBeamOpacity }}
+          className="pointer-events-none absolute inset-0 z-[4]"
+        >
+          <div className="absolute -top-1/4 left-[8%] h-[140%] w-40 -rotate-[18deg] bg-gradient-to-b from-white/25 via-white/5 to-transparent blur-2xl" />
+          <div className="absolute -top-1/4 right-[15%] h-[140%] w-32 rotate-[14deg] bg-gradient-to-b from-white/20 via-white/5 to-transparent blur-2xl" />
+        </motion.div>
 
         {reduced ? null : <HeroCricketScrub progress={scrollYProgress} />}
 
