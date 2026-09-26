@@ -201,6 +201,14 @@ export async function markPaymentPaid(data: {
   const supabase = createServiceRoleClient();
   const now = new Date().toISOString();
 
+  // A Razorpay order accepts more than one payment attempt — a declined card
+  // or a UPI timeout on the first try is routine, and the customer retrying
+  // and succeeding is the common case, not an edge case. Excluding "failed"
+  // here used to mean a captured retry could never be recorded: the first
+  // attempt's payment.failed webhook set status="failed", and this update's
+  // own WHERE clause then refused to move it to "paid" for the successful
+  // second attempt — silently orphaning a real, captured payment with no
+  // booking and no refund. Only a row already "paid" is left alone.
   if (supabase) {
     const { data: row, error } = await supabase
       .from("payments")
@@ -211,7 +219,7 @@ export async function markPaymentPaid(data: {
         updated_at: now,
       })
       .eq("razorpay_order_id", data.razorpayOrderId)
-      .in("status", ["created", "paid"])
+      .neq("status", "paid")
       .select("*")
       .single();
 
@@ -228,7 +236,7 @@ export async function markPaymentPaid(data: {
     const row = await prisma.payment.updateMany({
       where: {
         razorpayOrderId: data.razorpayOrderId,
-        status: { in: ["created", "paid"] },
+        status: { not: "paid" },
       },
       data: {
         razorpayPaymentId: data.razorpayPaymentId,
@@ -423,18 +431,21 @@ export async function markPaymentCancelled(razorpayOrderId: string): Promise<voi
 }
 
 /**
- * Paid payments created within [from, to) — the reconciliation job's candidate
- * pool for "payment succeeded but nothing ever finalized the booking" (client
- * crashed/closed the tab, network dropped, etc. right after Razorpay success).
- * Bounded by `from` so this never has to scan the whole table.
+ * Payments of a given status created within [from, to) — the reconciliation
+ * job's candidate pool. Bounded by `from` so this never has to scan the
+ * whole table.
  */
-export async function listPaidPaymentsInWindow(from: Date, to: Date): Promise<PaymentRecord[]> {
+export async function listPaymentsByStatusInWindow(
+  status: PaymentStatus,
+  from: Date,
+  to: Date,
+): Promise<PaymentRecord[]> {
   const supabase = createServiceRoleClient();
   if (supabase) {
     const { data, error } = await supabase
       .from("payments")
       .select("*")
-      .eq("status", "paid")
+      .eq("status", status)
       .gte("created_at", from.toISOString())
       .lt("created_at", to.toISOString())
       .order("created_at", { ascending: true })
@@ -451,7 +462,7 @@ export async function listPaidPaymentsInWindow(from: Date, to: Date): Promise<Pa
 
   try {
     const rows = await prisma.payment.findMany({
-      where: { status: "paid", createdAt: { gte: from, lt: to } },
+      where: { status, createdAt: { gte: from, lt: to } },
       orderBy: { createdAt: "asc" },
       take: 200,
     });
@@ -473,4 +484,23 @@ export async function listPaidPaymentsInWindow(from: Date, to: Date): Promise<Pa
     console.error("[Payment] Prisma window lookup failed:", error);
     return [];
   }
+}
+
+/**
+ * Paid payments created within [from, to) — the reconciliation job's candidate
+ * pool for "payment succeeded but nothing ever finalized the booking" (client
+ * crashed/closed the tab, network dropped, etc. right after Razorpay success).
+ */
+export async function listPaidPaymentsInWindow(from: Date, to: Date): Promise<PaymentRecord[]> {
+  return listPaymentsByStatusInWindow("paid", from, to);
+}
+
+/**
+ * Payments we recorded as "failed" within [from, to) — the candidate pool for
+ * re-checking against Razorpay directly, since a failed first attempt
+ * followed by a captured retry on the same order used to be unrecoverable
+ * (see markPaymentPaid).
+ */
+export async function listFailedPaymentsInWindow(from: Date, to: Date): Promise<PaymentRecord[]> {
+  return listPaymentsByStatusInWindow("failed", from, to);
 }

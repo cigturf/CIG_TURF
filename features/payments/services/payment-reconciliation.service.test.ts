@@ -15,10 +15,13 @@ vi.mock("@/features/payments/services/booking-session.repository", () => ({
 
 vi.mock("@/features/payments/services/payment.repository", () => ({
   listPaidPaymentsInWindow: vi.fn(),
+  listFailedPaymentsInWindow: vi.fn(),
+  markPaymentPaid: vi.fn(),
 }));
 
 vi.mock("@/features/payments/services/payment-refund.service", () => ({
   refundOnlineAdvanceWithoutBooking: vi.fn(),
+  findCapturedPaymentForOrder: vi.fn(),
 }));
 
 import { getBookingBySessionId } from "@/features/booking/services/booking.repository";
@@ -27,8 +30,15 @@ import {
   getBookingSessionById,
   updateBookingSessionStatus,
 } from "@/features/payments/services/booking-session.repository";
-import { listPaidPaymentsInWindow } from "@/features/payments/services/payment.repository";
-import { refundOnlineAdvanceWithoutBooking } from "@/features/payments/services/payment-refund.service";
+import {
+  listFailedPaymentsInWindow,
+  listPaidPaymentsInWindow,
+  markPaymentPaid,
+} from "@/features/payments/services/payment.repository";
+import {
+  findCapturedPaymentForOrder,
+  refundOnlineAdvanceWithoutBooking,
+} from "@/features/payments/services/payment-refund.service";
 import { reconcileStuckPaidSessions } from "@/features/payments/services/payment-reconciliation.service";
 
 const payment = {
@@ -69,6 +79,7 @@ describe("reconcileStuckPaidSessions", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.mocked(listPaidPaymentsInWindow).mockResolvedValue([payment]);
+    vi.mocked(listFailedPaymentsInWindow).mockResolvedValue([]);
   });
 
   it("skips a payment whose session already has a booking", async () => {
@@ -78,7 +89,14 @@ describe("reconcileStuckPaidSessions", () => {
 
     const result = await reconcileStuckPaidSessions();
 
-    expect(result).toEqual({ checked: 1, finalized: 0, refunded: 0, alreadyHandled: 1, errors: 0 });
+    expect(result).toEqual({
+      checked: 1,
+      finalized: 0,
+      refunded: 0,
+      alreadyHandled: 1,
+      errors: 0,
+      recoveredFromFailed: 0,
+    });
     expect(finalizeBookingFromSession).not.toHaveBeenCalled();
     expect(refundOnlineAdvanceWithoutBooking).not.toHaveBeenCalled();
   });
@@ -172,5 +190,52 @@ describe("reconcileStuckPaidSessions", () => {
     expect(result.checked).toBe(2);
     expect(result.errors).toBe(1);
     expect(result.alreadyHandled).toBe(1);
+  });
+
+  describe("payments we recorded as failed", () => {
+    const failedPayment = { ...payment, status: "failed" as const, razorpayPaymentId: null };
+
+    beforeEach(() => {
+      vi.mocked(listPaidPaymentsInWindow).mockResolvedValue([]);
+      vi.mocked(listFailedPaymentsInWindow).mockResolvedValue([failedPayment]);
+    });
+
+    it("leaves a failed payment alone when Razorpay has no captured attempt for it", async () => {
+      vi.mocked(findCapturedPaymentForOrder).mockResolvedValue(null);
+
+      const result = await reconcileStuckPaidSessions();
+
+      expect(result.checked).toBe(1);
+      expect(result.recoveredFromFailed).toBe(0);
+      expect(markPaymentPaid).not.toHaveBeenCalled();
+    });
+
+    it("recovers a payment that failed once but captured on a retry", async () => {
+      vi.mocked(findCapturedPaymentForOrder).mockResolvedValue({
+        paymentId: "pay_retry_success",
+        method: "upi",
+      });
+      vi.mocked(markPaymentPaid).mockResolvedValue({
+        ...failedPayment,
+        status: "paid",
+        razorpayPaymentId: "pay_retry_success",
+      });
+      vi.mocked(getBookingBySessionId).mockResolvedValue(null);
+      vi.mocked(getBookingSessionById).mockResolvedValue(session);
+      vi.mocked(finalizeBookingFromSession).mockResolvedValue({
+        success: true,
+        booking: { id: "booking-1" } as never,
+      });
+
+      const result = await reconcileStuckPaidSessions();
+
+      expect(markPaymentPaid).toHaveBeenCalledWith({
+        razorpayOrderId: "order_1",
+        razorpayPaymentId: "pay_retry_success",
+        paymentMethod: "upi",
+      });
+      expect(result.recoveredFromFailed).toBe(1);
+      expect(result.finalized).toBe(1);
+    });
   });
 });

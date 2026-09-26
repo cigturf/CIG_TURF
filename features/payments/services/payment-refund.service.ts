@@ -29,6 +29,24 @@ export async function refundRazorpayPayment(options: {
   return { refundId: refund.id };
 }
 
+/**
+ * Asks Razorpay directly whether an order actually has a captured payment —
+ * the source of truth when our own record shows "failed". An order accepts
+ * more than one payment attempt; a first attempt failing and a retry
+ * capturing is routine, not an edge case, and markPaymentPaid's status guard
+ * used to make that retry's capture unrecoverable once the first attempt's
+ * payment.failed webhook had already landed.
+ */
+export async function findCapturedPaymentForOrder(
+  orderId: string,
+): Promise<{ paymentId: string; method: string | null } | null> {
+  const razorpay = getRazorpayClient();
+  const response = await razorpay.orders.fetchPayments(orderId);
+  const captured = response.items.find((item) => item.status === "captured");
+  if (!captured) return null;
+  return { paymentId: captured.id, method: captured.method ?? null };
+}
+
 export async function refundOnlineAdvanceForBooking(options: {
   payment: PaymentRecord;
   bookingId: string;
