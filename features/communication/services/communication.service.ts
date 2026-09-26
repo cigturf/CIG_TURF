@@ -305,6 +305,67 @@ export const CommunicationService = {
     });
   },
 
+  /**
+   * Payment succeeded but the booking could not be confirmed and was auto-refunded —
+   * e.g. the slot was taken by someone else, the session expired, or reconciliation
+   * found a paid session that never finalized. Never call this for a routine payment
+   * failure (card declined, signature mismatch) — only once money has actually moved
+   * and been refunded back.
+   */
+  async sendBookingRefundedCustomer(input: {
+    customerEmail: string;
+    customerName: string;
+    attemptedDate: string;
+    attemptedTime: string;
+    amountRefunded: number;
+    paymentReference: string;
+    reason: string;
+  }): Promise<void> {
+    await enqueueRenderedEmail({
+      recipient: input.customerEmail,
+      template: EMAIL_TEMPLATES.BOOKING_PAYMENT_REFUNDED,
+      skipIfDisabled: "customer",
+      renderInput: {
+        template: EMAIL_TEMPLATES.BOOKING_PAYMENT_REFUNDED,
+        refund: {
+          customerName: input.customerName,
+          attemptedDate: input.attemptedDate,
+          attemptedTime: input.attemptedTime,
+          amountRefunded: input.amountRefunded,
+          paymentReference: input.paymentReference,
+          reason: input.reason,
+        },
+      },
+    });
+  },
+
+  async sendBookingRefundedOwner(input: {
+    customerName: string;
+    customerEmail: string;
+    attemptedDate: string;
+    attemptedTime: string;
+    amountRefunded: number;
+    paymentReference: string;
+    reason: string;
+  }): Promise<void> {
+    await enqueueOwnerEmails(EMAIL_TEMPLATES.OWNER_BOOKING_REFUNDED, {
+      owner: {
+        title: "Booking Refunded — Payment Succeeded but Booking Failed",
+        summary:
+          "A customer's payment succeeded but the booking could not be confirmed. The advance has been auto-refunded.",
+        details: [
+          { label: "Customer", value: input.customerName },
+          { label: "Email", value: input.customerEmail },
+          { label: "Requested Date", value: input.attemptedDate },
+          { label: "Requested Time", value: input.attemptedTime },
+          { label: "Amount Refunded", value: formatCurrency(input.amountRefunded) },
+          { label: "Payment Reference", value: input.paymentReference },
+          { label: "Reason", value: input.reason },
+        ],
+      },
+    });
+  },
+
   async sendCriticalError(input: {
     message: string;
     module?: string;

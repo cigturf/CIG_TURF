@@ -421,3 +421,56 @@ export async function markPaymentCancelled(razorpayOrderId: string): Promise<voi
     console.error("[Payment] Prisma cancelled update:", error);
   }
 }
+
+/**
+ * Paid payments created within [from, to) — the reconciliation job's candidate
+ * pool for "payment succeeded but nothing ever finalized the booking" (client
+ * crashed/closed the tab, network dropped, etc. right after Razorpay success).
+ * Bounded by `from` so this never has to scan the whole table.
+ */
+export async function listPaidPaymentsInWindow(from: Date, to: Date): Promise<PaymentRecord[]> {
+  const supabase = createServiceRoleClient();
+  if (supabase) {
+    const { data, error } = await supabase
+      .from("payments")
+      .select("*")
+      .eq("status", "paid")
+      .gte("created_at", from.toISOString())
+      .lt("created_at", to.toISOString())
+      .order("created_at", { ascending: true })
+      .limit(200);
+
+    if (!error && data) {
+      return (data as PaymentRow[]).map(mapPayment);
+    }
+
+    if (error) {
+      console.error("[Payment] Supabase window lookup failed:", error.message);
+    }
+  }
+
+  try {
+    const rows = await prisma.payment.findMany({
+      where: { status: "paid", createdAt: { gte: from, lt: to } },
+      orderBy: { createdAt: "asc" },
+      take: 200,
+    });
+
+    return rows.map((row) => ({
+      id: row.id,
+      bookingSessionId: row.bookingSessionId,
+      userId: row.userId,
+      razorpayOrderId: row.razorpayOrderId,
+      razorpayPaymentId: row.razorpayPaymentId,
+      amount: row.amount,
+      currency: row.currency,
+      status: row.status,
+      paymentMethod: row.paymentMethod,
+      createdAt: row.createdAt,
+      updatedAt: row.updatedAt,
+    }));
+  } catch (error) {
+    console.error("[Payment] Prisma window lookup failed:", error);
+    return [];
+  }
+}

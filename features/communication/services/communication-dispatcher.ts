@@ -29,6 +29,42 @@ export async function dispatchBookingCancelledEmails(booking: BookingRecord): Pr
   }
 }
 
+/** Payment succeeded but the booking could not be confirmed and was auto-refunded. */
+export async function dispatchBookingRefundedEmails(input: {
+  customerName: string;
+  customerEmail: string | null;
+  attemptedDate: string;
+  attemptedTime: string;
+  amountRefunded: number;
+  paymentReference: string;
+  reason: string;
+}): Promise<void> {
+  try {
+    if (input.customerEmail) {
+      await CommunicationService.sendBookingRefundedCustomer({
+        customerEmail: input.customerEmail,
+        customerName: input.customerName,
+        attemptedDate: input.attemptedDate,
+        attemptedTime: input.attemptedTime,
+        amountRefunded: input.amountRefunded,
+        paymentReference: input.paymentReference,
+        reason: input.reason,
+      });
+    }
+    await CommunicationService.sendBookingRefundedOwner({
+      customerName: input.customerName,
+      customerEmail: input.customerEmail ?? "—",
+      attemptedDate: input.attemptedDate,
+      attemptedTime: input.attemptedTime,
+      amountRefunded: input.amountRefunded,
+      paymentReference: input.paymentReference,
+      reason: input.reason,
+    });
+  } catch (error) {
+    logCommunicationError("booking refunded email", error);
+  }
+}
+
 export async function dispatchPaymentCollectedEmails(
   booking: BookingRecord,
   payment: {

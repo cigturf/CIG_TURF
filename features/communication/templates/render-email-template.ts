@@ -48,6 +48,16 @@ export type WelcomeEmailContext = {
   customerName: string;
 };
 
+/** Payment succeeded but a booking could not be confirmed — the advance was refunded in full. */
+export type BookingRefundedContext = {
+  customerName: string;
+  attemptedDate: string;
+  attemptedTime: string;
+  amountRefunded: number;
+  paymentReference: string;
+  reason: string;
+};
+
 export type OwnerAlertContext = {
   title: string;
   summary: string;
@@ -69,6 +79,7 @@ export type RenderEmailInput = {
   booking?: BookingEmailContext["booking"];
   payment?: PaymentEmailContext;
   welcome?: WelcomeEmailContext;
+  refund?: BookingRefundedContext;
   owner?: OwnerAlertContext;
   critical?: CriticalErrorContext;
   cancellationTime?: string;
@@ -226,6 +237,36 @@ export function renderEmailTemplate(input: RenderEmailInput): { subject: string;
       };
     }
 
+    case EMAIL_TEMPLATES.BOOKING_PAYMENT_REFUNDED: {
+      const refund = input.refund!;
+      const subject = "Your booking couldn't be confirmed — payment refunded";
+      const body = `
+        <p style="margin:0 0 16px;font-size:15px;line-height:1.6;color:#334155;">Hi ${escapeHtml(refund.customerName)}, we're sorry — we couldn't confirm your turf booking, so we've refunded your payment in full. No action is needed on your end for the refund.</p>
+        ${renderDetailTable([
+          { label: "Requested Date", value: escapeHtml(refund.attemptedDate) },
+          { label: "Requested Time", value: escapeHtml(refund.attemptedTime) },
+          { label: "Amount Refunded", value: escapeHtml(formatCurrency(refund.amountRefunded)) },
+          { label: "Payment Reference", value: escapeHtml(refund.paymentReference) },
+          { label: "Reason", value: escapeHtml(refund.reason) },
+        ])}
+        <p style="margin:16px 0 0;font-size:14px;line-height:1.6;color:#64748b;">The refund will reflect in your original payment method within 5-7 business days, depending on your bank. Please try booking again — we'd hate for you to miss your slot.</p>
+        <p style="margin:8px 0 0;font-size:14px;color:#64748b;">Need help? Contact us at ${branding.supportEmail ? escapeHtml(branding.supportEmail) : branding.phone ?? "support"}.</p>
+      `;
+      return {
+        subject,
+        html: renderEmailLayout({
+          branding,
+          title: "Booking Unsuccessful — Refund Issued",
+          previewText: "We couldn't confirm your booking, so your payment has been refunded.",
+          bodyHtml: body,
+          cta: {
+            label: "Book Again",
+            href: `${branding.appUrl}/book`,
+          },
+        }),
+      };
+    }
+
     case EMAIL_TEMPLATES.PAYMENT_RECEIVED:
     case EMAIL_TEMPLATES.PAYMENT_REMINDER: {
       const payment = input.payment!;
@@ -285,7 +326,8 @@ export function renderEmailTemplate(input: RenderEmailInput): { subject: string;
     case EMAIL_TEMPLATES.OWNER_MANUAL_BOOKING:
     case EMAIL_TEMPLATES.OWNER_BOOKING_CANCELLED:
     case EMAIL_TEMPLATES.OWNER_PAYMENT_COLLECTED:
-    case EMAIL_TEMPLATES.OWNER_PAYMENT_FAILED: {
+    case EMAIL_TEMPLATES.OWNER_PAYMENT_FAILED:
+    case EMAIL_TEMPLATES.OWNER_BOOKING_REFUNDED: {
       const owner = input.owner!;
       const subject = owner.title;
       const rows = owner.details ?? [];
@@ -377,6 +419,19 @@ export function buildPreviewRenderInput(
     case EMAIL_TEMPLATES.PAYMENT_RECEIVED:
     case EMAIL_TEMPLATES.PAYMENT_REMINDER:
       return { template, branding, payment: samplePayment };
+    case EMAIL_TEMPLATES.BOOKING_PAYMENT_REFUNDED:
+      return {
+        template,
+        branding,
+        refund: {
+          customerName: sampleBooking.customerName,
+          attemptedDate: sampleBooking.bookingDate,
+          attemptedTime: `${sampleBooking.startTime} – ${sampleBooking.endTime}`,
+          amountRefunded: 500,
+          paymentReference: "pay_PREVIEW001",
+          reason: "Slots unavailable after payment",
+        },
+      };
     case EMAIL_TEMPLATES.WELCOME:
       return { template, branding, welcome: { customerName: "Rahul Sharma" } };
     case EMAIL_TEMPLATES.OWNER_NEW_BOOKING:
@@ -433,6 +488,25 @@ export function buildPreviewRenderInput(
           details: [
             { label: "Session", value: "session-preview" },
             { label: "Reason", value: "Signature mismatch" },
+          ],
+        },
+      };
+    case EMAIL_TEMPLATES.OWNER_BOOKING_REFUNDED:
+      return {
+        template,
+        branding,
+        owner: {
+          title: "Booking Refunded — Payment Succeeded but Booking Failed",
+          summary:
+            "A customer's payment succeeded but the booking could not be confirmed. The advance has been auto-refunded.",
+          details: [
+            { label: "Customer", value: sampleBooking.customerName },
+            { label: "Email", value: sampleBooking.customerEmail },
+            { label: "Requested Date", value: sampleBooking.bookingDate },
+            { label: "Requested Time", value: `${sampleBooking.startTime} – ${sampleBooking.endTime}` },
+            { label: "Amount Refunded", value: formatCurrency(500) },
+            { label: "Payment Reference", value: "pay_PREVIEW001" },
+            { label: "Reason", value: "Slots unavailable after payment" },
           ],
         },
       };

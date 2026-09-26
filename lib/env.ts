@@ -9,6 +9,7 @@ const serverEnvSchema = z.object({
   RAZORPAY_KEY_ID: z.string().optional(),
   RAZORPAY_KEY_SECRET: z.string().optional(),
   RAZORPAY_WEBHOOK_SECRET: z.string().optional(),
+  CRON_SECRET: z.string().optional(),
   BREVO_API_KEY: z.string().optional(),
   BREVO_SENDER_EMAIL: z.string().email().optional(),
   BREVO_SENDER_NAME: z.string().optional(),
@@ -123,5 +124,10 @@ export const env = createEnv();
 
 export function getRazorpayWebhookSecret(): string | null {
   const secret = env.server.RAZORPAY_WEBHOOK_SECRET?.trim();
+  return secret || null;
+}
+
+export function getCronSecret(): string | null {
+  const secret = env.server.CRON_SECRET?.trim();
   return secret || null;
 }

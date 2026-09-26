@@ -103,9 +103,46 @@ export async function refundOnlineAdvanceWithoutBooking(options: {
       paymentId: options.payment.id,
     });
     await releaseSlotHoldsForSession(options.payment.bookingSessionId);
+    await notifyBookingRefundedWithoutBooking(options.payment, options.reason);
     return true;
   } catch (error) {
     safeLogError("payment-refund", error);
     return false;
   }
+}
+
+/**
+ * Tells the customer their payment was refunded (not just silently taken)
+ * and flags it to the owner — this is the one case that always needs a human
+ * to notice, since a booking that should exist doesn't.
+ */
+async function notifyBookingRefundedWithoutBooking(
+  payment: PaymentRecord,
+  reason: string,
+): Promise<void> {
+  const { getBookingSessionById } = await import(
+    "@/features/payments/services/booking-session.repository"
+  );
+  const { dispatchBookingRefundedEmails } = await import(
+    "@/features/communication/services/communication-dispatcher"
+  );
+
+  const session = await getBookingSessionById(payment.bookingSessionId);
+  if (!session) {
+    safeLogError(
+      "payment-refund",
+      new Error("Booking session missing for refund notification"),
+    );
+    return;
+  }
+
+  await dispatchBookingRefundedEmails({
+    customerName: session.profileName ?? "Customer",
+    customerEmail: session.profileEmail,
+    attemptedDate: session.selectedDate,
+    attemptedTime: session.timeRange ?? "—",
+    amountRefunded: payment.amount / 100,
+    paymentReference: payment.razorpayPaymentId ?? payment.razorpayOrderId,
+    reason,
+  });
 }

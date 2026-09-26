@@ -2,6 +2,7 @@ export const EMAIL_TEMPLATES = {
   BOOKING_CONFIRMED: "booking_confirmed",
   BOOKING_CANCELLED: "booking_cancelled",
   BOOKING_RESCHEDULED: "booking_rescheduled",
+  BOOKING_PAYMENT_REFUNDED: "booking_payment_refunded",
   PAYMENT_RECEIVED: "payment_received",
   PAYMENT_REMINDER: "payment_reminder",
   WELCOME: "welcome",
@@ -10,6 +11,7 @@ export const EMAIL_TEMPLATES = {
   OWNER_MANUAL_BOOKING: "owner_manual_booking",
   OWNER_PAYMENT_COLLECTED: "owner_payment_collected",
   OWNER_PAYMENT_FAILED: "owner_payment_failed",
+  OWNER_BOOKING_REFUNDED: "owner_booking_refunded",
   OWNER_CRITICAL_ERROR: "owner_critical_error",
 } as const;
 
