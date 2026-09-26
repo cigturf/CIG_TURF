@@ -1,7 +1,9 @@
 "use client";
 
+import { Receipt } from "lucide-react";
+
 import type { FinanceTransaction } from "@/features/admin/finance/types/finance.types";
-import { Badge, TableShell, Text } from "@/components/design-system";
+import { Badge, EmptyState, TableShell } from "@/components/design-system";
 import { formatCurrency } from "@/utils";
 import { cn } from "@/lib/utils";
 
@@ -19,7 +21,13 @@ export function FinanceTransactionsTable({
   onSelect,
 }: FinanceTransactionsTableProps) {
   if (transactions.length === 0) {
-    return <Text className="text-muted-foreground">No transactions in this period.</Text>;
+    return (
+      <EmptyState
+        icon={Receipt}
+        title="No transactions in this period"
+        description="Try a wider date range or clear your filters."
+      />
+    );
   }
 
   return (

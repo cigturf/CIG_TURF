@@ -1,8 +1,10 @@
 "use client";
 
+import { CircleCheck } from "lucide-react";
+
 import type { FinancePendingBooking } from "@/features/admin/finance/types/finance.types";
 import { formatBookingDateLabel } from "@/features/admin/bookings/lib/booking-utils";
-import { Button, TableShell, Text } from "@/components/design-system";
+import { Button, EmptyState, TableShell } from "@/components/design-system";
 import { formatCurrency } from "@/utils";
 
 type FinancePendingTableProps = {
@@ -12,7 +14,13 @@ type FinancePendingTableProps = {
 
 export function FinancePendingTable({ bookings, onCollect }: FinancePendingTableProps) {
   if (bookings.length === 0) {
-    return <Text className="text-muted-foreground">No pending collections right now.</Text>;
+    return (
+      <EmptyState
+        icon={CircleCheck}
+        title="All caught up"
+        description="No pending collections right now."
+      />
+    );
   }
 
   return (
