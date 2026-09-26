@@ -43,6 +43,7 @@ import { getPaymentById } from "@/features/payments/services/payment.repository"
 import { refundOnlineAdvanceForBooking } from "@/features/payments/services/payment-refund.service";
 import { listPaymentRecordsForBooking } from "@/features/admin/bookings/services/booking-payment.repository";
 import { listAuditLogsForBooking } from "@/features/admin/bookings/services/booking-audit.repository";
+import { dispatchBookingCancelledEmails } from "@/features/communication/services/communication-dispatcher";
 
 const baseBooking = {
   id: "booking-1",
@@ -112,9 +113,13 @@ describe("cancelAdminBooking", () => {
       status: "cancelled",
       cancellationReason: "Customer request",
     });
+    expect(dispatchBookingCancelledEmails).toHaveBeenCalledWith(
+      expect.objectContaining({ status: "cancelled" }),
+      undefined,
+    );
   });
 
-  it("refunds before cancelling when initiateRefund is true", async () => {
+  it("refunds before cancelling when initiateRefund is true, and notifies with refund details", async () => {
     await cancelAdminBooking(
       "booking-1",
       { reason: "Customer request", initiateRefund: true },
@@ -123,6 +128,10 @@ describe("cancelAdminBooking", () => {
 
     expect(refundOnlineAdvanceForBooking).toHaveBeenCalled();
     expect(updateBookingRecord).toHaveBeenCalled();
+    expect(dispatchBookingCancelledEmails).toHaveBeenCalledWith(
+      expect.objectContaining({ status: "cancelled" }),
+      { amount: 200, referenceNumber: "pay_razorpay" },
+    );
   });
 
   it("does not cancel when refund fails", async () => {

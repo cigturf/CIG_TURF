@@ -165,7 +165,11 @@ export const CommunicationService = {
     );
   },
 
-  async sendBookingCancelled(booking: BookingRecord, cancelledAt = new Date()): Promise<void> {
+  async sendBookingCancelled(
+    booking: BookingRecord,
+    cancelledAt = new Date(),
+    refund?: { amount: number; referenceNumber: string },
+  ): Promise<void> {
     if (booking.status !== "cancelled") return;
 
     if (booking.customerEmail) {
@@ -178,6 +182,7 @@ export const CommunicationService = {
           template: EMAIL_TEMPLATES.BOOKING_CANCELLED,
           booking: bookingRenderInput(booking),
           cancellationTime: cancelledAt.toISOString(),
+          cancelRefund: refund,
         },
       });
     }
@@ -186,13 +191,22 @@ export const CommunicationService = {
       EMAIL_TEMPLATES.OWNER_BOOKING_CANCELLED,
       {
         owner: {
-          title: "Booking Cancelled",
-          summary: "A booking was cancelled.",
+          title: refund ? "Booking Cancelled & Refunded" : "Booking Cancelled",
+          summary: refund
+            ? "A booking was cancelled and the online advance was refunded."
+            : "A booking was cancelled.",
           details: [
             { label: "Booking ID", value: booking.bookingReference },
             { label: "Customer", value: booking.customerName },
+            { label: "Email", value: booking.customerEmail || "—" },
             { label: "Date", value: booking.bookingDate },
             { label: "Cancelled At", value: cancelledAt.toLocaleString("en-IN") },
+            ...(refund
+              ? [
+                  { label: "Amount Refunded", value: formatCurrency(refund.amount) },
+                  { label: "Refund Reference", value: refund.referenceNumber },
+                ]
+              : []),
           ],
         },
       },

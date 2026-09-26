@@ -21,9 +21,12 @@ export async function dispatchBookingConfirmedEmails(booking: BookingRecord): Pr
   }
 }
 
-export async function dispatchBookingCancelledEmails(booking: BookingRecord): Promise<void> {
+export async function dispatchBookingCancelledEmails(
+  booking: BookingRecord,
+  refund?: { amount: number; referenceNumber: string },
+): Promise<void> {
   try {
-    await CommunicationService.sendBookingCancelled(booking);
+    await CommunicationService.sendBookingCancelled(booking, new Date(), refund);
   } catch (error) {
     logCommunicationError("booking cancelled email", error);
   }

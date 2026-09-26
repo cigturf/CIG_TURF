@@ -344,6 +344,7 @@ export async function cancelAdminBooking(
   }
 
   const initiateRefund = input.initiateRefund === true;
+  let refundInfo: { amount: number; referenceNumber: string } | undefined;
 
   if (initiateRefund) {
     if (booking.source !== "online" || booking.advancePaid <= 0) {
@@ -371,6 +372,8 @@ export async function cancelAdminBooking(
     if (!refunded) {
       throw new Error("Refund could not be processed. Booking was not cancelled.");
     }
+
+    refundInfo = { amount: booking.advancePaid, referenceNumber: payment.razorpayPaymentId };
   }
 
   const updated = await updateBookingRecord(id, {
@@ -393,7 +396,7 @@ export async function cancelAdminBooking(
     refundInitiated: initiateRefund,
   });
 
-  await dispatchBookingCancelledEmails(updated);
+  await dispatchBookingCancelledEmails(updated, refundInfo);
 
   publishCommunicationEvent(APP_EVENT_TYPES.BOOKING_CANCELLED, {
     bookingId: id,

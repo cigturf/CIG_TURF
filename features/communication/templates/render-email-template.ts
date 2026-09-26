@@ -84,6 +84,8 @@ export type RenderEmailInput = {
   critical?: CriticalErrorContext;
   cancellationTime?: string;
   paymentStatus?: string;
+  /** Present only when the cancellation also refunded an online advance. */
+  cancelRefund?: { amount: number; referenceNumber: string };
 };
 
 function resolvePaymentStatus(booking: BookingEmailContext["booking"]): string {
@@ -195,18 +197,22 @@ export function renderEmailTemplate(input: RenderEmailInput): { subject: string;
     case EMAIL_TEMPLATES.BOOKING_CANCELLED: {
       const booking = input.booking!;
       const cancelledAt = input.cancellationTime ?? new Date().toISOString();
+      const refund = input.cancelRefund;
       const subject = `Booking cancelled — ${booking.bookingReference}`;
       const body = `
-        <p style="margin:0 0 16px;font-size:15px;line-height:1.6;color:#334155;">Hi ${escapeHtml(booking.customerName)}, your booking has been cancelled as requested.</p>
+        <p style="margin:0 0 16px;font-size:15px;line-height:1.6;color:#334155;">Hi ${escapeHtml(booking.customerName)}, your booking has been cancelled${refund ? " and your advance has been refunded in full" : " as requested"}.</p>
         ${renderDetailTable([
           ...buildBookingRows(booking, branding).slice(0, 6),
           { label: "Cancelled At", value: escapeHtml(new Date(cancelledAt).toLocaleString("en-IN")) },
-          {
-            label: "Refund",
-            value: "Refund processing will be communicated separately.",
-          },
+          refund
+            ? { label: "Amount Refunded", value: escapeHtml(formatCurrency(refund.amount)) }
+            : { label: "Refund", value: "No online advance was refunded for this cancellation." },
+          ...(refund
+            ? [{ label: "Refund Reference", value: escapeHtml(refund.referenceNumber) }]
+            : []),
         ])}
-        <p style="margin:16px 0 0;font-size:14px;color:#64748b;">Need help? Contact us at ${branding.supportEmail ? escapeHtml(branding.supportEmail) : branding.phone ?? "support"}.</p>
+        ${refund ? `<p style="margin:16px 0 0;font-size:14px;line-height:1.6;color:#64748b;">The refund will reflect in your original payment method within 5-7 business days, depending on your bank.</p>` : ""}
+        <p style="margin:8px 0 0;font-size:14px;color:#64748b;">Need help? Contact us at ${branding.supportEmail ? escapeHtml(branding.supportEmail) : branding.phone ?? "support"}.</p>
       `;
       return {
         subject,
