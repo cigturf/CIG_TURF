@@ -27,7 +27,7 @@ const summary: BookingSummary = {
 
 describe("booking session", () => {
   beforeEach(() => {
-    sessionStorage.clear();
+    localStorage.clear();
   });
 
   it("saves and restores booking session", () => {
@@ -51,7 +51,7 @@ describe("booking session", () => {
   it("clears booking session", () => {
     saveBookingSession(selection, summary);
     clearBookingSession();
-    expect(sessionStorage.getItem(BOOKING_SESSION_KEY)).toBeNull();
+    expect(localStorage.getItem(BOOKING_SESSION_KEY)).toBeNull();
   });
 
   it("updates profile on booking session", () => {
@@ -68,5 +68,31 @@ describe("booking session", () => {
       phone: "9876543210",
       email: "player@example.com",
     });
+  });
+
+  it("survives a simulated tab-context change (localStorage, not sessionStorage)", () => {
+    // The exact bug this guards against: a selection saved before login has
+    // to still be there after a Google OAuth round-trip or a magic link
+    // opened in a new tab — sessionStorage doesn't reliably survive that,
+    // localStorage always does. Simulate "a different tab" by reading via a
+    // fresh JSON parse of what's actually in the persistent store, not any
+    // in-memory reference the save call might have kept.
+    saveBookingSession(selection, summary);
+    const rawFromStorage = localStorage.getItem(BOOKING_SESSION_KEY);
+    expect(rawFromStorage).not.toBeNull();
+
+    const stored = JSON.parse(rawFromStorage!);
+    expect(stored.dateIso).toBe(selection.dateIso);
+    expect(stored.selectedSlotIds).toEqual(selection.selectedSlotIds);
+  });
+
+  it("discards a selection older than the TTL instead of resurrecting it", () => {
+    saveBookingSession(selection, summary);
+    const raw = localStorage.getItem(BOOKING_SESSION_KEY)!;
+    const stale = { ...JSON.parse(raw), savedAt: new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString() };
+    localStorage.setItem(BOOKING_SESSION_KEY, JSON.stringify(stale));
+
+    expect(readBookingSession()).toBeNull();
+    expect(localStorage.getItem(BOOKING_SESSION_KEY)).toBeNull();
   });
 });
