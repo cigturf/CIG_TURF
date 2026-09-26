@@ -1,5 +1,7 @@
 "use client";
 
+import { motion } from "framer-motion";
+
 import { Badge } from "@/components/design-system";
 import type { BookingSlot, SlotStatus } from "@/features/booking/types";
 import { formatCurrency } from "@/utils";
@@ -61,12 +63,15 @@ function statusTone(slot: BookingSlot): string {
 
 export function BookingSlotCard({ slot, onSelect }: BookingSlotCardProps) {
   return (
-    <button
+    <motion.button
       type="button"
       disabled={!slot.isSelectable}
       onClick={() => onSelect(slot.id)}
+      animate={{ scale: slot.isSelected ? 1.02 : 1 }}
+      whileTap={slot.isSelectable ? { scale: 0.96 } : undefined}
+      transition={{ type: "spring", stiffness: 400, damping: 25 }}
       className={cn(
-        "touch-target flex min-h-11 w-full flex-col items-start rounded-[var(--radius-md)] border px-3.5 py-3 text-left transition-all duration-200",
+        "touch-target flex min-h-11 w-full flex-col items-start rounded-[var(--radius-md)] border px-3.5 py-3 text-left transition-colors duration-200",
         "focus-visible:ring-ring/50 focus-visible:ring-2 focus-visible:outline-none",
         !slot.isSelectable && "cursor-not-allowed opacity-55",
         slot.isSelectable && statusTone(slot),
@@ -92,6 +97,6 @@ export function BookingSlotCard({ slot, onSelect }: BookingSlotCardProps) {
           {slot.statusReason}
         </span>
       ) : null}
-    </button>
+    </motion.button>
   );
 }

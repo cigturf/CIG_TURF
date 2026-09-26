@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { Copy, ExternalLink, Plus } from "lucide-react";
+import { Copy, ExternalLink, Plus, UserX } from "lucide-react";
 import { toast } from "sonner";
 
 import { APP_EVENT_TYPES } from "@/features/events/constants/event-types";
@@ -15,8 +15,10 @@ import {
   Button,
   DrawerPanel,
   DrawerRoot,
+  EmptyState,
   FormTextarea,
   Separator,
+  SkeletonText,
   Text,
 } from "@/components/design-system";
 import { formatCurrency } from "@/utils";
@@ -155,9 +157,13 @@ export function CustomerProfileDrawer({
           className="max-w-md lg:max-w-xl"
         >
           {isLoading ? (
-            <Text className="text-muted-foreground">Loading customer…</Text>
+            <div className="space-y-6">
+              <SkeletonText lines={3} />
+              <Separator />
+              <SkeletonText lines={4} />
+            </div>
           ) : !profile ? (
-            <Text className="text-muted-foreground">Customer not found.</Text>
+            <EmptyState icon={UserX} title="Customer not found" />
           ) : (
             <div className="space-y-6">
               <div className="grid gap-3 text-sm">

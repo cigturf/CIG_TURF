@@ -9,6 +9,7 @@ import {
   DrawerPanel,
   DrawerRoot,
   Separator,
+  SkeletonText,
   Text,
 } from "@/components/design-system";
 import { formatCurrency } from "@/utils";
@@ -111,7 +112,7 @@ export function FinanceTransactionDrawer({
             <div>
               <Text className="mb-3 font-medium">Payment History</Text>
               {isLoading ? (
-                <Text className="text-muted-foreground text-sm">Loading history…</Text>
+                <SkeletonText lines={3} />
               ) : history.length === 0 ? (
                 <Text className="text-muted-foreground text-sm">No payment history found.</Text>
               ) : (

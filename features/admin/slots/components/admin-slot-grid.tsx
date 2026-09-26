@@ -6,7 +6,9 @@ import type { BookingSlot } from "@/features/booking/types";
 import type { AdminBookingRecord } from "@/features/admin/bookings/types/admin-booking.types";
 import { BookingSlotCard } from "@/features/booking/components/booking-slot-card";
 import { AnalyticsCard, Button, SkeletonBookingSlot, Text } from "@/components/design-system";
+import { getTodayIso } from "@/features/booking/utils/time";
 import { formatCurrency } from "@/utils";
+import { cn } from "@/lib/utils";
 
 type AdminSlotGridProps = {
   dateIso: string;
@@ -32,9 +34,12 @@ export function AdminSlotGrid({
   onBulkAction,
 }: AdminSlotGridProps) {
   const selectableCount = selectedSlotIds.length;
+  const isToday = dateIso === getTodayIso();
 
   const markers = useMemo(() => {
-    const items: string[] = [];
+    const now = new Date();
+    const currentMinutes = now.getHours() * 60 + Math.floor(now.getMinutes() / 30) * 30;
+    const items: { label: string; minutes: number }[] = [];
     for (let minutes = 0; minutes < 24 * 60; minutes += 30) {
       const h = Math.floor(minutes / 60);
       const m = minutes % 60;
@@ -43,9 +48,9 @@ export function AdminSlotGrid({
         minute: "2-digit",
         hour12: true,
       });
-      items.push(label);
+      items.push({ label, minutes });
     }
-    return items;
+    return { items, currentMinutes };
   }, []);
 
   return (
@@ -69,13 +74,25 @@ export function AdminSlotGrid({
         ) : null
       }
     >
-      <div className="border-border/60 mb-4 overflow-x-auto rounded-[var(--radius-md)] border">
+      <div className="border-border/60 bg-muted/20 sticky top-0 z-10 mb-4 overflow-x-auto rounded-[var(--radius-md)] border">
         <div className="flex min-w-max items-center gap-3 px-3 py-2">
-          {markers.map((label) => (
-            <Text key={label} size="sm" className="text-muted-foreground whitespace-nowrap text-xs">
-              {label}
-            </Text>
-          ))}
+          {markers.items.map((marker) => {
+            const isNow = isToday && marker.minutes === markers.currentMinutes;
+            return (
+              <Text
+                key={marker.label}
+                size="sm"
+                className={cn(
+                  "whitespace-nowrap text-xs",
+                  isNow
+                    ? "text-primary rounded-full bg-primary/10 px-1.5 py-0.5 font-semibold"
+                    : "text-muted-foreground",
+                )}
+              >
+                {marker.label}
+              </Text>
+            );
+          })}
         </div>
       </div>
 

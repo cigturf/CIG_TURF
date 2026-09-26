@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useMemo, useState } from "react";
-import { Search } from "lucide-react";
+import { CalendarOff, CalendarDays, ChevronLeft, ChevronRight, Search, Wrench } from "lucide-react";
 import { toast } from "sonner";
 
 import { AdminSlotGrid } from "@/features/admin/slots/components/admin-slot-grid";
@@ -112,6 +112,21 @@ export function AdminSlotsView() {
     if (quickFilter === "all") return slots;
     return slots.filter((slot) => slot.status === quickFilter);
   }, [slots, quickFilter]);
+
+  const filterCounts = useMemo(() => {
+    const counts: Record<string, number> = {
+      all: slots.length,
+      available: 0,
+      booked: 0,
+      reserved: 0,
+      blocked: 0,
+      maintenance: 0,
+    };
+    for (const slot of slots) {
+      if (slot.status in counts) counts[slot.status] = (counts[slot.status] ?? 0) + 1;
+    }
+    return counts;
+  }, [slots]);
 
   const handleDateNav = (direction: -1 | 1) => {
     setSelectedSlotIds([]);
@@ -308,24 +323,45 @@ export function AdminSlotsView() {
       >
         <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
           <div className="flex flex-wrap items-center gap-2">
-            <Button size="sm" variant="outline" onClick={() => handleDateNav(-1)}>
-              Previous
-            </Button>
-            <Button size="sm" variant="outline" onClick={() => setDateIso(today)}>
-              Today
-            </Button>
-            <Button size="sm" variant="outline" onClick={() => handleDateNav(1)}>
-              Next
-            </Button>
-            <Input
-              type="date"
-              value={activeDate}
-              min={today}
-              max={addDaysToIsoDate(today, ADMIN_SLOT_VIEW_WINDOW_DAYS - 1)}
-              onChange={(event) => setDateIso(event.target.value)}
-              className="h-9 w-[160px]"
-            />
+            <div className="border-border/80 flex items-center overflow-hidden rounded-[var(--radius-md)] border">
+              <Button
+                size="sm"
+                variant="ghost"
+                className="border-border/80 rounded-none border-r"
+                onClick={() => handleDateNav(-1)}
+              >
+                <ChevronLeft className="mr-1 size-4" />
+                Previous
+              </Button>
+              <Button
+                size="sm"
+                variant="ghost"
+                className="border-border/80 rounded-none border-r"
+                onClick={() => setDateIso(today)}
+              >
+                Today
+              </Button>
+              <Button size="sm" variant="ghost" className="rounded-none" onClick={() => handleDateNav(1)}>
+                Next
+                <ChevronRight className="ml-1 size-4" />
+              </Button>
+            </div>
+            <div className="relative">
+              <CalendarDays className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2" />
+              <Input
+                type="date"
+                value={activeDate}
+                min={today}
+                max={addDaysToIsoDate(today, ADMIN_SLOT_VIEW_WINDOW_DAYS - 1)}
+                onChange={(event) => setDateIso(event.target.value)}
+                className="h-9 w-[180px] pl-9"
+              />
+            </div>
+
+            <div className="bg-border mx-1 hidden h-6 w-px sm:block" />
+
             <Button size="sm" variant="outline" onClick={() => setHolidayDialogOpen(true)}>
+              <CalendarOff className="mr-1.5 size-4" />
               Holiday
             </Button>
             <Button
@@ -336,6 +372,7 @@ export function AdminSlotsView() {
                 setSelectedSlotIds([]);
               }}
             >
+              <Wrench className="mr-1.5 size-4" />
               {selectionMode ? "Selecting slots…" : "Select for maintenance"}
             </Button>
             {selectedSlotIds.length > 0 ? (
@@ -368,21 +405,26 @@ export function AdminSlotsView() {
           </Text>
           {(
             [
-              ["all", "All"],
-              ["available", "Available"],
-              ["booked", "Booked"],
-              ["reserved", "Payment hold"],
-              ["blocked", "Blocked"],
-              ["maintenance", "Maintenance"],
+              ["all", "All", null],
+              ["available", "Available", "bg-success"],
+              ["booked", "Booked", "bg-destructive"],
+              ["reserved", "Payment hold", "bg-muted-foreground"],
+              ["blocked", "Blocked", "bg-orange-500"],
+              ["maintenance", "Maintenance", "bg-amber-500"],
             ] as const
-          ).map(([key, label]) => (
+          ).map(([key, label, dotColor]) => (
             <Button
               key={key}
               size="sm"
               variant={quickFilter === key ? "default" : "outline"}
               onClick={() => setQuickFilter(key)}
+              className="gap-1.5"
             >
+              {dotColor ? <span className={`size-1.5 shrink-0 rounded-full ${dotColor}`} /> : null}
               {label}
+              <span className={quickFilter === key ? "opacity-80" : "text-muted-foreground"}>
+                {filterCounts[key] ?? 0}
+              </span>
             </Button>
           ))}
         </div>

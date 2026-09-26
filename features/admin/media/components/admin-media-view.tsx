@@ -4,7 +4,9 @@ import Image from "next/image";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 
-import { AnalyticsCard, Badge, Button, Heading, Input, Text } from "@/components/design-system";
+import { ImageOff } from "lucide-react";
+
+import { AnalyticsCard, Badge, Button, EmptyState, Heading, Input, Text } from "@/components/design-system";
 import type { MediaAssetRecord, MediaCategory, MediaVisibility } from "@/features/media/types";
 import { cn } from "@/lib/utils";
 
@@ -305,9 +307,11 @@ export function AdminMediaView() {
               </div>
 
               {assets.length === 0 ? (
-                <div className="py-10 text-center">
-                  <Text className="text-muted-foreground">No assets found.</Text>
-                </div>
+                <EmptyState
+                  icon={ImageOff}
+                  title="No assets found"
+                  description="Upload photos or videos to get started."
+                />
               ) : null}
             </div>
           </AnalyticsCard>
