@@ -404,6 +404,13 @@ export async function markPaymentFailed(razorpayOrderId: string): Promise<void> 
   }
 }
 
+/**
+ * Explicitly cancels a payment record regardless of its current status
+ * (except one already "paid", which this never touches) — an admin choosing
+ * not to book a stuck "failed" record after a captured retry is exactly the
+ * case this needs to allow; the old status guard here matched the same bug
+ * as markPaymentPaid's, just for the "cancelled" transition instead of "paid".
+ */
 export async function markPaymentCancelled(razorpayOrderId: string): Promise<void> {
   const supabase = createServiceRoleClient();
   const now = new Date().toISOString();
@@ -413,7 +420,7 @@ export async function markPaymentCancelled(razorpayOrderId: string): Promise<voi
       .from("payments")
       .update({ status: "cancelled", updated_at: now })
       .eq("razorpay_order_id", razorpayOrderId)
-      .in("status", ["created"]);
+      .neq("status", "paid");
 
     if (!error) return;
 
@@ -422,7 +429,7 @@ export async function markPaymentCancelled(razorpayOrderId: string): Promise<voi
 
   try {
     await prisma.payment.updateMany({
-      where: { razorpayOrderId, status: "created" },
+      where: { razorpayOrderId, status: { not: "paid" } },
       data: { status: "cancelled" },
     });
   } catch (error) {
