@@ -1,6 +1,7 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
+import { isAdminLoginEmail } from "@/features/auth/config/auth.config";
 import {
   getProfileById,
   isAdminUser,
@@ -8,6 +9,7 @@ import {
 } from "@/features/auth/services";
 import { saveCustomerProfile } from "@/features/auth/services/save-customer-profile.service";
 import type { AuthUser } from "@/features/auth/types";
+import { passwordSchema } from "@/lib/validations/common";
 
 export async function checkIsAdminAction(userId: string): Promise<boolean> {
   return isAdminUser(userId);
@@ -131,6 +133,75 @@ export async function signInWithPasswordAction(
     return {
       success: false,
       error: "Sign-in is taking too long to respond. Please try again in a moment.",
+    };
+  }
+}
+
+/**
+ * Changes the signed-in admin's password, but only after re-verifying the
+ * current password via a real sign-in — so a hijacked/unlocked session alone
+ * is never enough to change it. Re-signing in with the CORRECT password just
+ * re-issues the same session (harmless); an incorrect one leaves the current
+ * session and password untouched.
+ */
+export async function changeAdminPasswordAction(
+  currentPassword: string,
+  newPassword: string,
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const supabase = await createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (!user?.email) {
+      return { success: false, error: "You must be signed in to change your password" };
+    }
+    if (!isAdminLoginEmail(user.email)) {
+      return { success: false, error: "Password change is only available for the admin account" };
+    }
+
+    const parsedNewPassword = passwordSchema.safeParse(newPassword);
+    if (!parsedNewPassword.success) {
+      return {
+        success: false,
+        error: parsedNewPassword.error.issues[0]?.message ?? "Invalid new password",
+      };
+    }
+
+    const { error: verifyError } = await Promise.race([
+      supabase.auth.signInWithPassword({ email: user.email, password: currentPassword }),
+      new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error("timeout")), SIGN_IN_TIMEOUT_MS),
+      ),
+    ]);
+
+    if (verifyError) {
+      return { success: false, error: "Current password is incorrect" };
+    }
+
+    const { error: updateError } = await supabase.auth.updateUser({
+      password: parsedNewPassword.data,
+    });
+
+    if (updateError) {
+      console.error("[changeAdminPasswordAction] Supabase error:", {
+        message: updateError.message,
+        status: updateError.status,
+        code: updateError.code,
+      });
+      return {
+        success: false,
+        error: toUserFacingAuthError(updateError, "Failed to update password"),
+      };
+    }
+
+    return { success: true };
+  } catch (error) {
+    console.error("[changeAdminPasswordAction] Unexpected error:", error);
+    return {
+      success: false,
+      error: "Changing the password is taking too long. Please try again in a moment.",
     };
   }
 }

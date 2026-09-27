@@ -45,6 +45,35 @@ export function AuthPage() {
   const [phone, setPhone] = useState("");
   const [loading, setLoading] = useState(false);
   const [resetLinkSent, setResetLinkSent] = useState(false);
+  const [resetOtp, setResetOtp] = useState("");
+  const [newResetPassword, setNewResetPassword] = useState("");
+  const [confirmResetPassword, setConfirmResetPassword] = useState("");
+  const [resetCooldownUntil, setResetCooldownUntil] = useState<number | null>(null);
+  const [resetNow, setResetNow] = useState(() => Date.now());
+
+  useEffect(() => {
+    if (!resetCooldownUntil) return;
+    const interval = setInterval(() => {
+      if (Date.now() >= resetCooldownUntil) {
+        setResetCooldownUntil(null);
+      } else {
+        setResetNow(Date.now());
+      }
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [resetCooldownUntil]);
+
+  const resetCooldownSeconds = resetCooldownUntil
+    ? Math.max(0, Math.ceil((resetCooldownUntil - resetNow) / 1000))
+    : 0;
+
+  const resetForgotPasswordState = () => {
+    setResetLinkSent(false);
+    setResetOtp("");
+    setNewResetPassword("");
+    setConfirmResetPassword("");
+    setResetCooldownUntil(null);
+  };
 
   const continueAfterAuth = useCallback(() => {
     const next = resolveAuthReturnTo(returnToParam);
@@ -174,13 +203,63 @@ export function AuthPage() {
       });
 
       if (error) {
-        toast.error(error.message ?? "Failed to send reset link");
+        toast.error(error.message ?? "Failed to send reset code");
         return;
       }
 
       setResetLinkSent(true);
+      setResetNow(Date.now());
+      setResetCooldownUntil(Date.now() + 60_000);
       publish(APP_EVENT_TYPES.AUTH_PASSWORD_RESET, { email });
-      toast.success("If an account exists, a reset link has been sent to your email");
+      toast.success("A reset code has been sent to your email");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleVerifyResetOtp = async () => {
+    if (!resetOtp.trim()) {
+      toast.error("Enter the code from your email");
+      return;
+    }
+
+    const parsedNewPassword = passwordSchema.safeParse(newResetPassword);
+    if (!parsedNewPassword.success) {
+      toast.error(parsedNewPassword.error.issues[0]?.message ?? "Invalid new password");
+      return;
+    }
+
+    if (newResetPassword !== confirmResetPassword) {
+      toast.error("New passwords do not match");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const supabase = createClient();
+      const { data, error: verifyError } = await supabase.auth.verifyOtp({
+        email,
+        token: resetOtp.trim(),
+        type: "recovery",
+      });
+
+      if (verifyError || !data.user) {
+        toast.error(verifyError?.message || "Invalid or expired code");
+        return;
+      }
+
+      const { error: updateError } = await supabase.auth.updateUser({
+        password: parsedNewPassword.data,
+      });
+
+      if (updateError) {
+        toast.error(updateError.message || "Failed to update password");
+        return;
+      }
+
+      toast.success("Password updated");
+      publish(APP_EVENT_TYPES.AUTH_LOGIN_SUCCESS, { userId: data.user.id, email });
+      continueAfterAuth();
     } finally {
       setLoading(false);
     }
@@ -359,18 +438,70 @@ export function AuthPage() {
                 <Button
                   variant="booking"
                   className="touch-target min-h-12 w-full"
-                  onClick={handleSendResetLink}
+                  onClick={() => void handleSendResetLink()}
                   disabled={loading}
                 >
-                  Send reset link
+                  Send reset code
                 </Button>
               ) : (
-                <Text size="sm" className="text-muted-foreground text-center">
-                  If an account exists, check your email for a password reset link.
-                </Text>
+                <>
+                  <Text size="sm" className="text-muted-foreground">
+                    Enter the code we emailed you, then choose a new password.
+                  </Text>
+                  <FormField label="Reset code" htmlFor="reset-otp">
+                    <FormInput
+                      id="reset-otp"
+                      value={resetOtp}
+                      onChange={(event) => setResetOtp(event.target.value.replace(/\s/g, ""))}
+                      autoComplete="one-time-code"
+                      placeholder="Code from your email"
+                    />
+                  </FormField>
+                  <FormField label="New password" htmlFor="reset-new-password">
+                    <FormInput
+                      id="reset-new-password"
+                      type="password"
+                      value={newResetPassword}
+                      onChange={(event) => setNewResetPassword(event.target.value)}
+                      autoComplete="new-password"
+                    />
+                  </FormField>
+                  <FormField label="Confirm new password" htmlFor="reset-confirm-password">
+                    <FormInput
+                      id="reset-confirm-password"
+                      type="password"
+                      value={confirmResetPassword}
+                      onChange={(event) => setConfirmResetPassword(event.target.value)}
+                      autoComplete="new-password"
+                    />
+                  </FormField>
+                  <Button
+                    variant="booking"
+                    className="touch-target min-h-12 w-full"
+                    onClick={() => void handleVerifyResetOtp()}
+                    disabled={loading}
+                  >
+                    Verify code &amp; update password
+                  </Button>
+                  <Button
+                    variant="outline"
+                    className="w-full"
+                    onClick={() => void handleSendResetLink()}
+                    disabled={loading || resetCooldownSeconds > 0}
+                  >
+                    {resetCooldownSeconds > 0 ? `Resend code in ${resetCooldownSeconds}s` : "Resend code"}
+                  </Button>
+                </>
               )}
 
-              <Button variant="ghost" className="w-full" onClick={() => setMode("admin-signin")}>
+              <Button
+                variant="ghost"
+                className="w-full"
+                onClick={() => {
+                  setMode("admin-signin");
+                  resetForgotPasswordState();
+                }}
+              >
                 Back to sign in
               </Button>
             </div>

@@ -1,4 +1,5 @@
 export {
+  changeAdminPasswordAction,
   checkIsAdminAction,
   checkProfileCompleteAction,
   completeProfileAction,

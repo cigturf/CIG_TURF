@@ -68,6 +68,30 @@ export async function dispatchBookingRefundedEmails(input: {
   }
 }
 
+export async function dispatchSlotsBlockedEmail(input: {
+  state: "blocked" | "maintenance";
+  reason: string | null;
+  totalSlots: number;
+  dateSummaries: Array<{ label: string; value: string }>;
+}): Promise<void> {
+  try {
+    await CommunicationService.sendSlotsBlockedOwner(input);
+  } catch (error) {
+    logCommunicationError("slots blocked email", error);
+  }
+}
+
+export async function dispatchSlotsUnblockedEmail(input: {
+  totalSlots: number;
+  dateSummaries: Array<{ label: string; value: string }>;
+}): Promise<void> {
+  try {
+    await CommunicationService.sendSlotsUnblockedOwner(input);
+  } catch (error) {
+    logCommunicationError("slots unblocked email", error);
+  }
+}
+
 export async function dispatchPaymentCollectedEmails(
   booking: BookingRecord,
   payment: {

@@ -333,7 +333,9 @@ export function renderEmailTemplate(input: RenderEmailInput): { subject: string;
     case EMAIL_TEMPLATES.OWNER_BOOKING_CANCELLED:
     case EMAIL_TEMPLATES.OWNER_PAYMENT_COLLECTED:
     case EMAIL_TEMPLATES.OWNER_PAYMENT_FAILED:
-    case EMAIL_TEMPLATES.OWNER_BOOKING_REFUNDED: {
+    case EMAIL_TEMPLATES.OWNER_BOOKING_REFUNDED:
+    case EMAIL_TEMPLATES.OWNER_SLOTS_BLOCKED:
+    case EMAIL_TEMPLATES.OWNER_SLOTS_UNBLOCKED: {
       const owner = input.owner!;
       const subject = owner.title;
       const rows = owner.details ?? [];
@@ -513,6 +515,30 @@ export function buildPreviewRenderInput(
             { label: "Amount Refunded", value: formatCurrency(500) },
             { label: "Payment Reference", value: "pay_PREVIEW001" },
             { label: "Reason", value: "Slots unavailable after payment" },
+          ],
+        },
+      };
+    case EMAIL_TEMPLATES.OWNER_SLOTS_BLOCKED:
+      return {
+        template,
+        branding,
+        owner: {
+          title: "Slots Blocked",
+          summary: "2 slot(s) were blocked — Reason: Tournament.",
+          details: [
+            { label: sampleBooking.bookingDate, value: "2 slot(s) — 12:00 am, 12:30 am" },
+          ],
+        },
+      };
+    case EMAIL_TEMPLATES.OWNER_SLOTS_UNBLOCKED:
+      return {
+        template,
+        branding,
+        owner: {
+          title: "Blocked Slots Released",
+          summary: "2 slot(s) were released and are available for booking again.",
+          details: [
+            { label: sampleBooking.bookingDate, value: "2 slot(s) — 12:00 am, 12:30 am" },
           ],
         },
       };

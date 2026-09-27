@@ -380,6 +380,35 @@ export const CommunicationService = {
     });
   },
 
+  async sendSlotsBlockedOwner(input: {
+    state: "blocked" | "maintenance";
+    reason: string | null;
+    totalSlots: number;
+    dateSummaries: Array<{ label: string; value: string }>;
+  }): Promise<void> {
+    const action = input.state === "maintenance" ? "marked under maintenance" : "blocked";
+    await enqueueOwnerEmails(EMAIL_TEMPLATES.OWNER_SLOTS_BLOCKED, {
+      owner: {
+        title: input.state === "maintenance" ? "Slots Marked Under Maintenance" : "Slots Blocked",
+        summary: `${input.totalSlots} slot(s) were ${action}${input.reason ? ` — Reason: ${input.reason}` : ""}.`,
+        details: input.dateSummaries,
+      },
+    });
+  },
+
+  async sendSlotsUnblockedOwner(input: {
+    totalSlots: number;
+    dateSummaries: Array<{ label: string; value: string }>;
+  }): Promise<void> {
+    await enqueueOwnerEmails(EMAIL_TEMPLATES.OWNER_SLOTS_UNBLOCKED, {
+      owner: {
+        title: "Blocked Slots Released",
+        summary: `${input.totalSlots} slot(s) were released and are available for booking again.`,
+        details: input.dateSummaries,
+      },
+    });
+  },
+
   async sendCriticalError(input: {
     message: string;
     module?: string;

@@ -19,6 +19,7 @@ import {
   Text,
   Textarea,
 } from "@/components/design-system";
+import { AdminAccountPasswordForm } from "@/features/admin/settings/components/admin-account-password-form";
 
 type SettingsSection =
   | "general"
@@ -32,7 +33,8 @@ type SettingsSection =
   | "social"
   | "seo"
   | "legal"
-  | "advanced";
+  | "advanced"
+  | "account";
 
 const SECTIONS: Array<{ id: SettingsSection; label: string; description: string }> = [
   { id: "general", label: "General", description: "Name, locale, and platform defaults." },
@@ -47,6 +49,7 @@ const SECTIONS: Array<{ id: SettingsSection; label: string; description: string 
   { id: "seo", label: "SEO", description: "Meta title and description for public pages." },
   { id: "legal", label: "Legal", description: "Terms, privacy, refunds and cancellations." },
   { id: "advanced", label: "Advanced", description: "Maintenance mode and system toggles." },
+  { id: "account", label: "Account", description: "Change your admin sign-in password." },
 ];
 
 function resolveStringArray(value: string): string[] {
@@ -127,11 +130,13 @@ export function AdminSettingsView() {
             Centralized configuration center — changes propagate live across customer and admin modules.
           </Text>
         </div>
-        <div className="flex items-center gap-2">
-          <Button loading={isSaving} onClick={() => void save()}>
-            Save Changes
-          </Button>
-        </div>
+        {section !== "account" ? (
+          <div className="flex items-center gap-2">
+            <Button loading={isSaving} onClick={() => void save()}>
+              Save Changes
+            </Button>
+          </div>
+        ) : null}
       </div>
 
       <div className="grid gap-6 xl:grid-cols-[260px_minmax(0,1fr)_360px]">
@@ -160,7 +165,9 @@ export function AdminSettingsView() {
 
         <main className="min-w-0 space-y-6">
           <AnalyticsCard title={activeSection.label} description={activeSection.description}>
-            {isLoading ? (
+            {section === "account" ? (
+              <AdminAccountPasswordForm />
+            ) : isLoading ? (
               <Text size="sm" className="text-muted-foreground">
                 Loading settings…
               </Text>

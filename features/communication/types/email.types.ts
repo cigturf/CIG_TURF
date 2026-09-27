@@ -12,6 +12,8 @@ export const EMAIL_TEMPLATES = {
   OWNER_PAYMENT_COLLECTED: "owner_payment_collected",
   OWNER_PAYMENT_FAILED: "owner_payment_failed",
   OWNER_BOOKING_REFUNDED: "owner_booking_refunded",
+  OWNER_SLOTS_BLOCKED: "owner_slots_blocked",
+  OWNER_SLOTS_UNBLOCKED: "owner_slots_unblocked",
   OWNER_CRITICAL_ERROR: "owner_critical_error",
 } as const;
 
