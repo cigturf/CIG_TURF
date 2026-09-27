@@ -24,7 +24,10 @@ export function LandingPricing({ content }: LandingPricingProps) {
   const hasTiers = content.pricingTiers.length > 0;
 
   return (
-    <section id="pricing" className={cn("scroll-mt-14 bg-black sm:scroll-mt-16", SPACING.section.md)}>
+    <section
+      id="pricing"
+      className={cn("scroll-mt-14 bg-black sm:scroll-mt-16", SPACING.section.md)}
+    >
       <div className={LAYOUT.containerXl}>
         <Reveal className="mb-6 text-center sm:mb-8 lg:text-left">
           <Overline className="text-primary mb-3 block">Pricing</Overline>
@@ -47,14 +50,15 @@ export function LandingPricing({ content }: LandingPricingProps) {
                   padding="lg"
                   radius="xl"
                   className={cn(
-                    "h-full border-white/10 bg-white/[0.04] text-center text-white sm:text-left",
+                    "h-full border-white/10 bg-white/[0.04] text-center text-white transition-all duration-300 sm:text-left",
+                    "hover:border-primary/25 hover:-translate-y-1 hover:bg-white/[0.06]",
                     index === 0 && "ring-primary/30 ring-1",
                   )}
                 >
                   <p className="text-primary mb-2 text-[0.65rem] tracking-[0.2em] uppercase">
                     per hour
                   </p>
-                  <Heading level="h3" className="font-display mb-2 uppercase text-white">
+                  <Heading level="h3" className="font-display mb-2 text-white uppercase">
                     {tier.name}
                   </Heading>
                   {tier.priceLabel ? (

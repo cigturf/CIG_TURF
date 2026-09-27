@@ -1,6 +1,9 @@
 "use client";
 
+import { PieChart } from "lucide-react";
+
 import type { ReportPaymentBreakdown } from "@/features/admin/reports/types/reports.types";
+import { EmptyState } from "@/components/design-system";
 import { formatCurrency } from "@/utils";
 import { cn } from "@/lib/utils";
 
@@ -23,9 +26,11 @@ export function ReportPieChart({ data, className }: ReportPieChartProps) {
 
   if (total === 0) {
     return (
-      <div className={cn("text-muted-foreground flex h-48 items-center justify-center text-sm", className)}>
-        No payments recorded
-      </div>
+      <EmptyState
+        icon={PieChart}
+        title="No payments recorded"
+        className={cn("h-48 justify-center py-0", className)}
+      />
     );
   }
 

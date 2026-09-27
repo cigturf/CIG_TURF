@@ -25,7 +25,7 @@ export function AdminBookingsSlotOverview({
   const { publicSettings } = useConfigContext();
   const config = useMemo(() => resolveBookingEngineConfig(publicSettings), [publicSettings]);
 
-  const { bookedSlotIds, blockedSlotIds, maintenanceSlotIds, isHoliday, hydrated } =
+  const { bookedSlotIds, blockedSlotIds, maintenanceSlotIds, slotReasons, isHoliday, hydrated } =
     useRealtimeSlots(slotDate);
   const { snapshot: pricingSnapshot } = useRealtimePricing();
   const { bookingBySlotId } = useSlotDateBookings(slotDate);
@@ -48,6 +48,7 @@ export function AdminBookingsSlotOverview({
         bookedSlotIds: effectiveBookedSlotIds,
         blockedSlotIds: new Set(blockedSlotIds),
         maintenanceSlotIds: new Set(maintenanceSlotIds),
+        slotReasons,
         isHoliday,
         pricing: pricingSnapshot,
       }),
@@ -57,6 +58,7 @@ export function AdminBookingsSlotOverview({
       effectiveBookedSlotIds,
       blockedSlotIds,
       maintenanceSlotIds,
+      slotReasons,
       isHoliday,
       pricingSnapshot,
     ],

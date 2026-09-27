@@ -11,7 +11,6 @@ import { buildDashboardOperations } from "@/features/admin/bookings/services/boo
 import { createEmptyBusinessSettings } from "@/features/business-settings/lib/defaults";
 import { toPublicBusinessSettings } from "@/features/business-settings/lib/parse";
 import { resolveBookingEngineConfig } from "@/features/booking/services/booking-config.service";
-import { getBookedSlotIdsForDate } from "@/features/booking/services/booked-slot.repository";
 import {
   listBookingsForDate,
   listRecentBookings,
@@ -21,6 +20,7 @@ import type { BookingRecord } from "@/features/booking/types/booking-record.type
 import { getTodayIsoInTimezone } from "@/features/booking/utils/venue-timezone";
 import { buildPricingSnapshot } from "@/features/pricing/services/pricing-engine.service";
 import { listActivePricingRules } from "@/features/pricing/services/pricing.repository";
+import { getAvailabilityForDate } from "@/features/slots/services/slot-management.service";
 import { SettingsService } from "@/server/settings";
 
 const PLACEHOLDER_EVENTS: DashboardUpcomingEvent[] = [
@@ -109,6 +109,17 @@ function buildTimeline(
         slotId: slot.id,
         timeLabel: slot.timeLabel,
         kind: "available",
+      });
+      continue;
+    }
+
+    if (slot.status === "blocked" || slot.status === "maintenance") {
+      items.push({
+        id: slot.id,
+        slotId: slot.id,
+        timeLabel: slot.timeLabel,
+        kind: "blocked",
+        reason: slot.statusReason ?? (slot.status === "maintenance" ? "Under maintenance" : "Blocked"),
       });
     }
   }
@@ -210,9 +221,19 @@ export const getAdminDashboardData = cache(async (): Promise<AdminDashboardData>
   const config = resolveBookingEngineConfig(settings);
   const now = new Date();
   const dateIso = getTodayIsoInTimezone(now, config.timezone);
-  const bookedSlotIds = await getBookedSlotIdsForDate(dateIso);
+  const { bookedSlotIds, blockedSlotIds, maintenanceSlotIds, slotReasons, isHoliday } =
+    await getAvailabilityForDate(dateIso);
   const pricingSnapshot = buildPricingSnapshot(await listActivePricingRules());
-  const slots = generateSlots({ dateIso, config, bookedSlotIds, pricing: pricingSnapshot });
+  const slots = generateSlots({
+    dateIso,
+    config,
+    bookedSlotIds,
+    blockedSlotIds,
+    maintenanceSlotIds,
+    slotReasons,
+    isHoliday,
+    pricing: pricingSnapshot,
+  });
   const todaysBookings = await listBookingsForDate(dateIso);
   const recentBookings = await listRecentBookings(10);
   const upcomingEvents = await resolveUpcomingEventsFromSettings();

@@ -58,8 +58,8 @@ export function AdminSlotGrid({
       title="Timeline & Slot Grid"
       description={
         selectionMode
-          ? "Selection mode on — tap available or maintenance slots, then Apply."
-          : "Tap available slots to book. Use “Select for maintenance” to mark slots unavailable."
+          ? "Selection mode on — tap available or blocked slots, then Apply."
+          : "Tap available slots to book. Use “Block Slots” to mark slots unavailable."
       }
       action={
         selectableCount > 0 ? (

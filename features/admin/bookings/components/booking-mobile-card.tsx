@@ -9,6 +9,7 @@ import {
   canCollectPayment,
   canCompleteBooking,
   resolveBookingStatusBadge,
+  resolveBookingStatusBorderColor,
   resolvePaymentStatusBadge,
 } from "@/features/admin/bookings/lib/booking-status";
 import { Badge, Button, StatusBadge, Text } from "@/components/design-system";
@@ -27,7 +28,8 @@ export function BookingMobileCard({ booking, onSelect, onQuickAction }: BookingM
   return (
     <div
       className={cn(
-        "border-border/80 bg-card w-full rounded-[var(--radius-lg)] border p-4 text-left",
+        "border-border/80 bg-card w-full rounded-[var(--radius-lg)] border border-l-4 p-4 text-left",
+        resolveBookingStatusBorderColor(booking.status),
       )}
     >
       <button type="button" onClick={() => onSelect(booking.id)} className="w-full text-left">

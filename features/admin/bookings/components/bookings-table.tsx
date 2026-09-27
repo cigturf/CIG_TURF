@@ -11,6 +11,7 @@ import {
 } from "@/features/admin/bookings/lib/booking-utils";
 import {
   resolveBookingStatusBadge,
+  resolveBookingStatusBorderColor,
   resolvePaymentStatusBadge,
 } from "@/features/admin/bookings/lib/booking-status";
 import {
@@ -35,14 +36,6 @@ const BOOKINGS_GRID =
   "min-w-[76rem] grid-cols-[9rem_12rem_7rem_6.5rem_6rem_10rem_7.5rem_7.5rem_7rem_3.5rem]";
 
 const HEADER_CLASS = `${BOOKINGS_GRID} normal-case tracking-normal`;
-
-const STATUS_BORDER_COLOR: Record<string, string> = {
-  pending: "border-l-warning",
-  confirmed: "border-l-success",
-  cancelled: "border-l-destructive",
-  completed: "border-l-info",
-  default: "border-l-border",
-};
 
 export function BookingsTable({ bookings, onSelect, onAction }: BookingsTableProps) {
   return (
@@ -81,7 +74,7 @@ export function BookingsTable({ bookings, onSelect, onAction }: BookingsTablePro
       </TableHeader>
       {bookings.map((booking, index) => {
         const bookingStatus = resolveBookingStatusBadge(booking.status);
-        const borderColor = STATUS_BORDER_COLOR[bookingStatus.status] ?? STATUS_BORDER_COLOR.default;
+        const borderColor = resolveBookingStatusBorderColor(booking.status);
 
         return (
           <motion.div

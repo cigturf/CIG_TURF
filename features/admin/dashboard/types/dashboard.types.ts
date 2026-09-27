@@ -16,11 +16,12 @@ export type DashboardTimelineItem = {
   id: string;
   slotId: string;
   timeLabel: string;
-  kind: "booking" | "available";
+  kind: "booking" | "available" | "blocked";
   customerName?: string;
   bookingReference?: string;
   bookingStatus?: BookingRecord["status"];
   remainingAmount?: number;
+  reason?: string;
 };
 
 export type DashboardUpcomingEvent = {

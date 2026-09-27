@@ -191,10 +191,10 @@ export function SlotBulkBlockDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle>Slot availability</DialogTitle>
+          <DialogTitle>Block Slots</DialogTitle>
           <DialogDescription>
-            Put selected slots under maintenance or block them. Customers cannot book these slots
-            while active. Unblock to make them available again.
+            Block selected slots or mark them under maintenance. Customers see the reason you
+            choose below. Unblock to make them available again.
           </DialogDescription>
         </DialogHeader>
 

@@ -1,6 +1,9 @@
 "use client";
 
+import { BarChart3 } from "lucide-react";
+
 import type { ReportSeriesPoint } from "@/features/admin/reports/types/reports.types";
+import { EmptyState } from "@/components/design-system";
 import { cn } from "@/lib/utils";
 
 type ReportBarChartProps = {
@@ -32,9 +35,11 @@ export function ReportBarChart({
 
   if (data.length === 0) {
     return (
-      <div className={cn("text-muted-foreground flex h-40 items-center justify-center text-sm", className)}>
-        No data for this period
-      </div>
+      <EmptyState
+        icon={BarChart3}
+        title="No data for this period"
+        className={cn("h-40 justify-center py-0", className)}
+      />
     );
   }
 

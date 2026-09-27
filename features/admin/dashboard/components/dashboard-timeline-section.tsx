@@ -62,6 +62,13 @@ export function DashboardTimelineSection({ items }: DashboardTimelineSectionProp
                           : null}
                       </Text>
                     </>
+                  ) : item.kind === "blocked" ? (
+                    <>
+                      <Text className="font-medium">{item.reason}</Text>
+                      <Text size="sm" className="text-muted-foreground truncate">
+                        Slot unavailable
+                      </Text>
+                    </>
                   ) : (
                     <Text className="text-muted-foreground font-medium">Available</Text>
                   )}
@@ -69,6 +76,8 @@ export function DashboardTimelineSection({ items }: DashboardTimelineSectionProp
               </div>
               {item.kind === "booking" ? (
                 <StatusBadge {...resolveBookingBadge(item)} />
+              ) : item.kind === "blocked" ? (
+                <StatusBadge label="Blocked" status="cancelled" />
               ) : (
                 <StatusBadge label="Open" status="default" />
               )}

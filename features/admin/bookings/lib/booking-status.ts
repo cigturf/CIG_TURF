@@ -9,6 +9,18 @@ type StatusBadgeConfig = {
   status: "pending" | "confirmed" | "cancelled" | "completed" | "default";
 };
 
+const STATUS_BORDER_COLOR: Record<StatusBadgeConfig["status"], string> = {
+  pending: "border-l-warning",
+  confirmed: "border-l-success",
+  cancelled: "border-l-destructive",
+  completed: "border-l-info",
+  default: "border-l-border",
+};
+
+export function resolveBookingStatusBorderColor(status: BookingStatus): string {
+  return STATUS_BORDER_COLOR[resolveBookingStatusBadge(status).status];
+}
+
 export function resolveBookingStatusBadge(status: BookingStatus): StatusBadgeConfig {
   switch (status) {
     case "confirmed":

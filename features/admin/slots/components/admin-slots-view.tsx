@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useMemo, useState } from "react";
-import { CalendarOff, CalendarDays, ChevronLeft, ChevronRight, Search, Wrench } from "lucide-react";
+import { Ban, CalendarOff, CalendarDays, ChevronLeft, ChevronRight, Search } from "lucide-react";
 import { toast } from "sonner";
 
 import { AdminSlotGrid } from "@/features/admin/slots/components/admin-slot-grid";
@@ -372,8 +372,8 @@ export function AdminSlotsView() {
                 setSelectedSlotIds([]);
               }}
             >
-              <Wrench className="mr-1.5 size-4" />
-              {selectionMode ? "Selecting slots…" : "Select for maintenance"}
+              <Ban className="mr-1.5 size-4" />
+              {selectionMode ? "Selecting slots…" : "Block Slots"}
             </Button>
             {selectedSlotIds.length > 0 ? (
               <Button size="sm" onClick={() => setBlockDialogOpen(true)}>
@@ -447,7 +447,7 @@ export function AdminSlotsView() {
         onOpenChange={setBlockDialogOpen}
         activeDate={activeDate}
         selectedSlotIds={selectedSlotIds}
-        defaultAction="maintenance"
+        defaultAction="block"
         onDone={() => {
           setSelectedSlotIds([]);
           setSelectionMode(false);
