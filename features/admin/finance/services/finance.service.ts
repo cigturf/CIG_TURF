@@ -18,6 +18,7 @@ import {
 } from "@/features/admin/finance/services/finance-data.repository";
 import type { FinanceDashboardData } from "@/features/admin/finance/types/finance.types";
 import { resolveReportDateRange } from "@/features/admin/reports/lib/report-date-range";
+import { excludePendingReviewPayments } from "@/features/admin/reports/lib/reports-aggregation";
 import type { ReportDatePreset } from "@/features/admin/reports/types/reports.types";
 import { DEFAULT_VENUE_TIMEZONE, getTodayIsoInTimezone } from "@/features/booking/utils/venue-timezone";
 
@@ -59,28 +60,35 @@ export async function getFinanceDashboardData(
 
   const closingDay = closingDate ?? (preset === "today" ? today : range.to);
 
+  // Booking Details and Transaction History are factual per-booking/per-
+  // transaction records, so they show every payment as it actually happened.
+  // Revenue aggregates (overview, reconciliation, breakdown, trend, closing)
+  // exclude whatever's on manual hold (see excludePendingReviewPayments).
+  const activePeriodBookingPayments = excludePendingReviewPayments(periodBookingPayments);
+  const activePeriodPayments = excludePendingReviewPayments(periodPayments);
+
   return {
     range,
     overview: buildFinanceOverview({
-      periodBookingPayments,
+      periodBookingPayments: activePeriodBookingPayments,
       periodBookings,
     }),
-    paymentBreakdown: buildPaymentBreakdown(periodPayments),
+    paymentBreakdown: buildPaymentBreakdown(activePeriodPayments),
     pendingBookings,
     transactions: buildFinanceTransactions(periodPayments, bookingsById),
     dailyClosing: buildDailyClosing({
       date: closingDay,
-      payments: periodPayments,
+      payments: activePeriodPayments,
       bookings: periodBookings,
     }),
     reconciliation: buildReconciliation({
       bookings: periodBookings,
-      payments: periodBookingPayments,
+      payments: activePeriodBookingPayments,
     }),
     bookingCounts: buildBookingCounts(periodBookings),
     bookingDetails: buildFinanceBookingDetails(periodBookings, periodBookingPayments),
-    revenueTrend: buildDailyCollectionsSeries(periodPayments, range.from, range.to),
-    dailyCollections: buildDailyCollectionsSeries(periodPayments, range.from, range.to),
+    revenueTrend: buildDailyCollectionsSeries(activePeriodPayments, range.from, range.to),
+    dailyCollections: buildDailyCollectionsSeries(activePeriodPayments, range.from, range.to),
     pendingCollectionsTrend: buildPendingCollectionsTrend(periodBookings, range.from, range.to),
     generatedAt: new Date().toISOString(),
   };

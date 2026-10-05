@@ -5,6 +5,7 @@ import {
   buildBookingsPerDay,
   buildPaymentBreakdown,
   buildReportOverview,
+  excludePendingReviewPayments,
 } from "@/features/admin/reports/lib/reports-aggregation";
 
 function createBooking(
@@ -335,4 +336,32 @@ describe("reports aggregation", () => {
     expect(cash?.amount).toBe(0);
   });
 
+  it("holds a specific booking's payments out of revenue while under manual review", () => {
+    const payments = [
+      {
+        id: "pay1",
+        bookingId: "ab49cb40-72b5-4648-9ea7-47f530eb23d6", // on hold pending the owner's refund decision
+        type: "advance" as const,
+        amount: 200,
+        method: "online" as const,
+        collectedBy: null,
+        notes: null,
+        referenceNumber: null,
+        createdAt: new Date(),
+      },
+      {
+        id: "pay2",
+        bookingId: "some-other-booking",
+        type: "advance" as const,
+        amount: 300,
+        method: "cash" as const,
+        collectedBy: null,
+        notes: null,
+        referenceNumber: null,
+        createdAt: new Date(),
+      },
+    ];
+
+    expect(excludePendingReviewPayments(payments).map((p) => p.id)).toEqual(["pay2"]);
+  });
 });

@@ -12,6 +12,7 @@ import {
   buildPopularDays,
   buildPopularSlots,
   buildReportOverview,
+  excludePendingReviewPayments,
   isOnlineCollectionPayment,
   resolveSlotsPerDay,
 } from "@/features/admin/reports/lib/reports-aggregation";
@@ -45,9 +46,10 @@ export async function getReportsAnalyticsData(
     SettingsService.getPublic(),
   ]);
 
-  const periodBookingPayments = await listPaymentRecordsForBookingIds(
-    bookings.map((booking) => booking.id),
+  const periodBookingPayments = excludePendingReviewPayments(
+    await listPaymentRecordsForBookingIds(bookings.map((booking) => booking.id)),
   );
+  const activePayments = excludePendingReviewPayments(payments);
 
   const publicSettings =
     settings ?? toPublicBusinessSettings(createEmptyBusinessSettings());
@@ -74,22 +76,22 @@ export async function getReportsAnalyticsData(
     popularSlots: buildPopularSlots(bookings),
     popularDays: buildPopularDays(bookings),
     cancellationTrend: buildCancellationTrend(bookings, range.from, range.to),
-    dailyRevenue: buildDailyRevenue(payments, range.from, range.to),
-    revenueTrend: buildDailyRevenue(payments, range.from, range.to),
+    dailyRevenue: buildDailyRevenue(activePayments, range.from, range.to),
+    revenueTrend: buildDailyRevenue(activePayments, range.from, range.to),
     advancePayments: buildPaymentSeriesByDay(
-      payments,
+      activePayments,
       range.from,
       range.to,
       (payment) => payment.type === "advance",
     ),
     offlinePayments: buildPaymentSeriesByDay(
-      payments,
+      activePayments,
       range.from,
       range.to,
       (payment) => !isOnlineCollectionPayment(payment),
     ),
     pendingPayments: buildPendingPaymentsSeries(bookings, range.from, range.to),
-    paymentBreakdown: buildPaymentBreakdown(payments),
+    paymentBreakdown: buildPaymentBreakdown(activePayments),
     occupancy,
     generatedAt: new Date().toISOString(),
   };

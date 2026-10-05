@@ -74,6 +74,23 @@ function sumCollectedPayments(
 }
 
 /**
+ * Temporary, manual hold list — bookings whose collected-but-unrefunded
+ * money the venue owner hasn't yet decided whether to keep as revenue or
+ * refund. Excluded from every revenue total until that's settled. Delete an
+ * entry here once the owner confirms the outcome either way.
+ */
+const PENDING_REVIEW_BOOKING_IDS = new Set<string>([
+  // CIG-20260929-0002 — Rajat Aggarwal, cancelled, ₹200 Razorpay advance not refunded; owner hasn't decided yet (2026-10-06).
+  "ab49cb40-72b5-4648-9ea7-47f530eb23d6",
+]);
+
+export function excludePendingReviewPayments(
+  payments: BookingPaymentRecord[],
+): BookingPaymentRecord[] {
+  return payments.filter((payment) => !PENDING_REVIEW_BOOKING_IDS.has(payment.bookingId));
+}
+
+/**
  * A cancelled booking's money only drops out of revenue to the extent it was
  * actually refunded. If the venue kept it (no refund row for that booking),
  * it's real revenue and must still be counted — `paymentNetAmount` already
