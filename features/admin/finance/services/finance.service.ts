@@ -18,7 +18,6 @@ import {
 } from "@/features/admin/finance/services/finance-data.repository";
 import type { FinanceDashboardData } from "@/features/admin/finance/types/finance.types";
 import { resolveReportDateRange } from "@/features/admin/reports/lib/report-date-range";
-import { excludeCancelledBookingPayments } from "@/features/admin/reports/lib/reports-aggregation";
 import type { ReportDatePreset } from "@/features/admin/reports/types/reports.types";
 import { DEFAULT_VENUE_TIMEZONE, getTodayIsoInTimezone } from "@/features/booking/utils/venue-timezone";
 
@@ -48,8 +47,8 @@ export async function getFinanceDashboardData(
   // a different population from periodBookings (scoped by booking_date). Some
   // of those payments belong to bookings whose slot falls outside the range,
   // so bookingsById above won't have them; fetch whatever's missing so every
-  // payment can be checked against its real booking status and show the real
-  // customer instead of "Unknown".
+  // payment can show the real booking reference and customer instead of
+  // "Unknown".
   const missingBookingIds = [...new Set(periodPayments.map((payment) => payment.bookingId))].filter(
     (id) => !bookingsById.has(id),
   );
@@ -57,9 +56,6 @@ export async function getFinanceDashboardData(
   for (const booking of extraBookings) {
     bookingsById.set(booking.id, booking);
   }
-
-  const allReferencedBookings = [...bookingsById.values()];
-  const activePeriodPayments = excludeCancelledBookingPayments(allReferencedBookings, periodPayments);
 
   const closingDay = closingDate ?? (preset === "today" ? today : range.to);
 
@@ -69,12 +65,12 @@ export async function getFinanceDashboardData(
       periodBookingPayments,
       periodBookings,
     }),
-    paymentBreakdown: buildPaymentBreakdown(activePeriodPayments),
+    paymentBreakdown: buildPaymentBreakdown(periodPayments),
     pendingBookings,
-    transactions: buildFinanceTransactions(activePeriodPayments, bookingsById),
+    transactions: buildFinanceTransactions(periodPayments, bookingsById),
     dailyClosing: buildDailyClosing({
       date: closingDay,
-      payments: activePeriodPayments,
+      payments: periodPayments,
       bookings: periodBookings,
     }),
     reconciliation: buildReconciliation({
@@ -83,8 +79,8 @@ export async function getFinanceDashboardData(
     }),
     bookingCounts: buildBookingCounts(periodBookings),
     bookingDetails: buildFinanceBookingDetails(periodBookings, periodBookingPayments),
-    revenueTrend: buildDailyCollectionsSeries(activePeriodPayments, range.from, range.to),
-    dailyCollections: buildDailyCollectionsSeries(activePeriodPayments, range.from, range.to),
+    revenueTrend: buildDailyCollectionsSeries(periodPayments, range.from, range.to),
+    dailyCollections: buildDailyCollectionsSeries(periodPayments, range.from, range.to),
     pendingCollectionsTrend: buildPendingCollectionsTrend(periodBookings, range.from, range.to),
     generatedAt: new Date().toISOString(),
   };

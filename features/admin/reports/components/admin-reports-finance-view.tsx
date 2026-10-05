@@ -13,10 +13,7 @@ import type {
   OfflinePaymentMethod,
 } from "@/features/admin/bookings/types/admin-booking.types";
 import { FinanceBookingDetailsTable } from "@/features/admin/finance/components/finance-booking-details-table";
-import {
-  FinanceDailyClosingCard,
-  FinanceReconciliationCard,
-} from "@/features/admin/finance/components/finance-closing-reconciliation";
+import { FinanceReconciliationCard } from "@/features/admin/finance/components/finance-closing-reconciliation";
 import { FinancePendingTable } from "@/features/admin/finance/components/finance-pending-table";
 import { FinanceTransactionDrawer } from "@/features/admin/finance/components/finance-transaction-drawer";
 import { FinanceTransactionsTable } from "@/features/admin/finance/components/finance-transactions-table";
@@ -321,6 +318,48 @@ export function AdminReportsFinanceView({
 
       <FinanceReconciliationCard reconciliation={financeData.reconciliation} />
 
+      <div ref={bookingDetailsSectionRef}>
+        <ReportsSection
+          title="Booking Details"
+          description="Every booking in the selected period — customer, slot, how the advance was paid, and how the balance was (or wasn't) collected"
+        >
+          {bookingFilter !== "all" ? (
+            <button
+              type="button"
+              onClick={() => setBookingFilter("all")}
+              className="border-primary/30 bg-primary/10 text-primary mb-4 inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-sm font-medium"
+            >
+              {BOOKING_FILTER_LABELS[bookingFilter]} ({filteredBookingDetails.length})
+              <X className="size-3.5" />
+            </button>
+          ) : null}
+          <FinanceBookingDetailsTable
+            bookings={filteredBookingDetails}
+            onSelect={(bookingId) => void openBookingDetail(bookingId)}
+          />
+        </ReportsSection>
+      </div>
+
+      <ReportsSection title="Pending Collections" description="Bookings with outstanding balance">
+        <FinancePendingTable
+          bookings={financeData.pendingBookings}
+          onCollect={(booking) => {
+            setCollectBooking(booking);
+            setCollectOpen(true);
+          }}
+        />
+      </ReportsSection>
+
+      <ReportsSection title="Transaction History" description="Immutable payment records for the selected period">
+        <FinanceTransactionsTable
+          transactions={financeData.transactions}
+          onSelect={(transaction) => {
+            setSelectedTransaction(transaction);
+            setDrawerOpen(true);
+          }}
+        />
+      </ReportsSection>
+
       <ReportsSection title="Revenue & Collections" description="Trends across the selected period">
         <SwipeableCharts>
           <SwipeableChartItem>
@@ -405,50 +444,6 @@ export function AdminReportsFinanceView({
         <AnalyticsCard title="Busiest Hours Heatmap" description="Slot bookings by hour">
           <ReportHeatmap data={reportsData.occupancy.heatmap} />
         </AnalyticsCard>
-      </ReportsSection>
-
-      <FinanceDailyClosingCard closing={financeData.dailyClosing} />
-
-      <div ref={bookingDetailsSectionRef}>
-        <ReportsSection
-          title="Booking Details"
-          description="Every booking in the selected period — customer, slot, how the advance was paid, and how the balance was (or wasn't) collected"
-        >
-          {bookingFilter !== "all" ? (
-            <button
-              type="button"
-              onClick={() => setBookingFilter("all")}
-              className="border-primary/30 bg-primary/10 text-primary mb-4 inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-sm font-medium"
-            >
-              {BOOKING_FILTER_LABELS[bookingFilter]} ({filteredBookingDetails.length})
-              <X className="size-3.5" />
-            </button>
-          ) : null}
-          <FinanceBookingDetailsTable
-            bookings={filteredBookingDetails}
-            onSelect={(bookingId) => void openBookingDetail(bookingId)}
-          />
-        </ReportsSection>
-      </div>
-
-      <ReportsSection title="Pending Collections" description="Bookings with outstanding balance">
-        <FinancePendingTable
-          bookings={financeData.pendingBookings}
-          onCollect={(booking) => {
-            setCollectBooking(booking);
-            setCollectOpen(true);
-          }}
-        />
-      </ReportsSection>
-
-      <ReportsSection title="Transaction History" description="Immutable payment records for the selected period">
-        <FinanceTransactionsTable
-          transactions={financeData.transactions}
-          onSelect={(transaction) => {
-            setSelectedTransaction(transaction);
-            setDrawerOpen(true);
-          }}
-        />
       </ReportsSection>
 
       <FinanceTransactionDrawer

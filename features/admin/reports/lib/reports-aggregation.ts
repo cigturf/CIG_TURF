@@ -74,19 +74,36 @@ function sumCollectedPayments(
 }
 
 /**
- * Cancelled bookings never count toward revenue, whether or not a refund
- * payment was actually logged for them (many cash/offline cancellations never
- * get one) — so their payments are dropped from every revenue total, not just
- * netted via a "refund" type row.
+ * A cancelled booking's money only drops out of revenue to the extent it was
+ * actually refunded. If the venue kept it (no refund row for that booking),
+ * it's real revenue and must still be counted — `paymentNetAmount` already
+ * subtracts a logged refund from the same booking's total, so summing every
+ * payment through unfiltered gives the right net figure either way.
  */
-export function excludeCancelledBookingPayments(
+export function sumCancelledKeptAmount(
   bookings: AdminBookingRecord[],
   payments: BookingPaymentRecord[],
-): BookingPaymentRecord[] {
+): number {
   const cancelledBookingIds = new Set(
     bookings.filter((booking) => booking.status === "cancelled").map((booking) => booking.id),
   );
-  return payments.filter((payment) => !cancelledBookingIds.has(payment.bookingId));
+  return payments
+    .filter((payment) => cancelledBookingIds.has(payment.bookingId))
+    .reduce((sum, payment) => sum + paymentNetAmount(payment), 0);
+}
+
+/**
+ * "Online Collections" must mean money that actually moved through Razorpay —
+ * an admin choosing "online" as the method while recording a manual advance,
+ * a collected balance, or an Edit Amounts entry never touched Razorpay, so it
+ * belongs in Offline Collections, same as cash/UPI/card collected at the
+ * counter. A refund is bucketed by its own `method` regardless of who
+ * recorded it, so it nets against the same bucket as the advance it reverses.
+ */
+export function isOnlineCollectionPayment(payment: BookingPaymentRecord): boolean {
+  if (payment.method !== "online") return false;
+  if (payment.type === "refund") return true;
+  return isGenuineRazorpayPayment(payment);
 }
 
 /**
@@ -106,23 +123,19 @@ export function buildReportOverview(
   const cancelled = bookings.filter((booking) => booking.status === "cancelled");
   const manual = active.filter((booking) => booking.source === "manual");
   const online = active.filter((booking) => booking.source !== "manual");
-  const activeBookingPayments = excludeCancelledBookingPayments(bookings, payments);
 
   const totalAmount = active.reduce((sum, booking) => sum + booking.totalPrice, 0);
   const cancelledAmount = cancelled.reduce((sum, booking) => sum + booking.totalPrice, 0);
-  const totalRevenue = sumCollectedPayments(activeBookingPayments);
+  const totalRevenue = sumCollectedPayments(payments);
   const advanceCollected = sumCollectedPayments(
-    activeBookingPayments,
+    payments,
     (payment) => payment.type === "advance",
   );
   const offlineCollections = sumCollectedPayments(
-    activeBookingPayments,
-    (payment) => payment.method !== "online",
+    payments,
+    (payment) => !isOnlineCollectionPayment(payment),
   );
-  const onlineCollections = sumCollectedPayments(
-    activeBookingPayments,
-    (payment) => payment.method === "online",
-  );
+  const onlineCollections = sumCollectedPayments(payments, isOnlineCollectionPayment);
   const pendingCollections = active.reduce((sum, booking) => sum + booking.remainingAmount, 0);
 
   return {
@@ -321,9 +334,9 @@ export function resolvePaymentMethodLabel(payment: BookingPaymentRecord): string
 }
 
 /**
- * Expects `payments` to already exclude cancelled-booking payments (see
- * `excludeCancelledBookingPayments`) — this function only nets refunds
- * against their own method bucket, it doesn't know about booking status.
+ * Nets refunds against their own method bucket. A cancelled booking's
+ * payments are included like any other — if refunded, the refund row cancels
+ * the original advance out; if not, the kept amount still counts.
  */
 export function buildPaymentBreakdown(payments: BookingPaymentRecord[]): ReportPaymentBreakdown[] {
   const buckets = new Map<string, { amount: number; count: number }>();

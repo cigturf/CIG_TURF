@@ -5,7 +5,6 @@ import {
   buildBookingsPerDay,
   buildPaymentBreakdown,
   buildReportOverview,
-  excludeCancelledBookingPayments,
 } from "@/features/admin/reports/lib/reports-aggregation";
 
 function createBooking(
@@ -136,10 +135,10 @@ describe("reports aggregation", () => {
     expect(overview.totalRevenue).toBe(1200);
   });
 
-  it("drops a cancelled booking's collected money from revenue even when no refund was logged", () => {
-    // Regression: cash/offline cancellations routinely never get a "refund"
-    // payment row, so netting via payment type alone isn't enough — a
-    // cancelled booking's money must never count as revenue.
+  it("counts a cancelled booking's collected money as revenue when it was never refunded", () => {
+    // Regression: a cancelled booking's advance that the venue kept (no
+    // refund issued) is real revenue - it must not be silently dropped just
+    // because the booking itself was cancelled.
     const bookings = [
       createBooking({ id: "b1", status: "cancelled", totalPrice: 1200 }),
       createBooking({ id: "b2", status: "confirmed", totalPrice: 900 }),
@@ -148,10 +147,10 @@ describe("reports aggregation", () => {
     const overview = buildReportOverview(bookings, [
       {
         id: "pay1",
-        bookingId: "b1", // cancelled, no refund ever recorded
+        bookingId: "b1", // cancelled, no refund ever recorded - money was kept
         type: "advance",
         amount: 200,
-        method: "online",
+        method: "cash",
         collectedBy: null,
         notes: null,
         referenceNumber: null,
@@ -170,13 +169,70 @@ describe("reports aggregation", () => {
       },
     ]);
 
-    expect(overview.totalRevenue).toBe(300);
-    expect(overview.onlineCollections).toBe(0);
-    expect(overview.offlineCollections).toBe(300);
-    expect(overview.advanceCollected).toBe(300);
+    expect(overview.totalRevenue).toBe(500);
+    expect(overview.offlineCollections).toBe(500);
+    expect(overview.advanceCollected).toBe(500);
     expect(overview.totalAmount).toBe(900);
     expect(overview.cancelledAmount).toBe(1200);
     expect(overview.grossBookingValue).toBe(2100);
+  });
+
+  it("nets a cancelled booking's advance back out when it actually was refunded", () => {
+    const bookings = [createBooking({ id: "b1", status: "cancelled", totalPrice: 1200 })];
+
+    const overview = buildReportOverview(bookings, [
+      {
+        id: "pay1",
+        bookingId: "b1",
+        type: "advance",
+        amount: 200,
+        method: "online",
+        collectedBy: null,
+        notes: null,
+        referenceNumber: "pay_abc123",
+        createdAt: new Date("2026-07-01T00:00:00Z"),
+      },
+      {
+        id: "pay2",
+        bookingId: "b1",
+        type: "refund",
+        amount: 200,
+        method: "online",
+        collectedBy: "admin-1",
+        notes: null,
+        referenceNumber: "pay_abc123",
+        createdAt: new Date("2026-07-02T00:00:00Z"),
+      },
+    ]);
+
+    expect(overview.totalRevenue).toBe(0);
+    expect(overview.onlineCollections).toBe(0);
+    expect(overview.offlineCollections).toBe(0);
+  });
+
+  it("buckets an admin-recorded 'online' collection as offline, not Razorpay", () => {
+    // Regression: picking "Online" as the method while recording a manual
+    // advance/collection never actually touches Razorpay - it must count
+    // toward Offline Collections, same as UPI/cash taken at the counter.
+    const overview = buildReportOverview(
+      [createBooking({ id: "b1", status: "confirmed", totalPrice: 900 })],
+      [
+        {
+          id: "pay1",
+          bookingId: "b1",
+          type: "remaining",
+          amount: 300,
+          method: "online",
+          collectedBy: "admin-1", // admin chose "Online" at the counter
+          notes: null,
+          referenceNumber: null,
+          createdAt: new Date("2026-07-01T00:00:00Z"),
+        },
+      ],
+    );
+
+    expect(overview.onlineCollections).toBe(0);
+    expect(overview.offlineCollections).toBe(300);
   });
 
   it("builds bookings per day series", () => {
@@ -279,44 +335,4 @@ describe("reports aggregation", () => {
     expect(cash?.amount).toBe(0);
   });
 
-  it("excludes payments tied to a cancelled booking even if that booking isn't in the passed-in list", () => {
-    // Regression: daily-closing/transactions/trend charts fetch payments by
-    // their own createdAt date, which can include a payment whose booking's
-    // slot date falls outside the selected range — if that booking's status
-    // isn't looked up too, a cancelled booking's money would slip through.
-    const payments = [
-      {
-        id: "pay1",
-        bookingId: "cancelled-booking",
-        type: "advance" as const,
-        amount: 500,
-        method: "cash" as const,
-        collectedBy: null,
-        notes: null,
-        referenceNumber: null,
-        createdAt: new Date(),
-      },
-      {
-        id: "pay2",
-        bookingId: "active-booking",
-        type: "advance" as const,
-        amount: 300,
-        method: "cash" as const,
-        collectedBy: null,
-        notes: null,
-        referenceNumber: null,
-        createdAt: new Date(),
-      },
-    ];
-
-    const result = excludeCancelledBookingPayments(
-      [
-        createBooking({ id: "cancelled-booking", status: "cancelled" }),
-        createBooking({ id: "active-booking", status: "confirmed" }),
-      ],
-      payments,
-    );
-
-    expect(result.map((payment) => payment.id)).toEqual(["pay2"]);
-  });
 });

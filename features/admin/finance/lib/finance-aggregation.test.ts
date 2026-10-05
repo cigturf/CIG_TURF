@@ -108,18 +108,18 @@ describe("finance aggregation", () => {
     expect(overview.grossBookingValue).toBe(2100);
   });
 
-  it("drops a cancelled booking's collected money even when no refund was logged", () => {
-    // Regression: cash/offline cancellations routinely never get a "refund"
-    // payment row, so netting via payment type alone isn't enough — a
-    // cancelled booking's money must never count as revenue.
+  it("counts a cancelled booking's collected money when it was never refunded", () => {
+    // Regression: a cancelled booking's advance that the venue kept (no
+    // refund issued) is real revenue - it must not be dropped from Collected
+    // just because the booking itself was cancelled.
     const overview = buildFinanceOverview({
       periodBookingPayments: [
         {
           id: "p1",
-          bookingId: "b1", // cancelled booking, no refund ever recorded
+          bookingId: "b1", // cancelled booking, kept (no refund)
           type: "advance",
           amount: 200,
-          method: "online",
+          method: "cash",
           collectedBy: null,
           notes: null,
           referenceNumber: null,
@@ -143,10 +143,31 @@ describe("finance aggregation", () => {
       ],
     });
 
-    expect(overview.collectedAmount).toBe(300);
+    expect(overview.collectedAmount).toBe(500);
+    expect(overview.offlineCollections).toBe(500);
+    expect(overview.advanceCollected).toBe(500);
+  });
+
+  it("buckets an admin-recorded 'online' collection as offline, not Razorpay", () => {
+    const overview = buildFinanceOverview({
+      periodBookingPayments: [
+        {
+          id: "p1",
+          bookingId: "b1",
+          type: "remaining",
+          amount: 300,
+          method: "online",
+          collectedBy: "admin-1",
+          notes: null,
+          referenceNumber: null,
+          createdAt: new Date("2026-07-01T00:00:00Z"),
+        },
+      ],
+      periodBookings: [createBooking({ id: "b1", status: "confirmed", totalPrice: 900 })],
+    });
+
     expect(overview.onlineCollections).toBe(0);
     expect(overview.offlineCollections).toBe(300);
-    expect(overview.advanceCollected).toBe(300);
   });
 
   it("builds daily closing from payment methods", () => {
@@ -246,7 +267,7 @@ describe("finance aggregation", () => {
     expect(reconciliation.hasDiscrepancy).toBe(false);
   });
 
-  it("does not treat an unrefunded cancelled booking's advance as a reconciliation discrepancy", () => {
+  it("counts a kept (unrefunded) cancelled booking's advance as collected, not a discrepancy", () => {
     const reconciliation = buildReconciliation({
       bookings: [createBooking({ id: "b1", status: "cancelled", totalPrice: 1200, remainingAmount: 1000 })],
       payments: [
@@ -260,6 +281,41 @@ describe("finance aggregation", () => {
           notes: null,
           referenceNumber: null,
           createdAt: new Date("2026-07-01T00:00:00Z"),
+        },
+      ],
+    });
+
+    expect(reconciliation.expectedRevenue).toBe(200);
+    expect(reconciliation.collectedRevenue).toBe(200);
+    expect(reconciliation.outstandingRevenue).toBe(0);
+    expect(reconciliation.hasDiscrepancy).toBe(false);
+  });
+
+  it("nets a refunded cancelled booking's advance out of both expected and collected", () => {
+    const reconciliation = buildReconciliation({
+      bookings: [createBooking({ id: "b1", status: "cancelled", totalPrice: 1200, remainingAmount: 1000 })],
+      payments: [
+        {
+          id: "p1",
+          bookingId: "b1",
+          type: "advance",
+          amount: 200,
+          method: "online",
+          collectedBy: null,
+          notes: null,
+          referenceNumber: "pay_abc123",
+          createdAt: new Date("2026-07-01T00:00:00Z"),
+        },
+        {
+          id: "p2",
+          bookingId: "b1",
+          type: "refund",
+          amount: 200,
+          method: "online",
+          collectedBy: "admin-1",
+          notes: null,
+          referenceNumber: "pay_abc123",
+          createdAt: new Date("2026-07-02T00:00:00Z"),
         },
       ],
     });
@@ -334,6 +390,10 @@ describe("finance aggregation", () => {
     // balance is collected, so advancePaid ends up equal to totalPrice once
     // a booking is fully paid - it stops meaning "the advance" at all. The
     // booking detail report must use the ledger's own "advance" rows instead.
+    // Fixture mirrors a real, corrected booking: a genuine ₹200 Razorpay
+    // advance plus a separate ₹200 UPI advance recorded later. The old Edit
+    // Amounts bug used to merge both into one fabricated ₹400 "online" row;
+    // they've since been split back into their own rows.
     const [detail] = buildFinanceBookingDetails(
       [createBooking({ id: "b1", totalPrice: 1800, advancePaid: 1800, remainingAmount: 0 })],
       [
@@ -341,7 +401,7 @@ describe("finance aggregation", () => {
           id: "p1",
           bookingId: "b1",
           type: "advance",
-          amount: 400,
+          amount: 200,
           method: "online",
           collectedBy: null,
           notes: null,
@@ -350,6 +410,17 @@ describe("finance aggregation", () => {
         },
         {
           id: "p2",
+          bookingId: "b1",
+          type: "advance",
+          amount: 200,
+          method: "upi",
+          collectedBy: "admin1",
+          notes: null,
+          referenceNumber: null,
+          createdAt: new Date("2026-09-29T06:41:54Z"),
+        },
+        {
+          id: "p3",
           bookingId: "b1",
           type: "remaining",
           amount: 900,
@@ -360,7 +431,7 @@ describe("finance aggregation", () => {
           createdAt: new Date("2026-10-05T11:46:16Z"),
         },
         {
-          id: "p3",
+          id: "p4",
           bookingId: "b1",
           type: "remaining",
           amount: 500,
@@ -374,7 +445,8 @@ describe("finance aggregation", () => {
     );
 
     expect(detail?.advanceAmount).toBe(400);
-    expect(detail?.advanceMethod).toBe("Razorpay");
+    expect(detail?.advanceMethod).toContain("Razorpay");
+    expect(detail?.advanceMethod).toContain("UPI");
     expect(detail?.balancePaidAmount).toBe(1400);
     // Collected across two different methods - both should be visible,
     // not just whichever payment happens to sort first/last.

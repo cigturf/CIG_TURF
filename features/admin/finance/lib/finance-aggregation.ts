@@ -11,8 +11,9 @@ import { enumerateIsoDates } from "@/features/admin/reports/lib/report-date-rang
 import {
   buildPaymentBreakdown,
   buildPendingPaymentsSeries,
-  excludeCancelledBookingPayments,
+  isOnlineCollectionPayment,
   resolvePaymentMethodLabel,
+  sumCancelledKeptAmount,
 } from "@/features/admin/reports/lib/reports-aggregation";
 import type { ReportSeriesPoint } from "@/features/admin/reports/types/reports.types";
 
@@ -57,16 +58,15 @@ export function buildFinanceOverview(input: {
   const cancelledPeriodBookings = input.periodBookings.filter(
     (booking) => booking.status === "cancelled",
   );
-  const activeBookingPayments = excludeCancelledBookingPayments(
-    input.periodBookings,
-    input.periodBookingPayments,
-  );
   const totalAmount = activePeriodBookings.reduce((sum, booking) => sum + booking.totalPrice, 0);
   const cancelledAmount = cancelledPeriodBookings.reduce(
     (sum, booking) => sum + booking.totalPrice,
     0,
   );
-  const collectedAmount = sumPayments(activeBookingPayments);
+  // Cancelled bookings' payments are included like any other — a logged
+  // refund nets the advance back out via paymentNetAmount, but money the
+  // venue kept (no refund) still counts as real revenue.
+  const collectedAmount = sumPayments(input.periodBookingPayments);
 
   return {
     grossBookingValue: totalAmount + cancelledAmount,
@@ -78,17 +78,14 @@ export function buildFinanceOverview(input: {
       0,
     ),
     advanceCollected: sumPayments(
-      activeBookingPayments,
+      input.periodBookingPayments,
       (payment) => payment.type === "advance",
     ),
     offlineCollections: sumPayments(
-      activeBookingPayments,
-      (payment) => payment.method !== "online",
+      input.periodBookingPayments,
+      (payment) => !isOnlineCollectionPayment(payment),
     ),
-    onlineCollections: sumPayments(
-      activeBookingPayments,
-      (payment) => payment.method === "online",
-    ),
+    onlineCollections: sumPayments(input.periodBookingPayments, isOnlineCollectionPayment),
     averageBookingValue:
       activePeriodBookings.length > 0
         ? Math.round(collectedAmount / activePeriodBookings.length)
@@ -154,9 +151,14 @@ export function buildReconciliation(input: {
   payments: BookingPaymentRecord[];
 }): FinanceReconciliation {
   const activeBookings = input.bookings.filter((booking) => booking.status !== "cancelled");
-  const activeBookingPayments = excludeCancelledBookingPayments(input.bookings, input.payments);
-  const expectedRevenue = activeBookings.reduce((sum, booking) => sum + booking.totalPrice, 0);
-  const collectedRevenue = sumPayments(activeBookingPayments);
+  // A cancelled booking's kept (non-refunded) money is real revenue that was
+  // collected but never belonged to any "expected" active booking value — it
+  // has to be added to both sides so collected = expected - outstanding still
+  // holds instead of showing a false discrepancy.
+  const cancelledKeptAmount = sumCancelledKeptAmount(input.bookings, input.payments);
+  const expectedRevenue =
+    activeBookings.reduce((sum, booking) => sum + booking.totalPrice, 0) + cancelledKeptAmount;
+  const collectedRevenue = sumPayments(input.payments);
   const outstandingRevenue = activeBookings.reduce(
     (sum, booking) => sum + booking.remainingAmount,
     0,

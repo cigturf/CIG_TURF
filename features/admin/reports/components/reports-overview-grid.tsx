@@ -121,8 +121,13 @@ export function ReportsOverviewGrid({
                   />
                 )}
                 <Text size="sm" className="text-muted-foreground mt-1.5">
-                  {isClickable ? "Click to view these bookings" : definition.hint}
+                  {definition.hint}
                 </Text>
+                {isClickable ? (
+                  <Text size="sm" className="text-primary mt-1 text-xs font-medium">
+                    Click to view these bookings →
+                  </Text>
+                ) : null}
               </CardBody>
             </Card>
           </motion.div>
