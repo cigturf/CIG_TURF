@@ -328,6 +328,60 @@ describe("finance aggregation", () => {
     expect(detail?.isCompleted).toBe(false);
   });
 
+  it("reports the real advance from the payment ledger, not booking.advancePaid once it's been inflated by a later collection", () => {
+    // Regression: collectBookingPayment (admin-booking.service.ts) does
+    // `advancePaid: booking.advancePaid + amount` every time a remaining
+    // balance is collected, so advancePaid ends up equal to totalPrice once
+    // a booking is fully paid - it stops meaning "the advance" at all. The
+    // booking detail report must use the ledger's own "advance" rows instead.
+    const [detail] = buildFinanceBookingDetails(
+      [createBooking({ id: "b1", totalPrice: 1800, advancePaid: 1800, remainingAmount: 0 })],
+      [
+        {
+          id: "p1",
+          bookingId: "b1",
+          type: "advance",
+          amount: 400,
+          method: "online",
+          collectedBy: null,
+          notes: null,
+          referenceNumber: "pay_ThkvYmwU4Z0A0S",
+          createdAt: new Date("2026-09-29T06:41:53Z"),
+        },
+        {
+          id: "p2",
+          bookingId: "b1",
+          type: "remaining",
+          amount: 900,
+          method: "upi",
+          collectedBy: "admin1",
+          notes: null,
+          referenceNumber: null,
+          createdAt: new Date("2026-10-05T11:46:16Z"),
+        },
+        {
+          id: "p3",
+          bookingId: "b1",
+          type: "remaining",
+          amount: 500,
+          method: "cash",
+          collectedBy: "admin1",
+          notes: null,
+          referenceNumber: null,
+          createdAt: new Date("2026-10-05T11:46:27Z"),
+        },
+      ],
+    );
+
+    expect(detail?.advanceAmount).toBe(400);
+    expect(detail?.advanceMethod).toBe("Online (Razorpay)");
+    expect(detail?.balancePaidAmount).toBe(1400);
+    // Collected across two different methods - both should be visible,
+    // not just whichever payment happens to sort first/last.
+    expect(detail?.balanceMethod).toContain("UPI");
+    expect(detail?.balanceMethod).toContain("Cash");
+  });
+
   it("marks a booking's balance as pending or not required depending on what's left owing", () => {
     const [pendingBooking, fullyAdvancePaidBooking] = buildFinanceBookingDetails(
       [

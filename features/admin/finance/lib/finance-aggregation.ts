@@ -176,16 +176,25 @@ function methodLabel(method: BookingPaymentRecord["method"]): string {
   return PAYMENT_METHOD_LABELS[method] ?? method;
 }
 
-/** Picks the payment that best represents a leg (advance/remaining) of a booking's cost. */
+/**
+ * Summarizes a leg (advance/remaining) of a booking's cost from its own
+ * payment records. A leg collected across more than one payment (e.g. part
+ * UPI, part cash) shows every distinct method used, instead of silently
+ * picking just one and implying the whole amount went through it.
+ */
 function describeLeg(payments: BookingPaymentRecord[], type: BookingPaymentRecord["type"]) {
   const matches = payments.filter((payment) => payment.type === type);
   if (matches.length === 0) {
     return { amountPaid: 0, method: "—", referenceId: null as string | null };
   }
   const amountPaid = matches.reduce((sum, payment) => sum + payment.amount, 0);
+  const uniqueMethods = [...new Set(matches.map((payment) => methodLabel(payment.method)))];
   const withReference = matches.find((payment) => payment.referenceNumber);
-  const primary = withReference ?? matches[0]!;
-  return { amountPaid, method: methodLabel(primary.method), referenceId: primary.referenceNumber };
+  return {
+    amountPaid,
+    method: uniqueMethods.join(" + "),
+    referenceId: withReference?.referenceNumber ?? null,
+  };
 }
 
 export function buildFinanceBookingDetails(
@@ -220,7 +229,11 @@ export function buildFinanceBookingDetails(
       endTime: booking.endTime,
       durationMinutes: booking.durationMinutes,
       totalPrice: booking.totalPrice,
-      advanceAmount: booking.advancePaid,
+      // booking.advancePaid gets incremented by every later "collect remaining
+      // payment" action (features/admin/bookings/services/admin-booking.service.ts),
+      // so once a balance is collected it no longer reflects just the advance —
+      // the payment ledger's own "advance"-type rows are the source of truth here.
+      advanceAmount: advance.amountPaid,
       advanceMethod: advance.amountPaid > 0 ? advance.method : "—",
       advanceReferenceId: advance.amountPaid > 0 ? advance.referenceId : null,
       balanceStatus,
