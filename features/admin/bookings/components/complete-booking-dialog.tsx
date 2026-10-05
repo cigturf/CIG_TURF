@@ -27,9 +27,7 @@ type CompleteBookingDialogProps = {
   bookingReference: string;
   onSubmit: (payload: {
     collection?: {
-      amount: number;
-      method: OfflinePaymentMethod;
-      referenceNumber?: string;
+      parts: { amount: number; method: OfflinePaymentMethod; referenceNumber?: string }[];
       notes?: string;
     };
     overrideOutstanding?: boolean;
@@ -90,9 +88,13 @@ export function CompleteBookingDialog({
         collection:
           hasOutstanding && !overrideEnabled
             ? {
-                amount: parsedAmount,
-                method,
-                referenceNumber: referenceNumber.trim() || undefined,
+                parts: [
+                  {
+                    amount: parsedAmount,
+                    method,
+                    referenceNumber: referenceNumber.trim() || undefined,
+                  },
+                ],
                 notes: collectionNotes.trim() || undefined,
               }
             : undefined,

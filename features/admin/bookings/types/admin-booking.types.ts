@@ -108,10 +108,15 @@ export type UpdateBookingInput = {
   advanceAdjustmentMethod?: OfflinePaymentMethod;
 };
 
-export type CollectPaymentInput = {
+export type CollectPaymentPart = {
   amount: number;
   method: OfflinePaymentMethod;
   referenceNumber?: string;
+};
+
+/** A collection can be split across methods (e.g. part cash, part UPI) in one go. */
+export type CollectPaymentInput = {
+  parts: CollectPaymentPart[];
   notes?: string;
 };
 

@@ -14,6 +14,7 @@ import type {
 } from "@/features/admin/bookings/types/admin-booking.types";
 import { FinanceBookingDetailsTable } from "@/features/admin/finance/components/finance-booking-details-table";
 import { FinanceReconciliationCard } from "@/features/admin/finance/components/finance-closing-reconciliation";
+import { OfflineCollectionsBreakdownCard } from "@/features/admin/finance/components/offline-collections-breakdown-card";
 import { FinancePendingTable } from "@/features/admin/finance/components/finance-pending-table";
 import { FinanceTransactionDrawer } from "@/features/admin/finance/components/finance-transaction-drawer";
 import { FinanceTransactionsTable } from "@/features/admin/finance/components/finance-transactions-table";
@@ -176,9 +177,7 @@ export function AdminReportsFinanceView({
   );
 
   const handleCollect = async (payload: {
-    amount: number;
-    method: OfflinePaymentMethod;
-    referenceNumber?: string;
+    parts: { amount: number; method: OfflinePaymentMethod; referenceNumber?: string }[];
     notes?: string;
   }) => {
     if (!collectBooking) return;
@@ -237,9 +236,7 @@ export function AdminReportsFinanceView({
   };
 
   const collectDetailPayment = async (payload: {
-    amount: number;
-    method: OfflinePaymentMethod;
-    referenceNumber?: string;
+    parts: { amount: number; method: OfflinePaymentMethod; referenceNumber?: string }[];
     notes?: string;
   }) => {
     if (!selectedBookingId) return;
@@ -392,6 +389,10 @@ export function AdminReportsFinanceView({
             <ReportBarChart data={paymentMethodSeries} valueFormat="currency" accentClassName="bg-chart-2" />
           </div>
         </AnalyticsCard>
+        <OfflineCollectionsBreakdownCard
+          breakdown={financeData.offlineCollectionsBreakdown}
+          total={financeData.overview.offlineCollections}
+        />
       </ReportsSection>
 
       <ReportsSection title="Booking Analytics" description="When and how customers book">

@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import type { AdminBookingRecord } from "@/features/admin/bookings/types/admin-booking.types";
 import {
   buildBookingsPerDay,
+  buildOfflineCollectionsBreakdown,
   buildPaymentBreakdown,
   buildReportOverview,
   excludePendingReviewPayments,
@@ -363,5 +364,47 @@ describe("reports aggregation", () => {
     ];
 
     expect(excludePendingReviewPayments(payments).map((p) => p.id)).toEqual(["pay2"]);
+  });
+
+  it("breaks offline collections down by method, excluding genuine Razorpay payments", () => {
+    const breakdown = buildOfflineCollectionsBreakdown([
+      {
+        id: "pay1",
+        bookingId: "b1",
+        type: "advance",
+        amount: 200,
+        method: "online",
+        collectedBy: null, // genuine Razorpay - must be excluded from this breakdown
+        notes: null,
+        referenceNumber: null,
+        createdAt: new Date(),
+      },
+      {
+        id: "pay2",
+        bookingId: "b1",
+        type: "remaining",
+        amount: 300,
+        method: "cash",
+        collectedBy: "admin-1",
+        notes: null,
+        referenceNumber: null,
+        createdAt: new Date(),
+      },
+      {
+        id: "pay3",
+        bookingId: "b1",
+        type: "remaining",
+        amount: 100,
+        method: "upi",
+        collectedBy: "admin-1",
+        notes: null,
+        referenceNumber: null,
+        createdAt: new Date(),
+      },
+    ]);
+
+    expect(breakdown.find((item) => item.method === "Razorpay")).toBeUndefined();
+    expect(breakdown.find((item) => item.method === "Cash")?.amount).toBe(300);
+    expect(breakdown.find((item) => item.method === "UPI")?.amount).toBe(100);
   });
 });

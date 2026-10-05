@@ -19,11 +19,15 @@ export async function POST(request: Request, context: RouteContext) {
       id,
       {
         collection:
-          body.collection && Number(body.collection.amount) > 0
+          body.collection && Array.isArray(body.collection.parts) && body.collection.parts.length > 0
             ? {
-                amount: Number(body.collection.amount),
-                method: body.collection.method,
-                referenceNumber: body.collection.referenceNumber,
+                parts: body.collection.parts.map(
+                  (part: { amount: number; method: string; referenceNumber?: string }) => ({
+                    amount: Number(part.amount),
+                    method: part.method,
+                    referenceNumber: part.referenceNumber,
+                  }),
+                ),
                 notes: body.collection.notes,
               }
             : undefined,

@@ -212,9 +212,7 @@ export function AdminBookingsView() {
   };
 
   const collectPayment = async (payload: {
-    amount: number;
-    method: OfflinePaymentMethod;
-    referenceNumber?: string;
+    parts: { amount: number; method: OfflinePaymentMethod; referenceNumber?: string }[];
     notes?: string;
   }) => {
     if (!selectedBookingId) return;
@@ -235,9 +233,7 @@ export function AdminBookingsView() {
 
   const completeBooking = async (payload: {
     collection?: {
-      amount: number;
-      method: OfflinePaymentMethod;
-      referenceNumber?: string;
+      parts: { amount: number; method: OfflinePaymentMethod; referenceNumber?: string }[];
       notes?: string;
     };
     overrideOutstanding?: boolean;

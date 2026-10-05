@@ -18,7 +18,10 @@ import {
 } from "@/features/admin/finance/services/finance-data.repository";
 import type { FinanceDashboardData } from "@/features/admin/finance/types/finance.types";
 import { resolveReportDateRange } from "@/features/admin/reports/lib/report-date-range";
-import { excludePendingReviewPayments } from "@/features/admin/reports/lib/reports-aggregation";
+import {
+  buildOfflineCollectionsBreakdown,
+  excludePendingReviewPayments,
+} from "@/features/admin/reports/lib/reports-aggregation";
 import type { ReportDatePreset } from "@/features/admin/reports/types/reports.types";
 import { DEFAULT_VENUE_TIMEZONE, getTodayIsoInTimezone } from "@/features/booking/utils/venue-timezone";
 
@@ -74,6 +77,7 @@ export async function getFinanceDashboardData(
       periodBookings,
     }),
     paymentBreakdown: buildPaymentBreakdown(activePeriodPayments),
+    offlineCollectionsBreakdown: buildOfflineCollectionsBreakdown(activePeriodPayments),
     pendingBookings,
     transactions: buildFinanceTransactions(periodPayments, bookingsById),
     dailyClosing: buildDailyClosing({

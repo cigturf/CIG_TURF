@@ -24,6 +24,7 @@ import {
   updateBookingPaymentRecordAmount,
 } from "@/features/admin/bookings/services/booking-payment.repository";
 import { buildBookingTimeline } from "@/features/admin/bookings/services/booking-timeline.service";
+import { PAYMENT_METHOD_LABELS } from "@/features/admin/reports/lib/reports-aggregation";
 import { refundOnlineAdvanceForBooking } from "@/features/payments/services/payment-refund.service";
 import { releaseSlotHoldsForSession } from "@/features/booking/services/slot-hold.repository";
 import { getPaymentById } from "@/features/payments/services/payment.repository";
@@ -458,24 +459,43 @@ async function applyBookingPaymentCollection(
   input: CollectPaymentInput,
   actor: AdminActor,
 ): Promise<NonNullable<Awaited<ReturnType<typeof updateBookingRecord>>>> {
-  const amount = Math.min(Number(input.amount), booking.remainingAmount);
-  if (!Number.isFinite(amount) || amount <= 0) {
+  const parts = (input.parts ?? []).filter((part) => Number(part.amount) > 0);
+  if (parts.length === 0) {
     throw new Error("Enter a valid collection amount.");
   }
 
-  await createBookingPaymentRecord({
-    bookingId: id,
-    type: "remaining",
-    amount,
-    method: input.method,
-    collectedBy: actor.userId,
-    notes: input.notes ?? null,
-    referenceNumber: input.referenceNumber ?? null,
-  });
+  const totalAmount = parts.reduce((sum, part) => sum + Number(part.amount), 0);
+  if (!Number.isFinite(totalAmount) || totalAmount <= 0) {
+    throw new Error("Enter a valid collection amount.");
+  }
+  if (totalAmount > booking.remainingAmount) {
+    throw new Error("Amount cannot exceed the outstanding balance.");
+  }
 
-  const newRemaining = booking.remainingAmount - amount;
+  for (const part of parts) {
+    await createBookingPaymentRecord({
+      bookingId: id,
+      type: "remaining",
+      amount: Number(part.amount),
+      method: part.method,
+      collectedBy: actor.userId,
+      notes: input.notes ?? null,
+      referenceNumber: part.referenceNumber ?? null,
+    });
+  }
+
+  const methodSummary = [...new Set(parts.map((part) => PAYMENT_METHOD_LABELS[part.method] ?? part.method))].join(
+    " + ",
+  );
+  const referenceSummary =
+    parts
+      .map((part) => part.referenceNumber)
+      .filter((reference): reference is string => Boolean(reference))
+      .join(", ") || null;
+
+  const newRemaining = booking.remainingAmount - totalAmount;
   const updated = await updateBookingRecord(id, {
-    advancePaid: booking.advancePaid + amount,
+    advancePaid: booking.advancePaid + totalAmount,
     remainingAmount: newRemaining,
   });
 
@@ -491,24 +511,29 @@ async function applyBookingPaymentCollection(
     String(booking.remainingAmount),
     String(newRemaining),
     {
-      collectedAmount: amount,
-      method: input.method,
-      referenceNumber: input.referenceNumber ?? null,
+      collectedAmount: totalAmount,
+      method: methodSummary,
+      referenceNumber: referenceSummary,
+      parts: parts.map((part) => ({
+        amount: Number(part.amount),
+        method: part.method,
+        referenceNumber: part.referenceNumber ?? null,
+      })),
     },
   );
 
   if (newRemaining <= 0) {
     await dispatchPaymentCollectedEmails(updated, {
-      collectedAmount: amount,
-      method: input.method,
-      referenceNumber: input.referenceNumber ?? null,
+      collectedAmount: totalAmount,
+      method: methodSummary,
+      referenceNumber: referenceSummary,
       remainingAmount: newRemaining,
     });
   } else {
     await dispatchPartialPaymentEmails(updated, {
-      collectedAmount: amount,
-      method: input.method,
-      referenceNumber: input.referenceNumber ?? null,
+      collectedAmount: totalAmount,
+      method: methodSummary,
+      referenceNumber: referenceSummary,
       remainingAmount: newRemaining,
     });
   }
@@ -518,9 +543,9 @@ async function applyBookingPaymentCollection(
     {
       bookingId: id,
       bookingReference: updated.bookingReference,
-      collectedAmount: amount,
-      method: input.method,
-      referenceNumber: input.referenceNumber ?? null,
+      collectedAmount: totalAmount,
+      method: methodSummary,
+      referenceNumber: referenceSummary,
       remainingAmount: newRemaining,
     },
   );
@@ -552,13 +577,18 @@ export async function completeAdminBooking(
     throw new Error("Booking cannot be completed from its current status.");
   }
 
-  if (input.collection && Number(input.collection.amount) > 0) {
+  const collectionTotal = (input.collection?.parts ?? []).reduce(
+    (sum, part) => sum + Number(part.amount || 0),
+    0,
+  );
+
+  if (input.collection && collectionTotal > 0) {
     await applyBookingPaymentCollection(id, booking, input.collection, actor);
     booking = (await getBookingById(id)) ?? booking;
   }
 
   if (booking.remainingAmount > 0 && !input.overrideOutstanding) {
-    const collectedNow = Boolean(input.collection && Number(input.collection.amount) > 0);
+    const collectedNow = Boolean(input.collection && collectionTotal > 0);
     if (!collectedNow) {
       throw new Error(
         "Record the amount collected (full or partial), or use owner override to complete without payment.",

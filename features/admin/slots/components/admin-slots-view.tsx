@@ -271,9 +271,7 @@ export function AdminSlotsView() {
   };
 
   const collectPayment = async (payload: {
-    amount: number;
-    method: OfflinePaymentMethod;
-    referenceNumber?: string;
+    parts: { amount: number; method: OfflinePaymentMethod; referenceNumber?: string }[];
     notes?: string;
   }) => {
     if (!selectedBookingId) return;

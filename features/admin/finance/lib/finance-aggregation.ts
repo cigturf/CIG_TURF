@@ -5,6 +5,7 @@ import type {
   FinanceDailyClosing,
   FinanceOverview,
   FinanceReconciliation,
+  FinanceReconciliationDiscrepancyRow,
   FinanceTransaction,
 } from "@/features/admin/finance/types/finance.types";
 import { enumerateIsoDates } from "@/features/admin/reports/lib/report-date-range";
@@ -171,7 +172,48 @@ export function buildReconciliation(input: {
     outstandingRevenue,
     discrepancy,
     hasDiscrepancy: Math.abs(discrepancy) > 0,
+    discrepancies: buildReconciliationDiscrepancies(input.bookings, input.payments),
   };
+}
+
+/**
+ * Per-booking rows behind the aggregate discrepancy figure — an active
+ * booking where totalPrice doesn't equal its own collected + outstanding.
+ * Cancelled bookings are skipped: under this model their "expected" is
+ * defined as whatever they collected and kept, so they can never disagree
+ * with themselves.
+ */
+function buildReconciliationDiscrepancies(
+  bookings: AdminBookingRecord[],
+  payments: BookingPaymentRecord[],
+): FinanceReconciliationDiscrepancyRow[] {
+  const paymentsByBooking = new Map<string, BookingPaymentRecord[]>();
+  for (const payment of payments) {
+    const list = paymentsByBooking.get(payment.bookingId) ?? [];
+    list.push(payment);
+    paymentsByBooking.set(payment.bookingId, list);
+  }
+
+  const rows: FinanceReconciliationDiscrepancyRow[] = [];
+  for (const booking of bookings) {
+    if (booking.status === "cancelled") continue;
+    const collected = sumPayments(paymentsByBooking.get(booking.id) ?? []);
+    const outstanding = booking.remainingAmount;
+    const discrepancy = booking.totalPrice - (collected + outstanding);
+    if (discrepancy === 0) continue;
+    rows.push({
+      bookingId: booking.id,
+      bookingReference: booking.bookingReference,
+      customerName: booking.customerName,
+      status: booking.status,
+      expected: booking.totalPrice,
+      collected,
+      outstanding,
+      discrepancy,
+    });
+  }
+
+  return rows.sort((a, b) => Math.abs(b.discrepancy) - Math.abs(a.discrepancy));
 }
 
 /**

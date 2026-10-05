@@ -55,13 +55,44 @@ export function FinanceReconciliationCard({ reconciliation }: FinanceReconciliat
       </div>
       {reconciliation.hasDiscrepancy ? (
         <p className="text-destructive mt-4 text-sm font-medium">
-          A discrepancy was detected. Review transaction history and booking totals.
+          A discrepancy was detected. Review the bookings below.
         </p>
       ) : (
         <p className="text-muted-foreground mt-4 text-sm">
           Collections reconcile with booking totals for this period.
         </p>
       )}
+
+      {reconciliation.discrepancies.length > 0 ? (
+        <div className="mt-4 overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="text-muted-foreground text-left">
+                <th className="pb-2 pr-4 font-medium">Booking</th>
+                <th className="pb-2 pr-4 font-medium">Customer</th>
+                <th className="pb-2 pr-4 font-medium">Expected</th>
+                <th className="pb-2 pr-4 font-medium">Collected</th>
+                <th className="pb-2 pr-4 font-medium">Outstanding</th>
+                <th className="pb-2 font-medium">Discrepancy</th>
+              </tr>
+            </thead>
+            <tbody>
+              {reconciliation.discrepancies.map((row) => (
+                <tr key={row.bookingId} className="border-border/50 border-t">
+                  <td className="py-2 pr-4 font-medium whitespace-nowrap">{row.bookingReference}</td>
+                  <td className="py-2 pr-4 whitespace-nowrap">{row.customerName}</td>
+                  <td className="py-2 pr-4 whitespace-nowrap">{formatCurrency(row.expected)}</td>
+                  <td className="py-2 pr-4 whitespace-nowrap">{formatCurrency(row.collected)}</td>
+                  <td className="py-2 pr-4 whitespace-nowrap">{formatCurrency(row.outstanding)}</td>
+                  <td className="text-destructive py-2 font-medium whitespace-nowrap">
+                    {formatCurrency(row.discrepancy)}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      ) : null}
     </AnalyticsCard>
   );
 }

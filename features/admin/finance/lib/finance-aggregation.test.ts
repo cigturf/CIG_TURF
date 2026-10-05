@@ -239,6 +239,39 @@ describe("finance aggregation", () => {
     expect(reconciliation.collectedRevenue).toBe(100);
     expect(reconciliation.outstandingRevenue).toBe(1000);
     expect(reconciliation.hasDiscrepancy).toBe(true);
+    expect(reconciliation.discrepancies).toHaveLength(1);
+    expect(reconciliation.discrepancies[0]).toMatchObject({
+      bookingId: "b1",
+      expected: 1200,
+      collected: 100,
+      outstanding: 1000,
+      discrepancy: 100,
+    });
+  });
+
+  it("lists no discrepancy rows, and skips cancelled bookings, when everything reconciles", () => {
+    const reconciliation = buildReconciliation({
+      bookings: [
+        createBooking({ id: "b1", totalPrice: 1200, remainingAmount: 1000 }),
+        createBooking({ id: "b2", status: "cancelled", totalPrice: 500, remainingAmount: 300 }),
+      ],
+      payments: [
+        {
+          id: "p1",
+          bookingId: "b1",
+          type: "advance",
+          amount: 200,
+          method: "online",
+          collectedBy: null,
+          notes: null,
+          referenceNumber: null,
+          createdAt: new Date(),
+        },
+      ],
+    });
+
+    expect(reconciliation.hasDiscrepancy).toBe(false);
+    expect(reconciliation.discrepancies).toHaveLength(0);
   });
 
   it("reconciles cleanly when a booking's advance was paid before the selected period", () => {

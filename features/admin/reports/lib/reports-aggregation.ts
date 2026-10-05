@@ -379,6 +379,17 @@ export function buildPaymentBreakdown(payments: BookingPaymentRecord[]): ReportP
     .sort((a, b) => b.amount - a.amount);
 }
 
+/**
+ * The Cash/UPI/Card/Bank Transfer/Other split behind the single "Offline
+ * Collections" figure — same genuine-Razorpay-aware bucketing as
+ * isOnlineCollectionPayment, just broken out by method instead of summed.
+ */
+export function buildOfflineCollectionsBreakdown(
+  payments: BookingPaymentRecord[],
+): ReportPaymentBreakdown[] {
+  return buildPaymentBreakdown(payments.filter((payment) => !isOnlineCollectionPayment(payment)));
+}
+
 export function buildOccupancyHeatmap(bookings: AdminBookingRecord[]): ReportSeriesPoint[] {
   const hours = new Map<string, number>();
   for (let hour = 0; hour < 24; hour += 1) {

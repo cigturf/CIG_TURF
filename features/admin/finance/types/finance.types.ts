@@ -68,12 +68,25 @@ export type FinanceDailyClosing = {
   manualBookings: number;
 };
 
+export type FinanceReconciliationDiscrepancyRow = {
+  bookingId: string;
+  bookingReference: string;
+  customerName: string;
+  status: BookingStatus;
+  expected: number;
+  collected: number;
+  outstanding: number;
+  discrepancy: number;
+};
+
 export type FinanceReconciliation = {
   expectedRevenue: number;
   collectedRevenue: number;
   outstandingRevenue: number;
   discrepancy: number;
   hasDiscrepancy: boolean;
+  /** Active bookings where totalPrice doesn't equal collected + outstanding — the specific rows behind `discrepancy`. */
+  discrepancies: FinanceReconciliationDiscrepancyRow[];
 };
 
 export type FinanceBookingCounts = {
@@ -118,6 +131,7 @@ export type FinanceDashboardData = {
   range: ReportDateRange;
   overview: FinanceOverview;
   paymentBreakdown: ReportPaymentBreakdown[];
+  offlineCollectionsBreakdown: ReportPaymentBreakdown[];
   pendingBookings: FinancePendingBooking[];
   transactions: FinanceTransaction[];
   dailyClosing: FinanceDailyClosing;
