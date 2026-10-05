@@ -75,19 +75,66 @@ describe("updateAdminBooking", () => {
     vi.mocked(listAuditLogsForBooking).mockResolvedValue([]);
   });
 
-  it("refuses to change the advance amount when it's a genuine Razorpay capture", async () => {
+  it("never mutates a genuine Razorpay capture's own amount, even when increasing the advance", async () => {
     // Regression: "Edit Amounts" used to call updateBookingPaymentRecordAmount
     // unconditionally, silently overwriting a real captured Razorpay payment's
     // ledger amount (this is exactly how a genuine ₹200 capture became a
-    // fabricated ₹400 "advance" on a real booking).
+    // fabricated ₹400 "advance" on a real booking). Increasing the advance
+    // must split: the Razorpay row stays untouched, and a new, separately
+    // attributed row covers only the difference.
+    vi.mocked(listPaymentRecordsForBooking).mockResolvedValue([genuineRazorpayAdvance]);
+
+    await updateAdminBooking(
+      "booking-1",
+      { totalPrice: 1800, advancePaid: 400, advanceAdjustmentMethod: "upi" },
+      actor,
+    );
+
+    expect(updateBookingPaymentRecordAmount).not.toHaveBeenCalled();
+    expect(createBookingPaymentRecord).toHaveBeenCalledWith(
+      expect.objectContaining({ type: "advance", amount: 200, method: "upi", collectedBy: "admin-1" }),
+    );
+    expect(updateBookingRecord).toHaveBeenCalledWith(
+      "booking-1",
+      expect.objectContaining({ totalPrice: 1800, advancePaid: 400, remainingAmount: 1400 }),
+    );
+  });
+
+  it("refuses to reduce the advance below what Razorpay genuinely collected", async () => {
     vi.mocked(listPaymentRecordsForBooking).mockResolvedValue([genuineRazorpayAdvance]);
 
     await expect(
-      updateAdminBooking("booking-1", { totalPrice: 1800, advancePaid: 400 }, actor),
+      updateAdminBooking("booking-1", { advancePaid: 100 }, actor),
     ).rejects.toThrow(/Razorpay/);
 
     expect(updateBookingPaymentRecordAmount).not.toHaveBeenCalled();
+    expect(createBookingPaymentRecord).not.toHaveBeenCalled();
     expect(updateBookingRecord).not.toHaveBeenCalled();
+  });
+
+  it("adjusts the existing admin-recorded top-up instead of creating a duplicate one", async () => {
+    // A booking that already has both a genuine ₹200 Razorpay row and a
+    // previously-added ₹50 admin top-up; editing the advance again should
+    // resize the top-up, not touch Razorpay's row or create a third record.
+    vi.mocked(listPaymentRecordsForBooking).mockResolvedValue([
+      genuineRazorpayAdvance,
+      {
+        id: "advance-2",
+        bookingId: "booking-1",
+        type: "advance" as const,
+        amount: 50,
+        method: "upi" as const,
+        collectedBy: "admin-1",
+        notes: "Additional advance beyond the ₹200 Razorpay collected",
+        referenceNumber: null,
+        createdAt: new Date(),
+      },
+    ]);
+
+    await updateAdminBooking("booking-1", { advancePaid: 300 }, { ...actor, userId: "admin-1" });
+
+    expect(updateBookingPaymentRecordAmount).toHaveBeenCalledWith("advance-2", 100);
+    expect(createBookingPaymentRecord).not.toHaveBeenCalled();
   });
 
   it("allows editing the advance when it was admin-recorded, not a Razorpay capture", async () => {

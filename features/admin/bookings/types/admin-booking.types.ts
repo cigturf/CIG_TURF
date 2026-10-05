@@ -104,6 +104,8 @@ export type UpdateBookingInput = {
   notes?: string;
   totalPrice?: number;
   advancePaid?: number;
+  /** Method for whatever's added beyond a genuine Razorpay advance (ignored otherwise). */
+  advanceAdjustmentMethod?: OfflinePaymentMethod;
 };
 
 export type CollectPaymentInput = {

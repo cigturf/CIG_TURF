@@ -54,6 +54,7 @@ import {
 import { createPaymentRecord } from "@/features/payments/services/payment.repository";
 import { prisma } from "@/lib/prisma";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
+import { formatCurrency } from "@/utils";
 import { randomUUID } from "crypto";
 
 type AdminActor = {
@@ -306,13 +307,42 @@ export async function updateAdminBooking(
       );
     }
 
-    if (advancePayments.length === 1) {
-      if (isGenuineRazorpayPayment(advancePayments[0]!)) {
-        throw new Error(
-          "This advance was captured by Razorpay and can't be edited. Adjust the total price instead — the remaining amount will update automatically.",
-        );
+    // A genuine Razorpay capture is never mutated — its own ledger row always
+    // stays exactly what Razorpay actually charged. Any amount the admin adds
+    // on top is tracked as its own, separately-attributed "advance" row (e.g.
+    // an extra ₹50 collected in person via UPI), so the two always stay
+    // individually traceable even though they sum to one "advance" total.
+    const genuineAdvance = advancePayments.find(isGenuineRazorpayPayment) ?? null;
+    const adminAdvances = advancePayments.filter((payment) => payment !== genuineAdvance);
+    const genuineAmount = genuineAdvance?.amount ?? 0;
+
+    if (nextAdvancePaid < genuineAmount) {
+      throw new Error(
+        `Razorpay genuinely collected ${formatCurrency(genuineAmount)} for this booking's advance — it can't be reduced below that without a real refund.`,
+      );
+    }
+
+    const desiredAdminTotal = nextAdvancePaid - genuineAmount;
+    const currentAdminTotal = adminAdvances.reduce((sum, payment) => sum + payment.amount, 0);
+
+    if (desiredAdminTotal !== currentAdminTotal) {
+      if (adminAdvances.length === 0 && desiredAdminTotal > 0) {
+        await createBookingPaymentRecord({
+          bookingId: id,
+          type: "advance",
+          amount: desiredAdminTotal,
+          method: input.advanceAdjustmentMethod ?? (booking.source === "online" ? "online" : "cash"),
+          collectedBy: actor.userId,
+          notes: genuineAdvance
+            ? `Additional advance beyond the ${formatCurrency(genuineAmount)} Razorpay collected`
+            : "Advance updated from booking edit",
+        });
+      } else if (adminAdvances.length === 1) {
+        await updateBookingPaymentRecordAmount(adminAdvances[0]!.id, desiredAdminTotal);
+      } else if (adminAdvances.length > 1) {
+        throw new Error("Multiple advance payments found. Update amounts from the payment history.");
       }
-      await updateBookingPaymentRecordAmount(advancePayments[0]!.id, nextAdvancePaid);
+
       await logBookingChange(
         id,
         actor,
@@ -320,26 +350,8 @@ export async function updateAdminBooking(
         "advance_paid",
         String(booking.advancePaid),
         String(nextAdvancePaid),
+        genuineAdvance ? { razorpayAmount: genuineAmount, adminRecordedAmount: desiredAdminTotal } : undefined,
       );
-    } else if (advancePayments.length === 0 && nextAdvancePaid > 0) {
-      await createBookingPaymentRecord({
-        bookingId: id,
-        type: "advance",
-        amount: nextAdvancePaid,
-        method: booking.source === "online" ? "online" : "cash",
-        collectedBy: actor.userId,
-        notes: "Advance updated from booking edit",
-      });
-      await logBookingChange(
-        id,
-        actor,
-        "booking.amounts_edited",
-        "advance_paid",
-        String(booking.advancePaid),
-        String(nextAdvancePaid),
-      );
-    } else if (advancePayments.length > 1) {
-      throw new Error("Multiple advance payments found. Update amounts from the payment history.");
     }
   }
 

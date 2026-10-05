@@ -177,6 +177,7 @@ export function AdminBookingsView() {
     notes?: string;
     totalPrice: number;
     advancePaid: number;
+    advanceAdjustmentMethod?: OfflinePaymentMethod;
   }) => {
     if (!selectedBookingId) return;
     const response = await fetch(`/api/admin/bookings/${selectedBookingId}`, {
