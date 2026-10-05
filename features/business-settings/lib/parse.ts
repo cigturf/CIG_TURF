@@ -72,7 +72,10 @@ export function toPublicBusinessSettings(settings: BusinessSettings): BusinessSe
     branding: settings.branding ?? empty.branding,
     media: settings.media ?? empty.media,
     contact: settings.contact ?? empty.contact,
-    booking: { rules: settings.booking?.rules ?? empty.booking.rules },
+    booking: {
+      rules: settings.booking?.rules ?? empty.booking.rules,
+      advanceAmount: settings.booking?.advanceAmount ?? empty.booking.advanceAmount,
+    },
     pricing: {
       currency: settings.pricing?.currency ?? empty.pricing.currency,
       tiers: settings.pricing?.tiers ?? empty.pricing.tiers,
@@ -100,7 +103,11 @@ export function mergeToBusinessSettings(publicSettings: BusinessSettingsPublic):
     branding: publicSettings.branding,
     media: publicSettings.media,
     contact: publicSettings.contact,
-    booking: { ...empty.booking, rules: publicSettings.booking.rules },
+    booking: {
+      ...empty.booking,
+      rules: publicSettings.booking.rules,
+      advanceAmount: publicSettings.booking.advanceAmount,
+    },
     pricing: {
       ...empty.pricing,
       currency: publicSettings.pricing.currency,

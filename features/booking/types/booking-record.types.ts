@@ -41,4 +41,5 @@ export type FinalizeBookingResult =
   | { success: false; code: "slots_unavailable"; message: string }
   | { success: false; code: "session_invalid"; message: string }
   | { success: false; code: "payment_unverified"; message: string }
+  | { success: false; code: "not_online_payment"; message: string }
   | { success: false; code: "finalize_failed"; message: string };

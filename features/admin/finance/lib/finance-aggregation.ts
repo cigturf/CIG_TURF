@@ -12,7 +12,7 @@ import {
   buildPaymentBreakdown,
   buildPendingPaymentsSeries,
   excludeCancelledBookingPayments,
-  PAYMENT_METHOD_LABELS,
+  resolvePaymentMethodLabel,
 } from "@/features/admin/reports/lib/reports-aggregation";
 import type { ReportSeriesPoint } from "@/features/admin/reports/types/reports.types";
 
@@ -172,10 +172,6 @@ export function buildReconciliation(input: {
   };
 }
 
-function methodLabel(method: BookingPaymentRecord["method"]): string {
-  return PAYMENT_METHOD_LABELS[method] ?? method;
-}
-
 /**
  * Summarizes a leg (advance/remaining) of a booking's cost from its own
  * payment records. A leg collected across more than one payment (e.g. part
@@ -188,7 +184,7 @@ function describeLeg(payments: BookingPaymentRecord[], type: BookingPaymentRecor
     return { amountPaid: 0, method: "—", referenceId: null as string | null };
   }
   const amountPaid = matches.reduce((sum, payment) => sum + payment.amount, 0);
-  const uniqueMethods = [...new Set(matches.map((payment) => methodLabel(payment.method)))];
+  const uniqueMethods = [...new Set(matches.map(resolvePaymentMethodLabel))];
   const withReference = matches.find((payment) => payment.referenceNumber);
   return {
     amountPaid,
@@ -217,6 +213,7 @@ export function buildFinanceBookingDetails(
       booking.remainingAmount > 0 ? "pending" : remaining.amountPaid > 0 ? "paid" : "not_required";
 
     return {
+      id: booking.id,
       bookingReference: booking.bookingReference,
       customerName: booking.customerName,
       customerPhone: booking.customerPhone,

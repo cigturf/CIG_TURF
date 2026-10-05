@@ -31,7 +31,10 @@ export async function PATCH(request: Request, context: RouteContext) {
 
   try {
     const body = await request.json();
-    const booking = await updateAdminBooking(id, body);
+    const booking = await updateAdminBooking(id, body, {
+      userId: auth.session.user.id,
+      email: auth.session.user.email,
+    });
     if (!booking) {
       return NextResponse.json({ error: "Booking not found" }, { status: 404 });
     }

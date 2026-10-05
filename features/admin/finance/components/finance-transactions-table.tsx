@@ -2,6 +2,7 @@
 
 import { Receipt } from "lucide-react";
 
+import { isGenuineRazorpayPayment } from "@/features/admin/bookings/lib/booking-utils";
 import type { FinanceTransaction } from "@/features/admin/finance/types/finance.types";
 import { Badge, EmptyState, TableShell } from "@/components/design-system";
 import { formatCurrency } from "@/utils";
@@ -12,8 +13,14 @@ type FinanceTransactionsTableProps = {
   onSelect: (transaction: FinanceTransaction) => void;
 };
 
-function formatMethod(method: string) {
-  return method === "online" ? "Razorpay" : method.replace(/_/g, " ");
+/** "Razorpay" is reserved for a genuinely automatic online capture — an
+ * admin recording "online"/UPI at the counter never actually went through
+ * Razorpay, even if that's the method they picked. */
+function formatMethod(txn: FinanceTransaction) {
+  if (txn.method === "online") {
+    return isGenuineRazorpayPayment(txn) ? "Razorpay" : "Online";
+  }
+  return txn.method.replace(/_/g, " ");
 }
 
 export function FinanceTransactionsTable({
@@ -66,7 +73,7 @@ export function FinanceTransactionsTable({
                   <td className="px-4 py-3 font-medium">{txn.bookingReference}</td>
                   <td className="px-4 py-3">{txn.customerName}</td>
                   <td className="px-4 py-3 font-medium">{formatCurrency(txn.amount)}</td>
-                  <td className="px-4 py-3 capitalize">{formatMethod(txn.method)}</td>
+                  <td className="px-4 py-3 capitalize">{formatMethod(txn)}</td>
                   <td className="px-4 py-3 capitalize">{txn.type}</td>
                   <td className="px-4 py-3">{txn.collectedBy ?? "—"}</td>
                   <td className="px-4 py-3">{txn.referenceNumber ?? "—"}</td>
@@ -102,7 +109,7 @@ export function FinanceTransactionsTable({
             <div className="text-muted-foreground mt-3 flex flex-wrap gap-2 text-xs">
               <span>{new Date(txn.createdAt).toLocaleString("en-IN")}</span>
               <span>·</span>
-              <span className="capitalize">{formatMethod(txn.method)}</span>
+              <span className="capitalize">{formatMethod(txn)}</span>
               <span>·</span>
               <span className="capitalize">{txn.type}</span>
             </div>

@@ -11,6 +11,22 @@ function toDate(value: Date | string): Date {
   return value instanceof Date ? value : new Date(value);
 }
 
+/**
+ * True only for a payment the online checkout captured automatically through
+ * Razorpay (features/booking/services/booking-finalization.service.ts never
+ * sets collectedBy). Any admin-recorded payment — a manual booking's advance,
+ * a collected remaining balance, or an "Edit Amounts" correction — always has
+ * collectedBy set, even if its method happens to be "online"/"upi", because an
+ * admin choosing that method at the counter is not the same as Razorpay
+ * actually capturing the money. Use this before ever labeling a payment
+ * "Razorpay" or treating its amount as immutable.
+ */
+export function isGenuineRazorpayPayment(
+  payment: Pick<BookingPaymentRecord, "method" | "collectedBy">,
+): boolean {
+  return payment.method === "online" && payment.collectedBy === null;
+}
+
 export function normalizeAdminBookingRecord(
   booking: AdminBookingRecord & { createdAt: Date | string; updatedAt: Date | string },
 ): AdminBookingRecord {

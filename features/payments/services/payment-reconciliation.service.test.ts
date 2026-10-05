@@ -101,6 +101,30 @@ describe("reconcileStuckPaidSessions", () => {
     expect(refundOnlineAdvanceWithoutBooking).not.toHaveBeenCalled();
   });
 
+  it("skips a synthetic manual payment instead of trying to finalize or refund it", async () => {
+    // Regression: a failed admin Manual Booking attempt leaves a session
+    // stuck at payment_completed with a fake "manual-<uuid>" payment ID -
+    // there's no real Razorpay payment to recover or refund, so this must
+    // not call finalize (which would mislabel it "online") or attempt a
+    // real refund against a payment ID Razorpay has never heard of.
+    vi.mocked(listPaidPaymentsInWindow).mockResolvedValue([
+      {
+        ...payment,
+        paymentMethod: "manual",
+        razorpayPaymentId: "manual-48b0ee85-3905-403f-b119-8541eb693ace",
+      },
+    ]);
+    vi.mocked(getBookingBySessionId).mockResolvedValue(null);
+
+    const result = await reconcileStuckPaidSessions();
+
+    expect(result.alreadyHandled).toBe(1);
+    expect(result.finalized).toBe(0);
+    expect(result.refunded).toBe(0);
+    expect(finalizeBookingFromSession).not.toHaveBeenCalled();
+    expect(refundOnlineAdvanceWithoutBooking).not.toHaveBeenCalled();
+  });
+
   it("recovers the booking when finalize succeeds on retry", async () => {
     vi.mocked(getBookingBySessionId).mockResolvedValue(null);
     vi.mocked(getBookingSessionById).mockResolvedValue(session);

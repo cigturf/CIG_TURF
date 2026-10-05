@@ -237,7 +237,7 @@ export type BusinessSettingsPublic = {
   branding: BrandingSettings;
   media: MediaSettings;
   contact: ContactSettings;
-  booking: Pick<BookingSettings, "rules">;
+  booking: Pick<BookingSettings, "rules" | "advanceAmount">;
   pricing: Pick<PricingSettings, "currency" | "tiers">;
   operations: Pick<
     OperationsSettings,

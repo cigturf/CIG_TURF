@@ -4,8 +4,14 @@ import { Download, FileSpreadsheet, FileText } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 
+import { BookingDetailDrawer } from "@/features/admin/bookings/components/booking-detail-drawer";
+import { CancelBookingDialog } from "@/features/admin/bookings/components/cancel-booking-dialog";
 import { CollectPaymentDialog } from "@/features/admin/bookings/components/collect-payment-dialog";
-import type { OfflinePaymentMethod } from "@/features/admin/bookings/types/admin-booking.types";
+import { CompleteBookingDialog } from "@/features/admin/bookings/components/complete-booking-dialog";
+import type {
+  AdminBookingDetail,
+  OfflinePaymentMethod,
+} from "@/features/admin/bookings/types/admin-booking.types";
 import { FinanceBookingDetailsTable } from "@/features/admin/finance/components/finance-booking-details-table";
 import {
   FinanceDailyClosingCard,
@@ -72,6 +78,14 @@ export function AdminReportsFinanceView({
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [collectBooking, setCollectBooking] = useState<FinancePendingBooking | null>(null);
   const [collectOpen, setCollectOpen] = useState(false);
+
+  const [selectedBookingId, setSelectedBookingId] = useState<string | null>(null);
+  const [selectedDetail, setSelectedDetail] = useState<AdminBookingDetail | null>(null);
+  const [isDetailLoading, setIsDetailLoading] = useState(false);
+  const [bookingDetailOpen, setBookingDetailOpen] = useState(false);
+  const [detailCancelOpen, setDetailCancelOpen] = useState(false);
+  const [detailCollectOpen, setDetailCollectOpen] = useState(false);
+  const [detailCompleteOpen, setDetailCompleteOpen] = useState(false);
 
   useEffect(() => {
     setPreset(financeData.range.preset);
@@ -146,6 +160,85 @@ export function AdminReportsFinanceView({
     toast.success("Payment collected");
     setCollectOpen(false);
     setCollectBooking(null);
+    await onRefresh();
+  };
+
+  const openBookingDetail = useCallback(async (bookingId: string) => {
+    setSelectedBookingId(bookingId);
+    setBookingDetailOpen(true);
+    setIsDetailLoading(true);
+    try {
+      const response = await fetch(`/api/admin/bookings/${bookingId}`, { cache: "no-store" });
+      if (!response.ok) throw new Error("Failed to load booking");
+      const detail = (await response.json()) as AdminBookingDetail;
+      setSelectedDetail(detail);
+    } catch {
+      setSelectedDetail(null);
+    } finally {
+      setIsDetailLoading(false);
+    }
+  }, []);
+
+  const cancelDetailBooking = async (payload: { reason: string; initiateRefund: boolean }) => {
+    if (!selectedBookingId) return;
+    const response = await fetch(`/api/admin/bookings/${selectedBookingId}/cancel`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    if (!response.ok) {
+      const body = await response.json().catch(() => null);
+      toast.error(body?.error ?? "Failed to cancel booking");
+      return;
+    }
+    toast.success(
+      payload.initiateRefund ? "Booking cancelled and refund initiated" : "Booking cancelled",
+    );
+    await openBookingDetail(selectedBookingId);
+    await onRefresh();
+  };
+
+  const collectDetailPayment = async (payload: {
+    amount: number;
+    method: OfflinePaymentMethod;
+    referenceNumber?: string;
+    notes?: string;
+  }) => {
+    if (!selectedBookingId) return;
+    const response = await fetch(`/api/admin/bookings/${selectedBookingId}/collect-payment`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    if (!response.ok) {
+      const body = await response.json().catch(() => null);
+      toast.error(body?.error ?? "Failed to collect payment");
+      return;
+    }
+    toast.success("Payment collected");
+    setDetailCollectOpen(false);
+    await openBookingDetail(selectedBookingId);
+    await onRefresh();
+  };
+
+  const completeDetailBooking = async (payload: {
+    overrideOutstanding?: boolean;
+    overrideReason?: string;
+  }) => {
+    if (!selectedBookingId) return;
+    const response = await fetch(`/api/admin/bookings/${selectedBookingId}/complete`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    if (!response.ok) {
+      const body = await response.json().catch(() => null);
+      toast.error(body?.error ?? "Failed to complete booking");
+      return;
+    }
+    toast.success("Booking completed");
+    setDetailCompleteOpen(false);
+    await openBookingDetail(selectedBookingId);
     await onRefresh();
   };
 
@@ -275,7 +368,10 @@ export function AdminReportsFinanceView({
         title="Booking Details"
         description="Every booking in the selected period — customer, slot, how the advance was paid, and how the balance was (or wasn't) collected"
       >
-        <FinanceBookingDetailsTable bookings={financeData.bookingDetails} />
+        <FinanceBookingDetailsTable
+          bookings={financeData.bookingDetails}
+          onSelect={(bookingId) => void openBookingDetail(bookingId)}
+        />
       </ReportsSection>
 
       <ReportsSection title="Pending Collections" description="Bookings with outstanding balance">
@@ -309,6 +405,48 @@ export function AdminReportsFinanceView({
         onOpenChange={setCollectOpen}
         remainingAmount={collectBooking?.outstanding ?? 0}
         onSubmit={handleCollect}
+      />
+
+      <BookingDetailDrawer
+        open={bookingDetailOpen}
+        onOpenChange={(open) => {
+          setBookingDetailOpen(open);
+          if (!open) setSelectedBookingId(null);
+        }}
+        detail={selectedDetail}
+        isLoading={isDetailLoading}
+        onEdit={() => toast.message("Edit is available in Bookings module")}
+        onCancel={() => setDetailCancelOpen(true)}
+        onDuplicate={() => toast.message("Duplicate is available in Bookings module")}
+        onPrint={() => {
+          if (selectedBookingId) window.open(`/api/admin/bookings/${selectedBookingId}/receipt`, "_blank");
+        }}
+        onCollectPayment={() => setDetailCollectOpen(true)}
+        onComplete={() => setDetailCompleteOpen(true)}
+      />
+
+      <CancelBookingDialog
+        open={detailCancelOpen}
+        onOpenChange={setDetailCancelOpen}
+        bookingReference={selectedDetail?.bookingReference ?? "this booking"}
+        source={selectedDetail?.source}
+        advancePaid={selectedDetail?.advancePaid ?? 0}
+        onSubmit={cancelDetailBooking}
+      />
+
+      <CollectPaymentDialog
+        open={detailCollectOpen}
+        onOpenChange={setDetailCollectOpen}
+        remainingAmount={selectedDetail?.remainingAmount ?? 0}
+        onSubmit={collectDetailPayment}
+      />
+
+      <CompleteBookingDialog
+        open={detailCompleteOpen}
+        onOpenChange={setDetailCompleteOpen}
+        remainingAmount={selectedDetail?.remainingAmount ?? 0}
+        bookingReference={selectedDetail?.bookingReference ?? "this booking"}
+        onSubmit={completeDetailBooking}
       />
     </div>
   );

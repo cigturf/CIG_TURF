@@ -10,7 +10,10 @@ import {
   canCompleteBooking,
 } from "@/features/admin/bookings/lib/booking-status";
 import { hasBookingStartTimePassed } from "@/features/admin/bookings/lib/booking-schedule";
-import { toAdminBookingRecord } from "@/features/admin/bookings/lib/booking-utils";
+import {
+  isGenuineRazorpayPayment,
+  toAdminBookingRecord,
+} from "@/features/admin/bookings/lib/booking-utils";
 import {
   createBookingAuditLog,
   listAuditLogsForBooking,
@@ -228,6 +231,11 @@ export async function createManualBooking(
   if (!reservation.success) {
     await releaseBookedSlotsForBooking(booking.id);
     await deleteBookingById(booking.id);
+    // Without this, the session is left stuck at "payment_completed" with no
+    // booking — exactly what the payment-reconciliation safety net watches
+    // for, and it would later "recover" this failed manual-booking attempt
+    // as if it were a genuine online booking.
+    await updateBookingSessionStatus(session.id, "failed");
     throw new Error("Unable to reserve selected slots.");
   }
 
@@ -264,6 +272,7 @@ export async function createManualBooking(
 export async function updateAdminBooking(
   id: string,
   input: UpdateBookingInput,
+  actor: AdminActor,
 ): Promise<AdminBookingDetail | null> {
   const booking = await getBookingById(id);
   if (!booking) return null;
@@ -298,15 +307,37 @@ export async function updateAdminBooking(
     }
 
     if (advancePayments.length === 1) {
-      await updateBookingPaymentRecordAmount(advancePayments[0].id, nextAdvancePaid);
+      if (isGenuineRazorpayPayment(advancePayments[0]!)) {
+        throw new Error(
+          "This advance was captured by Razorpay and can't be edited. Adjust the total price instead — the remaining amount will update automatically.",
+        );
+      }
+      await updateBookingPaymentRecordAmount(advancePayments[0]!.id, nextAdvancePaid);
+      await logBookingChange(
+        id,
+        actor,
+        "booking.amounts_edited",
+        "advance_paid",
+        String(booking.advancePaid),
+        String(nextAdvancePaid),
+      );
     } else if (advancePayments.length === 0 && nextAdvancePaid > 0) {
       await createBookingPaymentRecord({
         bookingId: id,
         type: "advance",
         amount: nextAdvancePaid,
         method: booking.source === "online" ? "online" : "cash",
+        collectedBy: actor.userId,
         notes: "Advance updated from booking edit",
       });
+      await logBookingChange(
+        id,
+        actor,
+        "booking.amounts_edited",
+        "advance_paid",
+        String(booking.advancePaid),
+        String(nextAdvancePaid),
+      );
     } else if (advancePayments.length > 1) {
       throw new Error("Multiple advance payments found. Update amounts from the payment history.");
     }

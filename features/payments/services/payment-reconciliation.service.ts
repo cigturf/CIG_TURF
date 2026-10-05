@@ -45,6 +45,15 @@ async function recoverPaidPayment(
   const existingBooking = await getBookingBySessionId(payment.bookingSessionId);
   if (existingBooking) return "alreadyHandled";
 
+  // A synthetic "manual-<uuid>" payment never went through Razorpay — it's a
+  // failed admin Manual Booking attempt, not a captured payment with real
+  // money to protect. Nothing to finalize (finalizeBookingFromSession now
+  // refuses it) and nothing to refund (there's no real Razorpay payment ID
+  // to refund), so there's nothing for reconciliation to do here.
+  if (payment.paymentMethod === "manual" || payment.razorpayPaymentId?.startsWith("manual-")) {
+    return "alreadyHandled";
+  }
+
   const session = await getBookingSessionById(payment.bookingSessionId);
   if (!session) {
     const refunded = await refundOnlineAdvanceWithoutBooking({

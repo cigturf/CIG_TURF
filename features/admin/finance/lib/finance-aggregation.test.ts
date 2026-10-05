@@ -319,7 +319,7 @@ describe("finance aggregation", () => {
     );
 
     expect(detail?.advanceAmount).toBe(200);
-    expect(detail?.advanceMethod).toBe("Online (Razorpay)");
+    expect(detail?.advanceMethod).toBe("Razorpay");
     expect(detail?.advanceReferenceId).toBe("pay_RZP123");
     expect(detail?.balanceDue).toBe(0);
     expect(detail?.balancePaidAmount).toBe(1000);
@@ -374,7 +374,7 @@ describe("finance aggregation", () => {
     );
 
     expect(detail?.advanceAmount).toBe(400);
-    expect(detail?.advanceMethod).toBe("Online (Razorpay)");
+    expect(detail?.advanceMethod).toBe("Razorpay");
     expect(detail?.balancePaidAmount).toBe(1400);
     // Collected across two different methods - both should be visible,
     // not just whichever payment happens to sort first/last.

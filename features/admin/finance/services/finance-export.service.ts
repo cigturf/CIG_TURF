@@ -1,8 +1,19 @@
+import { isGenuineRazorpayPayment } from "@/features/admin/bookings/lib/booking-utils";
+import type { BookingPaymentRecord } from "@/features/admin/bookings/types/admin-booking.types";
 import type {
   FinanceBookingDetail,
   FinanceDashboardData,
 } from "@/features/admin/finance/types/finance.types";
 import { formatCurrency } from "@/utils";
+
+/** "Razorpay" only for a genuinely automatic online capture, never an
+ * admin-recorded "online"/UPI collection at the counter. */
+function formatTxnMethod(txn: Pick<BookingPaymentRecord, "method" | "collectedBy">) {
+  if (txn.method === "online") {
+    return isGenuineRazorpayPayment(txn) ? "Razorpay" : "Online";
+  }
+  return txn.method;
+}
 
 function escapeCsv(value: string | number) {
   const text = String(value);
@@ -137,7 +148,7 @@ export function buildFinanceCsv(data: FinanceDashboardData): string {
         txn.bookingReference,
         txn.customerName,
         txn.amount,
-        txn.method,
+        formatTxnMethod(txn),
         txn.type,
         txn.collectedBy ?? "",
         txn.referenceNumber ?? "",
@@ -176,7 +187,7 @@ export function buildFinancePdfHtml(data: FinanceDashboardData, venueName: strin
         <td>${txn.bookingReference}</td>
         <td>${txn.customerName}</td>
         <td>${formatCurrency(txn.amount)}</td>
-        <td>${txn.method}</td>
+        <td>${formatTxnMethod(txn)}</td>
         <td>${txn.type}</td>
       </tr>`,
     )

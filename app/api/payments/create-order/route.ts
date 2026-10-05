@@ -4,8 +4,6 @@ import { isAdminUser } from "@/features/auth/services";
 import { isBookingMaintenanceActive } from "@/features/business-settings/lib/maintenance-guard";
 import { upsertSlotHolds } from "@/features/booking/services/slot-hold.repository";
 import {
-  PAYMENT_ADVANCE_AMOUNT_INR,
-  PAYMENT_ADVANCE_AMOUNT_PAISE,
   PAYMENT_CURRENCY,
   SLOT_HOLD_CONFLICT_ERROR,
   SLOT_UNAVAILABLE_USER_MESSAGE,
@@ -64,10 +62,10 @@ export async function POST(request: Request) {
     const parsed = await parseJsonBody(request, createOrderSchema);
     if (!parsed.success) return parsed.response;
 
-    if (parsed.data.advanceAmount !== PAYMENT_ADVANCE_AMOUNT_INR) {
-      return NextResponse.json({ error: "Invalid advance amount" }, { status: 400 });
-    }
-
+    // validateCreateOrderInput already checks parsed.data.advanceAmount against
+    // the live, settings-driven fixedAdvanceAmount (resolveBookingEngineConfig) -
+    // no separate hardcoded check here, or a Settings change would make every
+    // order rejected before it could ever reach that live check.
     const validation = await validateCreateOrderInput(parsed.data);
     if (!validation.ok) {
       return NextResponse.json(
@@ -170,7 +168,11 @@ export async function POST(request: Request) {
       return apiErrorResponse("Booking session initialization failed", 500, "payments/create-order");
     }
 
-    if (!Number.isInteger(PAYMENT_ADVANCE_AMOUNT_PAISE)) {
+    // parsed.data.advanceAmount was just confirmed by validateCreateOrderInput
+    // to match the live, settings-driven advance amount - this is the only
+    // amount Razorpay is ever asked to charge for an online advance.
+    const advanceAmountPaise = parsed.data.advanceAmount * 100;
+    if (!Number.isInteger(advanceAmountPaise) || advanceAmountPaise <= 0) {
       return apiErrorResponse("Invalid payment amount configuration", 500, "payments/create-order");
     }
 
@@ -182,7 +184,7 @@ export async function POST(request: Request) {
     if (holdError) return holdError;
 
     const order = await createRazorpayOrder({
-      amount: PAYMENT_ADVANCE_AMOUNT_PAISE,
+      amount: advanceAmountPaise,
       currency: PAYMENT_CURRENCY,
       receipt: bookingSessionId,
       notes: {

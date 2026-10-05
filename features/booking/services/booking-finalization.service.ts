@@ -138,6 +138,20 @@ export async function finalizeBookingFromSession(options: {
     };
   }
 
+  // A synthetic "manual-<uuid>" payment (created by the admin Manual Booking
+  // flow, never Razorpay) left stuck at payment_completed - usually a failed
+  // manual-booking attempt whose own cleanup deleted the booking without
+  // marking the session failed. This function only knows how to finalize a
+  // genuine online booking, so recovering it here would mislabel it
+  // source: "online" despite no real Razorpay payment ever existing.
+  if (payment.paymentMethod === "manual" || payment.razorpayPaymentId?.startsWith("manual-")) {
+    return {
+      success: false,
+      code: "not_online_payment",
+      message: "This session's payment was not a real online payment and cannot be finalized here.",
+    };
+  }
+
   const selectedSlots = session.selectedSlots;
   if (!Array.isArray(selectedSlots) || selectedSlots.length === 0) {
     return {

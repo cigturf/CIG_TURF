@@ -4,7 +4,10 @@ import { useEffect, useState } from "react";
 
 import type { FinanceTransaction } from "@/features/admin/finance/types/finance.types";
 import type { BookingPaymentRecord } from "@/features/admin/bookings/types/admin-booking.types";
-import { formatBookingDateLabel } from "@/features/admin/bookings/lib/booking-utils";
+import {
+  formatBookingDateLabel,
+  isGenuineRazorpayPayment,
+} from "@/features/admin/bookings/lib/booking-utils";
 import {
   DrawerPanel,
   DrawerRoot,
@@ -20,9 +23,11 @@ type FinanceTransactionDrawerProps = {
   transaction: FinanceTransaction | null;
 };
 
-function formatMethod(method: string) {
-  if (method === "online") return "Online (Razorpay)";
-  return method.replace(/_/g, " ");
+function formatMethod(payment: Pick<BookingPaymentRecord, "method" | "collectedBy">) {
+  if (payment.method === "online") {
+    return isGenuineRazorpayPayment(payment) ? "Razorpay" : "Online";
+  }
+  return payment.method.replace(/_/g, " ");
 }
 
 export function FinanceTransactionDrawer({
@@ -86,7 +91,7 @@ export function FinanceTransactionDrawer({
               </div>
               <div className="flex justify-between gap-4">
                 <span className="text-muted-foreground">Collection method</span>
-                <span className="capitalize">{formatMethod(transaction.method)}</span>
+                <span className="capitalize">{formatMethod(transaction)}</span>
               </div>
               <div className="flex justify-between gap-4">
                 <span className="text-muted-foreground">Reference</span>
@@ -126,7 +131,7 @@ export function FinanceTransactionDrawer({
                         <p className="font-medium capitalize">{payment.type}</p>
                         <p className="text-muted-foreground text-xs">
                           {new Date(payment.createdAt).toLocaleString("en-IN")} ·{" "}
-                          {formatMethod(payment.method)}
+                          {formatMethod(payment)}
                         </p>
                       </div>
                       <p className="font-semibold">{formatCurrency(payment.amount)}</p>

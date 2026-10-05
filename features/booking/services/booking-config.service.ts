@@ -18,7 +18,7 @@ export function resolveBookingEngineConfig(
     slotDurationMinutes,
     businessHours: { ...BOOKING_DEFAULTS.businessHours },
     bookingWindowDays: BOOKING_DEFAULTS.bookingWindowDays,
-    fixedAdvanceAmount: BOOKING_DEFAULTS.fixedAdvanceAmount,
+    fixedAdvanceAmount: settings.booking.advanceAmount ?? BOOKING_DEFAULTS.fixedAdvanceAmount,
     defaultSlotPrice: DEFAULT_SLOT_PRICE,
     currency: settings.pricing.currency ?? BOOKING_DEFAULTS.currency,
     weekendPricing: { ...BOOKING_DEFAULTS.weekendPricing },

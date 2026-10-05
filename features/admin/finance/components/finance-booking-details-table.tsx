@@ -11,6 +11,7 @@ import { cn } from "@/lib/utils";
 
 type FinanceBookingDetailsTableProps = {
   bookings: FinanceBookingDetail[];
+  onSelect: (bookingId: string) => void;
 };
 
 const BALANCE_LABELS: Record<FinanceBookingDetail["balanceStatus"], string> = {
@@ -36,7 +37,7 @@ function BalanceCell({ booking }: { booking: FinanceBookingDetail }) {
   );
 }
 
-export function FinanceBookingDetailsTable({ bookings }: FinanceBookingDetailsTableProps) {
+export function FinanceBookingDetailsTable({ bookings, onSelect }: FinanceBookingDetailsTableProps) {
   if (bookings.length === 0) {
     return (
       <EmptyState
@@ -68,7 +69,11 @@ export function FinanceBookingDetailsTable({ bookings }: FinanceBookingDetailsTa
               {bookings.map((booking) => {
                 const statusBadge = resolveBookingStatusBadge(booking.status);
                 return (
-                  <tr key={booking.bookingReference} className="border-border/60 border-t">
+                  <tr
+                    key={booking.bookingReference}
+                    className="border-border/60 hover:bg-muted/30 cursor-pointer border-t transition-colors"
+                    onClick={() => onSelect(booking.id)}
+                  >
                     <td className="px-4 py-3 font-medium whitespace-nowrap">
                       {booking.bookingReference}
                     </td>
@@ -118,9 +123,11 @@ export function FinanceBookingDetailsTable({ bookings }: FinanceBookingDetailsTa
         {bookings.map((booking) => {
           const statusBadge = resolveBookingStatusBadge(booking.status);
           return (
-            <div
+            <button
               key={booking.bookingReference}
-              className="border-border/70 bg-card rounded-[var(--radius-lg)] border p-4"
+              type="button"
+              onClick={() => onSelect(booking.id)}
+              className="border-border/70 bg-card w-full rounded-[var(--radius-lg)] border p-4 text-left"
             >
               <div className="flex items-start justify-between gap-3">
                 <div>
@@ -160,7 +167,7 @@ export function FinanceBookingDetailsTable({ bookings }: FinanceBookingDetailsTa
                   </p>
                 </div>
               </div>
-            </div>
+            </button>
           );
         })}
       </div>

@@ -405,20 +405,26 @@ function SettingsSectionForm({
             })
           }
         />
-        <Field
-          label="Advance Amount (₹)"
-          type="number"
-          value={String(settings.booking.advanceAmount ?? "")}
-          onChange={(value) =>
-            onChange({
-              ...settings,
-              booking: {
-                ...settings.booking,
-                advanceAmount: value ? Number(value) : null,
-              },
-            })
-          }
-        />
+        <div>
+          <Field
+            label="Advance Amount (₹)"
+            type="number"
+            value={String(settings.booking.advanceAmount ?? "")}
+            onChange={(value) =>
+              onChange({
+                ...settings,
+                booking: {
+                  ...settings.booking,
+                  advanceAmount: value ? Number(value) : null,
+                },
+              })
+            }
+          />
+          <Text size="sm" className="text-muted-foreground mt-1 text-xs">
+            This is the exact amount Razorpay charges customers for every online booking advance.
+            Leave blank to use the default (₹200).
+          </Text>
+        </div>
       </div>
     );
   }

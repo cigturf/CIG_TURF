@@ -90,6 +90,7 @@ export type FinanceBookingCounts = {
 export type FinanceBalanceStatus = "paid" | "pending" | "not_required";
 
 export type FinanceBookingDetail = {
+  id: string;
   bookingReference: string;
   customerName: string;
   customerPhone: string;

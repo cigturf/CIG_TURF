@@ -219,7 +219,31 @@ describe("reports aggregation", () => {
 
     expect(breakdown).toHaveLength(2);
     expect(breakdown.find((item) => item.method === "Cash")?.percentage).toBe(30);
-    expect(breakdown.find((item) => item.method === "Online (Razorpay)")?.percentage).toBe(70);
+    expect(breakdown.find((item) => item.method === "Razorpay")?.percentage).toBe(70);
+  });
+
+  it("labels an admin-recorded 'online' payment as Online, not Razorpay", () => {
+    // Regression: a manual booking's advance or a collected remaining
+    // balance can be recorded with method "online" (the admin chose it at
+    // the counter), but that is not the same as Razorpay actually capturing
+    // the money - only a payment with no collectedBy (the automatic online
+    // checkout flow) may say "Razorpay".
+    const breakdown = buildPaymentBreakdown([
+      {
+        id: "pay1",
+        bookingId: "b1",
+        type: "advance",
+        amount: 500,
+        method: "online",
+        collectedBy: "admin-1",
+        notes: "Manual booking advance (online)",
+        referenceNumber: null,
+        createdAt: new Date(),
+      },
+    ]);
+
+    expect(breakdown).toHaveLength(1);
+    expect(breakdown[0]?.method).toBe("Online");
   });
 
   it("nets a refund against its method bucket instead of adding it as revenue", () => {

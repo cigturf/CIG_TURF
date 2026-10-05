@@ -1,5 +1,6 @@
 import type { AdminBookingRecord } from "@/features/admin/bookings/types/admin-booking.types";
 import type { BookingPaymentRecord } from "@/features/admin/bookings/types/admin-booking.types";
+import { isGenuineRazorpayPayment } from "@/features/admin/bookings/lib/booking-utils";
 import { enumerateIsoDates } from "@/features/admin/reports/lib/report-date-range";
 import type {
   ReportOccupancy,
@@ -298,10 +299,26 @@ export const PAYMENT_METHOD_LABELS: Record<string, string> = {
   cash: "Cash",
   upi: "UPI",
   card: "Card",
-  online: "Online (Razorpay)",
+  online: "Online",
   bank_transfer: "Other",
   other: "Other",
 };
+
+/**
+ * "Razorpay" is reserved for a payment the online checkout captured
+ * automatically (features/admin/bookings/lib/booking-utils.ts's
+ * isGenuineRazorpayPayment) — an admin recording a payment as "online"/UPI at
+ * the counter (a manual booking's advance, a collected remaining balance, an
+ * "Edit Amounts" entry) never actually went through Razorpay, so it must not
+ * be labeled as if it did.
+ */
+export function resolvePaymentMethodLabel(payment: BookingPaymentRecord): string {
+  if (payment.method === "bank_transfer" || payment.method === "other") return "Other";
+  if (payment.method === "online") {
+    return isGenuineRazorpayPayment(payment) ? "Razorpay" : "Online";
+  }
+  return PAYMENT_METHOD_LABELS[payment.method] ?? payment.method;
+}
 
 /**
  * Expects `payments` to already exclude cancelled-booking payments (see
@@ -312,10 +329,7 @@ export function buildPaymentBreakdown(payments: BookingPaymentRecord[]): ReportP
   const buckets = new Map<string, { amount: number; count: number }>();
 
   for (const payment of payments) {
-    const label =
-      payment.method === "bank_transfer" || payment.method === "other"
-        ? "Other"
-        : (PAYMENT_METHOD_LABELS[payment.method] ?? payment.method);
+    const label = resolvePaymentMethodLabel(payment);
     const current = buckets.get(label) ?? { amount: 0, count: 0 };
     buckets.set(label, {
       amount: current.amount + paymentNetAmount(payment),

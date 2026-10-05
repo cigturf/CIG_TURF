@@ -177,6 +177,32 @@ describe("finalizeBookingFromSession", () => {
     expect(releaseSlotHoldsForSession).toHaveBeenCalledWith("session-1");
   });
 
+  it("refuses to finalize a session whose payment is a synthetic manual marker, not a real Razorpay capture", async () => {
+    // Regression: a failed admin Manual Booking attempt (createManualBooking)
+    // marks its payment "paid" with a fake razorpayPaymentId of
+    // `manual-<uuid>` via markManualPaymentPaid. If that attempt's booking
+    // creation then fails and the session is left stuck, this function must
+    // not "recover" it as a genuine online booking — it was never a real
+    // Razorpay payment.
+    vi.mocked(getPaidPaymentBySessionId).mockResolvedValue({
+      ...basePayment,
+      paymentMethod: "manual",
+      razorpayPaymentId: "manual-48b0ee85-3905-403f-b119-8541eb693ace",
+    });
+
+    const result = await finalizeBookingFromSession({
+      bookingSessionId: "session-1",
+      userId: "user-1",
+      venueName: "CIG",
+    });
+
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.code).toBe("not_online_payment");
+    }
+    expect(createBookingRecord).not.toHaveBeenCalled();
+  });
+
   it("refunds when session expired but payment was captured", async () => {
     vi.mocked(isBookingSessionExpired).mockReturnValue(true);
 
