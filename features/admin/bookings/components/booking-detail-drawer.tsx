@@ -219,10 +219,16 @@ export function BookingDetailDrawer({
             <Separator />
 
             <div className="grid grid-cols-2 gap-2">
-              <Button variant="outline" onClick={onEdit}>
-                Edit Amounts
-              </Button>
-              <Button variant="outline" onClick={onDuplicate}>
+              {detail.status !== "cancelled" ? (
+                <Button variant="outline" onClick={onEdit}>
+                  Edit Amounts
+                </Button>
+              ) : null}
+              <Button
+                variant="outline"
+                className={detail.status === "cancelled" ? "col-span-2" : undefined}
+                onClick={onDuplicate}
+              >
                 Duplicate
               </Button>
               {detail.status !== "cancelled" && detail.status !== "completed" ? (

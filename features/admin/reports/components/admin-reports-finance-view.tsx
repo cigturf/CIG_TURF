@@ -1,7 +1,7 @@
 "use client";
 
-import { Download, FileSpreadsheet, FileText } from "lucide-react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { Download, FileSpreadsheet, FileText, X } from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 
 import { BookingDetailDrawer } from "@/features/admin/bookings/components/booking-detail-drawer";
@@ -30,7 +30,10 @@ import { ReportHeatmap } from "@/features/admin/reports/components/report-heatma
 import { ReportLineChart } from "@/features/admin/reports/components/report-line-chart";
 import { ReportPieChart } from "@/features/admin/reports/components/report-pie-chart";
 import { ReportsDateFilter } from "@/features/admin/reports/components/reports-date-filter";
-import { ReportsOverviewGrid } from "@/features/admin/reports/components/reports-overview-grid";
+import {
+  ReportsOverviewGrid,
+  type BookingCardFilter,
+} from "@/features/admin/reports/components/reports-overview-grid";
 import {
   ReportsSection,
   SwipeableChartItem,
@@ -86,6 +89,44 @@ export function AdminReportsFinanceView({
   const [detailCancelOpen, setDetailCancelOpen] = useState(false);
   const [detailCollectOpen, setDetailCollectOpen] = useState(false);
   const [detailCompleteOpen, setDetailCompleteOpen] = useState(false);
+
+  const [bookingFilter, setBookingFilter] = useState<BookingCardFilter>("all");
+  const bookingDetailsSectionRef = useRef<HTMLDivElement>(null);
+
+  const filteredBookingDetails = useMemo(() => {
+    switch (bookingFilter) {
+      case "active":
+        return financeData.bookingDetails.filter((booking) => booking.status !== "cancelled");
+      case "completed":
+        return financeData.bookingDetails.filter((booking) => booking.status === "completed");
+      case "cancelled":
+        return financeData.bookingDetails.filter((booking) => booking.status === "cancelled");
+      case "manual":
+        return financeData.bookingDetails.filter(
+          (booking) => booking.source === "manual" && booking.status !== "cancelled",
+        );
+      case "online":
+        return financeData.bookingDetails.filter(
+          (booking) => booking.source !== "manual" && booking.status !== "cancelled",
+        );
+      default:
+        return financeData.bookingDetails;
+    }
+  }, [financeData.bookingDetails, bookingFilter]);
+
+  const BOOKING_FILTER_LABELS: Record<BookingCardFilter, string> = {
+    all: "All bookings",
+    active: "Active bookings",
+    completed: "Completed bookings",
+    cancelled: "Cancelled bookings",
+    manual: "Manual bookings",
+    online: "Online bookings",
+  };
+
+  const handleFilterSelect = useCallback((filter: BookingCardFilter) => {
+    setBookingFilter(filter);
+    bookingDetailsSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, []);
 
   useEffect(() => {
     setPreset(financeData.range.preset);
@@ -272,7 +313,11 @@ export function AdminReportsFinanceView({
         }}
       />
 
-      <ReportsOverviewGrid overview={reportsData.overview} />
+      <ReportsOverviewGrid
+        overview={reportsData.overview}
+        activeFilter={bookingFilter}
+        onFilterSelect={handleFilterSelect}
+      />
 
       <FinanceReconciliationCard reconciliation={financeData.reconciliation} />
 
@@ -364,15 +409,27 @@ export function AdminReportsFinanceView({
 
       <FinanceDailyClosingCard closing={financeData.dailyClosing} />
 
-      <ReportsSection
-        title="Booking Details"
-        description="Every booking in the selected period — customer, slot, how the advance was paid, and how the balance was (or wasn't) collected"
-      >
-        <FinanceBookingDetailsTable
-          bookings={financeData.bookingDetails}
-          onSelect={(bookingId) => void openBookingDetail(bookingId)}
-        />
-      </ReportsSection>
+      <div ref={bookingDetailsSectionRef}>
+        <ReportsSection
+          title="Booking Details"
+          description="Every booking in the selected period — customer, slot, how the advance was paid, and how the balance was (or wasn't) collected"
+        >
+          {bookingFilter !== "all" ? (
+            <button
+              type="button"
+              onClick={() => setBookingFilter("all")}
+              className="border-primary/30 bg-primary/10 text-primary mb-4 inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-sm font-medium"
+            >
+              {BOOKING_FILTER_LABELS[bookingFilter]} ({filteredBookingDetails.length})
+              <X className="size-3.5" />
+            </button>
+          ) : null}
+          <FinanceBookingDetailsTable
+            bookings={filteredBookingDetails}
+            onSelect={(bookingId) => void openBookingDetail(bookingId)}
+          />
+        </ReportsSection>
+      </div>
 
       <ReportsSection title="Pending Collections" description="Bookings with outstanding balance">
         <FinancePendingTable
