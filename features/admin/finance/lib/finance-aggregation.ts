@@ -11,6 +11,7 @@ import { enumerateIsoDates } from "@/features/admin/reports/lib/report-date-rang
 import {
   buildPaymentBreakdown,
   buildPendingPaymentsSeries,
+  excludeCancelledBookingPayments,
   PAYMENT_METHOD_LABELS,
 } from "@/features/admin/reports/lib/reports-aggregation";
 import type { ReportSeriesPoint } from "@/features/admin/reports/types/reports.types";
@@ -26,22 +27,6 @@ function sumPayments(
   return payments
     .filter((payment) => (predicate ? predicate(payment) : true))
     .reduce((sum, payment) => sum + paymentNetAmount(payment), 0);
-}
-
-/**
- * Cancelled bookings never count toward revenue, whether or not a refund
- * payment was actually logged for them (many cash/offline cancellations never
- * get one) — so their payments are dropped from every revenue total, not just
- * netted via a "refund" type row.
- */
-function excludeCancelledBookingPayments(
-  bookings: AdminBookingRecord[],
-  payments: BookingPaymentRecord[],
-): BookingPaymentRecord[] {
-  const cancelledBookingIds = new Set(
-    bookings.filter((booking) => booking.status === "cancelled").map((booking) => booking.id),
-  );
-  return payments.filter((payment) => !cancelledBookingIds.has(payment.bookingId));
 }
 
 function paymentsInRange(
@@ -69,14 +54,23 @@ export function buildFinanceOverview(input: {
   const activePeriodBookings = input.periodBookings.filter(
     (booking) => booking.status !== "cancelled",
   );
+  const cancelledPeriodBookings = input.periodBookings.filter(
+    (booking) => booking.status === "cancelled",
+  );
   const activeBookingPayments = excludeCancelledBookingPayments(
     input.periodBookings,
     input.periodBookingPayments,
   );
   const totalAmount = activePeriodBookings.reduce((sum, booking) => sum + booking.totalPrice, 0);
+  const cancelledAmount = cancelledPeriodBookings.reduce(
+    (sum, booking) => sum + booking.totalPrice,
+    0,
+  );
   const collectedAmount = sumPayments(activeBookingPayments);
 
   return {
+    grossBookingValue: totalAmount + cancelledAmount,
+    cancelledAmount,
     totalAmount,
     collectedAmount,
     pendingCollections: activePeriodBookings.reduce(

@@ -8,6 +8,11 @@ import type { ReportDatePreset, ReportDateRange } from "@/features/admin/reports
 import type { ReportPaymentBreakdown, ReportSeriesPoint } from "@/features/admin/reports/types/reports.types";
 
 export type FinanceOverview = {
+  /** Sum of all bookings in the period, including cancelled ones. */
+  grossBookingValue: number;
+  /** Value of cancelled bookings, subtracted out of grossBookingValue. */
+  cancelledAmount: number;
+  /** grossBookingValue minus cancelledAmount — the net figure driving every other total. */
   totalAmount: number;
   collectedAmount: number;
   pendingCollections: number;

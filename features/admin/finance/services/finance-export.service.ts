@@ -86,7 +86,9 @@ export function buildFinanceCsv(data: FinanceDashboardData): string {
     ]),
     "",
     section("SUMMARY", ["Metric", "Amount"], [
-      ["Total Amount (booking value)", data.overview.totalAmount],
+      ["Gross Booking Value (before cancellations)", data.overview.grossBookingValue],
+      ["Cancelled Amount (subtracted out)", -data.overview.cancelledAmount],
+      ["Total Amount (net booking value)", data.overview.totalAmount],
       ["Collected Amount", data.overview.collectedAmount],
       ["Pending Collections", data.overview.pendingCollections],
       ["Advance Collected", data.overview.advanceCollected],
@@ -232,7 +234,9 @@ export function buildFinancePdfHtml(data: FinanceDashboardData, venueName: strin
   <h1>${venueName} — Finance</h1>
   <p>${data.range.label} · ${data.range.from} to ${data.range.to}</p>
   <div class="grid">
-    <div class="card"><div class="label">Total Amount</div><div class="value">${formatCurrency(data.overview.totalAmount)}</div></div>
+    <div class="card"><div class="label">Gross Booking Value</div><div class="value">${formatCurrency(data.overview.grossBookingValue)}</div></div>
+    <div class="card"><div class="label">Cancelled Amount</div><div class="value">−${formatCurrency(data.overview.cancelledAmount)}</div></div>
+    <div class="card"><div class="label">Total Amount (net)</div><div class="value">${formatCurrency(data.overview.totalAmount)}</div></div>
     <div class="card"><div class="label">Collected</div><div class="value">${formatCurrency(data.overview.collectedAmount)}</div></div>
     <div class="card"><div class="label">Pending</div><div class="value">${formatCurrency(data.overview.pendingCollections)}</div></div>
     <div class="card"><div class="label">Avg Booking Value</div><div class="value">${formatCurrency(data.overview.averageBookingValue)}</div></div>

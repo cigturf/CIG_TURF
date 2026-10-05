@@ -1,9 +1,18 @@
-import { AdminReportsLiveView } from "@/features/admin/reports/components/admin-reports-live-view";
+import { AdminReportsFinanceLiveView } from "@/features/admin/reports/components/admin-reports-finance-live-view";
 import { getReportsAnalyticsData } from "@/features/admin/reports/services/reports-analytics.service";
+import { getFinanceDashboardData } from "@/features/admin/finance/services/finance.service";
 
-export const metadata = { title: "Reports" };
+export const metadata = { title: "Reports & Finances" };
 
 export default async function AdminReportsPage() {
-  const initialData = await getReportsAnalyticsData("last_7_days");
-  return <AdminReportsLiveView initialData={initialData} />;
+  const [reportsData, financeData] = await Promise.all([
+    getReportsAnalyticsData("last_7_days"),
+    getFinanceDashboardData("last_7_days"),
+  ]);
+  return (
+    <AdminReportsFinanceLiveView
+      initialReportsData={reportsData}
+      initialFinanceData={financeData}
+    />
+  );
 }

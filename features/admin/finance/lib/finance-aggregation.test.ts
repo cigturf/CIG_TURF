@@ -104,6 +104,8 @@ describe("finance aggregation", () => {
     expect(overview.totalAmount).toBe(900);
     expect(overview.pendingCollections).toBe(500);
     expect(overview.averageBookingValue).toBe(0);
+    expect(overview.cancelledAmount).toBe(1200);
+    expect(overview.grossBookingValue).toBe(2100);
   });
 
   it("drops a cancelled booking's collected money even when no refund was logged", () => {

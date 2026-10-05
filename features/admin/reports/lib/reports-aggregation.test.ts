@@ -5,6 +5,7 @@ import {
   buildBookingsPerDay,
   buildPaymentBreakdown,
   buildReportOverview,
+  excludeCancelledBookingPayments,
 } from "@/features/admin/reports/lib/reports-aggregation";
 
 function createBooking(
@@ -173,6 +174,9 @@ describe("reports aggregation", () => {
     expect(overview.onlineCollections).toBe(0);
     expect(overview.offlineCollections).toBe(300);
     expect(overview.advanceCollected).toBe(300);
+    expect(overview.totalAmount).toBe(900);
+    expect(overview.cancelledAmount).toBe(1200);
+    expect(overview.grossBookingValue).toBe(2100);
   });
 
   it("builds bookings per day series", () => {
@@ -216,5 +220,79 @@ describe("reports aggregation", () => {
     expect(breakdown).toHaveLength(2);
     expect(breakdown.find((item) => item.method === "Cash")?.percentage).toBe(30);
     expect(breakdown.find((item) => item.method === "Online (Razorpay)")?.percentage).toBe(70);
+  });
+
+  it("nets a refund against its method bucket instead of adding it as revenue", () => {
+    // Regression: a refund row was being summed with `+ payment.amount` like
+    // any other payment, so a refunded ₹300 showed up as +₹300 of "revenue"
+    // in that method's bucket instead of cancelling out the original advance.
+    const breakdown = buildPaymentBreakdown([
+      {
+        id: "pay1",
+        bookingId: "b1",
+        type: "advance",
+        amount: 300,
+        method: "cash",
+        collectedBy: null,
+        notes: null,
+        referenceNumber: null,
+        createdAt: new Date(),
+      },
+      {
+        id: "pay2",
+        bookingId: "b1",
+        type: "refund",
+        amount: 300,
+        method: "cash",
+        collectedBy: null,
+        notes: null,
+        referenceNumber: null,
+        createdAt: new Date(),
+      },
+    ]);
+
+    const cash = breakdown.find((item) => item.method === "Cash");
+    expect(cash?.amount).toBe(0);
+  });
+
+  it("excludes payments tied to a cancelled booking even if that booking isn't in the passed-in list", () => {
+    // Regression: daily-closing/transactions/trend charts fetch payments by
+    // their own createdAt date, which can include a payment whose booking's
+    // slot date falls outside the selected range — if that booking's status
+    // isn't looked up too, a cancelled booking's money would slip through.
+    const payments = [
+      {
+        id: "pay1",
+        bookingId: "cancelled-booking",
+        type: "advance" as const,
+        amount: 500,
+        method: "cash" as const,
+        collectedBy: null,
+        notes: null,
+        referenceNumber: null,
+        createdAt: new Date(),
+      },
+      {
+        id: "pay2",
+        bookingId: "active-booking",
+        type: "advance" as const,
+        amount: 300,
+        method: "cash" as const,
+        collectedBy: null,
+        notes: null,
+        referenceNumber: null,
+        createdAt: new Date(),
+      },
+    ];
+
+    const result = excludeCancelledBookingPayments(
+      [
+        createBooking({ id: "cancelled-booking", status: "cancelled" }),
+        createBooking({ id: "active-booking", status: "confirmed" }),
+      ],
+      payments,
+    );
+
+    expect(result.map((payment) => payment.id)).toEqual(["pay2"]);
   });
 });

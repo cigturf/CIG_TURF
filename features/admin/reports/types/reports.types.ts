@@ -22,6 +22,11 @@ export type ReportOverview = {
   cancelledBookings: number;
   manualBookings: number;
   onlineBookings: number;
+  /** Sum of all bookings in the period, including cancelled ones. */
+  grossBookingValue: number;
+  /** Value of cancelled bookings, subtracted out of grossBookingValue. */
+  cancelledAmount: number;
+  /** grossBookingValue minus cancelledAmount — the net figure driving every other total. */
   totalAmount: number;
   totalRevenue: number;
   advanceCollected: number;

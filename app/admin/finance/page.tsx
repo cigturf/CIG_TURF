@@ -1,9 +1,7 @@
-import { AdminFinanceLiveView } from "@/features/admin/finance/components/admin-finance-live-view";
-import { getFinanceDashboardData } from "@/features/admin/finance/services/finance.service";
+import { redirect } from "next/navigation";
 
-export const metadata = { title: "Finance" };
-
-export default async function AdminFinancePage() {
-  const initialData = await getFinanceDashboardData("last_7_days");
-  return <AdminFinanceLiveView initialData={initialData} />;
+// Finance was merged into the "Reports & Finances" page — keep this route
+// alive (bookmarks, old links) and send it to the new combined view.
+export default function AdminFinancePage() {
+  redirect("/admin/reports");
 }

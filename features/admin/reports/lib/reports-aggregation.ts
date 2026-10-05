@@ -78,7 +78,7 @@ function sumCollectedPayments(
  * get one) — so their payments are dropped from every revenue total, not just
  * netted via a "refund" type row.
  */
-function excludeCancelledBookingPayments(
+export function excludeCancelledBookingPayments(
   bookings: AdminBookingRecord[],
   payments: BookingPaymentRecord[],
 ): BookingPaymentRecord[] {
@@ -108,6 +108,7 @@ export function buildReportOverview(
   const activeBookingPayments = excludeCancelledBookingPayments(bookings, payments);
 
   const totalAmount = active.reduce((sum, booking) => sum + booking.totalPrice, 0);
+  const cancelledAmount = cancelled.reduce((sum, booking) => sum + booking.totalPrice, 0);
   const totalRevenue = sumCollectedPayments(activeBookingPayments);
   const advanceCollected = sumCollectedPayments(
     activeBookingPayments,
@@ -130,6 +131,8 @@ export function buildReportOverview(
     cancelledBookings: cancelled.length,
     manualBookings: manual.length,
     onlineBookings: online.length,
+    grossBookingValue: totalAmount + cancelledAmount,
+    cancelledAmount,
     totalAmount,
     totalRevenue,
     advanceCollected,
@@ -300,6 +303,11 @@ export const PAYMENT_METHOD_LABELS: Record<string, string> = {
   other: "Other",
 };
 
+/**
+ * Expects `payments` to already exclude cancelled-booking payments (see
+ * `excludeCancelledBookingPayments`) — this function only nets refunds
+ * against their own method bucket, it doesn't know about booking status.
+ */
 export function buildPaymentBreakdown(payments: BookingPaymentRecord[]): ReportPaymentBreakdown[] {
   const buckets = new Map<string, { amount: number; count: number }>();
 
@@ -310,7 +318,7 @@ export function buildPaymentBreakdown(payments: BookingPaymentRecord[]): ReportP
         : (PAYMENT_METHOD_LABELS[payment.method] ?? payment.method);
     const current = buckets.get(label) ?? { amount: 0, count: 0 };
     buckets.set(label, {
-      amount: current.amount + payment.amount,
+      amount: current.amount + paymentNetAmount(payment),
       count: current.count + 1,
     });
   }

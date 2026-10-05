@@ -143,6 +143,49 @@ export async function listBookingsInRange(
   }
 }
 
+/**
+ * Looks up bookings by id regardless of their booking_date — a payment
+ * inside a date range can belong to a booking whose slot falls outside it
+ * (an advance paid today for a booking weeks out), so callers can still
+ * check that payment's booking status (cancelled or not).
+ */
+export async function listBookingsByIds(ids: string[]): Promise<AdminBookingRecord[]> {
+  if (ids.length === 0) return [];
+
+  const supabase = createServiceRoleClient();
+  if (supabase) {
+    const { data, error } = await supabase
+      .from("bookings")
+      .select(REPORTS_BOOKING_COLUMNS)
+      .in("id", ids);
+
+    if (!error && data) {
+      return (data as ReportsBookingRow[]).map(mapReportsBooking);
+    }
+  }
+
+  try {
+    const rows = await prisma.booking.findMany({
+      where: { id: { in: ids } },
+      select: {
+        id: true,
+        bookingDate: true,
+        startTime: true,
+        selectedSlots: true,
+        totalPrice: true,
+        advancePaid: true,
+        remainingAmount: true,
+        status: true,
+        source: true,
+      },
+    });
+
+    return rows.map(mapPrismaReportsBooking);
+  } catch {
+    return [];
+  }
+}
+
 export async function listPaymentRecordsInRange(
   fromIso: string,
   toIso: string,

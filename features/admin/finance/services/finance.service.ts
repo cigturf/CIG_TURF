@@ -11,12 +11,14 @@ import {
 } from "@/features/admin/finance/lib/finance-aggregation";
 import {
   listAllPaymentRecordsInRange,
+  listBookingsByIds,
   listBookingsInRange,
   listPaymentRecordsForBookingIds,
   listPendingCollectionBookings,
 } from "@/features/admin/finance/services/finance-data.repository";
 import type { FinanceDashboardData } from "@/features/admin/finance/types/finance.types";
 import { resolveReportDateRange } from "@/features/admin/reports/lib/report-date-range";
+import { excludeCancelledBookingPayments } from "@/features/admin/reports/lib/reports-aggregation";
 import type { ReportDatePreset } from "@/features/admin/reports/types/reports.types";
 import { DEFAULT_VENUE_TIMEZONE, getTodayIsoInTimezone } from "@/features/booking/utils/venue-timezone";
 
@@ -40,6 +42,25 @@ export async function getFinanceDashboardData(
   );
 
   const bookingsById = new Map(periodBookings.map((booking) => [booking.id, booking]));
+
+  // periodPayments is scoped by payment.createdAt (what actually moved during
+  // this period, for the transaction ledger / daily closing / trend charts) —
+  // a different population from periodBookings (scoped by booking_date). Some
+  // of those payments belong to bookings whose slot falls outside the range,
+  // so bookingsById above won't have them; fetch whatever's missing so every
+  // payment can be checked against its real booking status and show the real
+  // customer instead of "Unknown".
+  const missingBookingIds = [...new Set(periodPayments.map((payment) => payment.bookingId))].filter(
+    (id) => !bookingsById.has(id),
+  );
+  const extraBookings = await listBookingsByIds(missingBookingIds);
+  for (const booking of extraBookings) {
+    bookingsById.set(booking.id, booking);
+  }
+
+  const allReferencedBookings = [...bookingsById.values()];
+  const activePeriodPayments = excludeCancelledBookingPayments(allReferencedBookings, periodPayments);
+
   const closingDay = closingDate ?? (preset === "today" ? today : range.to);
 
   return {
@@ -48,12 +69,12 @@ export async function getFinanceDashboardData(
       periodBookingPayments,
       periodBookings,
     }),
-    paymentBreakdown: buildPaymentBreakdown(periodPayments),
+    paymentBreakdown: buildPaymentBreakdown(activePeriodPayments),
     pendingBookings,
-    transactions: buildFinanceTransactions(periodPayments, bookingsById),
+    transactions: buildFinanceTransactions(activePeriodPayments, bookingsById),
     dailyClosing: buildDailyClosing({
       date: closingDay,
-      payments: periodPayments,
+      payments: activePeriodPayments,
       bookings: periodBookings,
     }),
     reconciliation: buildReconciliation({
@@ -62,8 +83,8 @@ export async function getFinanceDashboardData(
     }),
     bookingCounts: buildBookingCounts(periodBookings),
     bookingDetails: buildFinanceBookingDetails(periodBookings, periodBookingPayments),
-    revenueTrend: buildDailyCollectionsSeries(periodPayments, range.from, range.to),
-    dailyCollections: buildDailyCollectionsSeries(periodPayments, range.from, range.to),
+    revenueTrend: buildDailyCollectionsSeries(activePeriodPayments, range.from, range.to),
+    dailyCollections: buildDailyCollectionsSeries(activePeriodPayments, range.from, range.to),
     pendingCollectionsTrend: buildPendingCollectionsTrend(periodBookings, range.from, range.to),
     generatedAt: new Date().toISOString(),
   };

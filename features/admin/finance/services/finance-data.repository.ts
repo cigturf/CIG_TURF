@@ -208,6 +208,66 @@ export async function listBookingsInRange(
   }
 }
 
+/**
+ * Looks up bookings by id regardless of their booking_date — needed when a
+ * payment inside a date range belongs to a booking whose slot falls outside
+ * it (e.g. an advance paid today for a booking two weeks out), so callers can
+ * still resolve that payment's booking status (cancelled or not) and
+ * customer details correctly.
+ */
+export async function listBookingsByIds(ids: string[]): Promise<AdminBookingRecord[]> {
+  if (ids.length === 0) return [];
+
+  const supabase = createServiceRoleClient();
+  if (supabase) {
+    const { data, error } = await supabase
+      .from("bookings")
+      .select(BOOKING_LIST_COLUMNS)
+      .in("id", ids);
+
+    if (!error && data) {
+      return (data as BookingRow[]).map(mapBooking).map(toAdminBookingRecord);
+    }
+  }
+
+  try {
+    const rows = await prisma.booking.findMany({
+      where: { id: { in: ids } },
+    });
+    return rows.map((row) =>
+      toAdminBookingRecord({
+        id: row.id,
+        bookingReference: row.bookingReference,
+        userId: row.userId,
+        bookingSessionId: row.bookingSessionId,
+        paymentId: row.paymentId,
+        bookingDate: row.bookingDate,
+        startTime: row.startTime,
+        endTime: row.endTime,
+        selectedSlots: row.selectedSlots as string[],
+        durationMinutes: row.durationMinutes,
+        totalPrice: row.totalPrice,
+        advancePaid: row.advancePaid,
+        remainingAmount: row.remainingAmount,
+        status: row.status,
+        source: row.source ?? "online",
+        notes: row.notes ?? null,
+        cancellationReason: row.cancellationReason ?? null,
+        arrivedAt: row.arrivedAt ?? null,
+        matchStartedAt: row.matchStartedAt ?? null,
+        matchCompletedAt: row.matchCompletedAt ?? null,
+        customerName: row.customerName,
+        customerPhone: row.customerPhone,
+        customerEmail: row.customerEmail,
+        createdAt: row.createdAt,
+        updatedAt: row.updatedAt,
+      }),
+    );
+  } catch {
+    return [];
+  }
+}
+
 export async function listAllBookings(): Promise<AdminBookingRecord[]> {
   const supabase = createServiceRoleClient();
   if (supabase) {

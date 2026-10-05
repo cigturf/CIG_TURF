@@ -7,11 +7,9 @@ import { toast } from "sonner";
 import { CollectPaymentDialog } from "@/features/admin/bookings/components/collect-payment-dialog";
 import type { OfflinePaymentMethod } from "@/features/admin/bookings/types/admin-booking.types";
 import {
-  FinanceBookingCountsCard,
   FinanceDailyClosingCard,
   FinanceReconciliationCard,
 } from "@/features/admin/finance/components/finance-closing-reconciliation";
-import { FinanceOverviewGrid } from "@/features/admin/finance/components/finance-overview-grid";
 import { FinancePendingTable } from "@/features/admin/finance/components/finance-pending-table";
 import { FinanceTransactionDrawer } from "@/features/admin/finance/components/finance-transaction-drawer";
 import { FinanceTransactionsTable } from "@/features/admin/finance/components/finance-transactions-table";
@@ -21,24 +19,22 @@ import type {
   FinanceTransaction,
 } from "@/features/admin/finance/types/finance.types";
 import { ReportBarChart } from "@/features/admin/reports/components/report-bar-chart";
+import { ReportHeatmap } from "@/features/admin/reports/components/report-heatmap";
 import { ReportLineChart } from "@/features/admin/reports/components/report-line-chart";
 import { ReportPieChart } from "@/features/admin/reports/components/report-pie-chart";
 import { ReportsDateFilter } from "@/features/admin/reports/components/reports-date-filter";
+import { ReportsOverviewGrid } from "@/features/admin/reports/components/reports-overview-grid";
 import {
   ReportsSection,
   SwipeableChartItem,
   SwipeableCharts,
 } from "@/features/admin/reports/components/reports-section";
-import type { ReportDatePreset } from "@/features/admin/reports/types/reports.types";
-import {
-  AnalyticsCard,
-  Button,
-  Heading,
-  Text,
-} from "@/components/design-system";
+import type { ReportDatePreset, ReportsAnalyticsData } from "@/features/admin/reports/types/reports.types";
+import { AnalyticsCard, Button, Heading, StatsCard, Text } from "@/components/design-system";
 
-type AdminFinanceViewProps = {
-  data: FinanceDashboardData;
+type AdminReportsFinanceViewProps = {
+  reportsData: ReportsAnalyticsData;
+  financeData: FinanceDashboardData;
   onRangeChange: (input: {
     preset: ReportDatePreset;
     from?: string;
@@ -58,28 +54,29 @@ function buildExportUrl(data: FinanceDashboardData, format: "csv" | "xlsx" | "pd
     params.set("to", data.range.to);
   }
   params.set("closingDate", data.dailyClosing.date);
-  return `/api/admin/finance/export?${params.toString()}`;
+  return `/api/admin/reports-finance/export?${params.toString()}`;
 }
 
-export function AdminFinanceView({
-  data,
+export function AdminReportsFinanceView({
+  reportsData,
+  financeData,
   onRangeChange,
   onRefresh,
   isRefreshing,
-}: AdminFinanceViewProps) {
-  const [preset, setPreset] = useState<ReportDatePreset>(data.range.preset);
-  const [customFrom, setCustomFrom] = useState(data.range.from);
-  const [customTo, setCustomTo] = useState(data.range.to);
+}: AdminReportsFinanceViewProps) {
+  const [preset, setPreset] = useState<ReportDatePreset>(financeData.range.preset);
+  const [customFrom, setCustomFrom] = useState(financeData.range.from);
+  const [customTo, setCustomTo] = useState(financeData.range.to);
   const [selectedTransaction, setSelectedTransaction] = useState<FinanceTransaction | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [collectBooking, setCollectBooking] = useState<FinancePendingBooking | null>(null);
   const [collectOpen, setCollectOpen] = useState(false);
 
   useEffect(() => {
-    setPreset(data.range.preset);
-    setCustomFrom(data.range.from);
-    setCustomTo(data.range.to);
-  }, [data.range.from, data.range.preset, data.range.to, data.generatedAt]);
+    setPreset(financeData.range.preset);
+    setCustomFrom(financeData.range.from);
+    setCustomTo(financeData.range.to);
+  }, [financeData.range.from, financeData.range.preset, financeData.range.to, financeData.generatedAt]);
 
   const applyRange = useCallback(
     async (nextPreset: ReportDatePreset, from = customFrom, to = customTo) => {
@@ -95,29 +92,29 @@ export function AdminFinanceView({
 
   const paymentMethodSeries = useMemo(
     () =>
-      data.paymentBreakdown.map((item) => ({
+      financeData.paymentBreakdown.map((item) => ({
         label: item.method,
         value: item.amount,
       })),
-    [data.paymentBreakdown],
+    [financeData.paymentBreakdown],
   );
 
   const exportActions = (
     <div className="flex flex-wrap gap-2">
       <Button asChild size="sm" variant="outline">
-        <a href={buildExportUrl(data, "csv")}>
+        <a href={buildExportUrl(financeData, "csv")}>
           <Download className="mr-2 size-4" />
           CSV
         </a>
       </Button>
       <Button asChild size="sm" variant="outline">
-        <a href={buildExportUrl(data, "xlsx")}>
+        <a href={buildExportUrl(financeData, "xlsx")}>
           <FileSpreadsheet className="mr-2 size-4" />
           Excel
         </a>
       </Button>
       <Button asChild size="sm" variant="outline">
-        <a href={buildExportUrl(data, "pdf")} target="_blank" rel="noreferrer">
+        <a href={buildExportUrl(financeData, "pdf")} target="_blank" rel="noreferrer">
           <FileText className="mr-2 size-4" />
           PDF
         </a>
@@ -156,24 +153,15 @@ export function AdminFinanceView({
       <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
         <div>
           <Heading level="h3" className="mb-1">
-            Finance & Accounting
+            Reports & Finances
           </Heading>
           <Text className="text-muted-foreground">
-            {data.range.label} · {data.range.from} to {data.range.to}
+            {financeData.range.label} · {financeData.range.from} to {financeData.range.to}
             {isRefreshing ? " · Updating…" : ""}
           </Text>
         </div>
         {exportActions}
       </div>
-
-      <FinanceOverviewGrid
-        overview={data.overview}
-        rangeLabel={
-          data.range.from === data.range.to
-            ? data.range.from
-            : `${data.range.from} to ${data.range.to}`
-        }
-      />
 
       <ReportsDateFilter
         preset={preset}
@@ -190,47 +178,101 @@ export function AdminFinanceView({
         }}
       />
 
-      <ReportsSection title="Charts" description="Revenue and collection trends">
+      <ReportsOverviewGrid overview={reportsData.overview} />
+
+      <FinanceReconciliationCard reconciliation={financeData.reconciliation} />
+
+      <ReportsSection title="Revenue & Collections" description="Trends across the selected period">
         <SwipeableCharts>
           <SwipeableChartItem>
-            <AnalyticsCard title="Revenue Trend" description="Net collections by day">
-              <ReportLineChart data={data.revenueTrend} valueFormat="currency" />
+            <AnalyticsCard title="Revenue Trend" description="Net collections by day (cancelled bookings excluded)">
+              <ReportLineChart data={financeData.revenueTrend} valueFormat="currency" />
             </AnalyticsCard>
           </SwipeableChartItem>
           <SwipeableChartItem>
-            <AnalyticsCard title="Daily Collections" description="Payment transactions by day">
-              <ReportBarChart data={data.dailyCollections} valueFormat="currency" />
+            <AnalyticsCard title="Bookings Per Day" description="Daily booking volume (by slot date)">
+              <ReportBarChart data={reportsData.bookingsPerDay} accentClassName="bg-chart-2" />
             </AnalyticsCard>
           </SwipeableChartItem>
           <SwipeableChartItem>
             <AnalyticsCard title="Payment Method Distribution" description="Share of collected revenue">
-              <ReportPieChart data={data.paymentBreakdown} />
+              <ReportPieChart data={financeData.paymentBreakdown} />
             </AnalyticsCard>
           </SwipeableChartItem>
           <SwipeableChartItem>
             <AnalyticsCard title="Pending Collections Trend" description="Outstanding by booking date">
-              <ReportLineChart data={data.pendingCollectionsTrend} valueFormat="currency" />
+              <ReportLineChart data={financeData.pendingCollectionsTrend} valueFormat="currency" />
             </AnalyticsCard>
           </SwipeableChartItem>
         </SwipeableCharts>
       </ReportsSection>
 
-      <ReportsSection title="Payment Breakdown" description="Amount, share, and transaction count">
+      <ReportsSection title="Payment Breakdown" description="Amount, share, and transaction count by method">
         <AnalyticsCard title="Collections by Method">
-          <ReportPieChart data={data.paymentBreakdown} />
+          <ReportPieChart data={financeData.paymentBreakdown} />
           <div className="mt-6">
             <ReportBarChart data={paymentMethodSeries} valueFormat="currency" accentClassName="bg-chart-2" />
           </div>
         </AnalyticsCard>
       </ReportsSection>
 
-      <FinanceReconciliationCard reconciliation={data.reconciliation} />
-      <FinanceBookingCountsCard counts={data.bookingCounts} />
-      <FinanceDailyClosingCard closing={data.dailyClosing} />
+      <ReportsSection title="Booking Analytics" description="When and how customers book">
+        <SwipeableCharts>
+          <SwipeableChartItem>
+            <AnalyticsCard title="Bookings Per Hour" description="Hourly distribution">
+              <ReportBarChart data={reportsData.bookingsPerHour} accentClassName="bg-chart-2" />
+            </AnalyticsCard>
+          </SwipeableChartItem>
+          <SwipeableChartItem>
+            <AnalyticsCard title="Peak Booking Times" description="Busiest hours">
+              <ReportBarChart data={reportsData.peakBookingTimes} accentClassName="bg-chart-3" />
+            </AnalyticsCard>
+          </SwipeableChartItem>
+          <SwipeableChartItem>
+            <AnalyticsCard title="Popular Time Slots" description="Most booked start times">
+              <ReportBarChart data={reportsData.popularSlots} accentClassName="bg-chart-4" />
+            </AnalyticsCard>
+          </SwipeableChartItem>
+          <SwipeableChartItem>
+            <AnalyticsCard title="Popular Days" description="Day-of-week preference">
+              <ReportBarChart data={reportsData.popularDays} accentClassName="bg-chart-5" />
+            </AnalyticsCard>
+          </SwipeableChartItem>
+        </SwipeableCharts>
+        <AnalyticsCard title="Cancellation Trend" description="Daily cancellations">
+          <ReportLineChart data={reportsData.cancellationTrend} />
+        </AnalyticsCard>
+      </ReportsSection>
+
+      <ReportsSection title="Occupancy Analytics" description="Slot utilization across the period">
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          <StatsCard label="Available Slots" value={String(reportsData.occupancy.availableSlots)} />
+          <StatsCard label="Booked Slots" value={String(reportsData.occupancy.bookedSlots)} />
+          <StatsCard label="Blocked Slots" value={String(reportsData.occupancy.blockedSlots)} />
+          <StatsCard label="Maintenance" value={String(reportsData.occupancy.maintenanceSlots)} />
+        </div>
+        <AnalyticsCard
+          title="Occupancy Rate"
+          description={`${reportsData.occupancy.occupancyPercent}% of sellable inventory booked`}
+        >
+          <div className="bg-muted/40 mb-4 h-3 overflow-hidden rounded-full">
+            <div
+              className="bg-primary h-full rounded-full transition-all duration-700"
+              style={{ width: `${Math.min(reportsData.occupancy.occupancyPercent, 100)}%` }}
+            />
+          </div>
+          <p className="text-2xl font-semibold">{reportsData.occupancy.occupancyPercent}%</p>
+        </AnalyticsCard>
+        <AnalyticsCard title="Busiest Hours Heatmap" description="Slot bookings by hour">
+          <ReportHeatmap data={reportsData.occupancy.heatmap} />
+        </AnalyticsCard>
+      </ReportsSection>
+
+      <FinanceDailyClosingCard closing={financeData.dailyClosing} />
 
       <ReportsSection title="Pending Collections" description="Bookings with outstanding balance">
         <FinancePendingTable
-          bookings={data.pendingBookings}
+          bookings={financeData.pendingBookings}
           onCollect={(booking) => {
             setCollectBooking(booking);
             setCollectOpen(true);
@@ -240,7 +282,7 @@ export function AdminFinanceView({
 
       <ReportsSection title="Transaction History" description="Immutable payment records for the selected period">
         <FinanceTransactionsTable
-          transactions={data.transactions}
+          transactions={financeData.transactions}
           onSelect={(transaction) => {
             setSelectedTransaction(transaction);
             setDrawerOpen(true);
