@@ -6,6 +6,7 @@ import { toast } from "sonner";
 
 import { CollectPaymentDialog } from "@/features/admin/bookings/components/collect-payment-dialog";
 import type { OfflinePaymentMethod } from "@/features/admin/bookings/types/admin-booking.types";
+import { FinanceBookingDetailsTable } from "@/features/admin/finance/components/finance-booking-details-table";
 import {
   FinanceDailyClosingCard,
   FinanceReconciliationCard,
@@ -269,6 +270,13 @@ export function AdminReportsFinanceView({
       </ReportsSection>
 
       <FinanceDailyClosingCard closing={financeData.dailyClosing} />
+
+      <ReportsSection
+        title="Booking Details"
+        description="Every booking in the selected period — customer, slot, how the advance was paid, and how the balance was (or wasn't) collected"
+      >
+        <FinanceBookingDetailsTable bookings={financeData.bookingDetails} />
+      </ReportsSection>
 
       <ReportsSection title="Pending Collections" description="Bookings with outstanding balance">
         <FinancePendingTable
