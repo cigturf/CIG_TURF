@@ -14,7 +14,6 @@ import type {
 } from "@/features/admin/bookings/types/admin-booking.types";
 import { FinanceBookingDetailsTable } from "@/features/admin/finance/components/finance-booking-details-table";
 import { FinanceReconciliationCard } from "@/features/admin/finance/components/finance-closing-reconciliation";
-import { OfflineCollectionsBreakdownCard } from "@/features/admin/finance/components/offline-collections-breakdown-card";
 import { FinancePendingTable } from "@/features/admin/finance/components/finance-pending-table";
 import { FinanceTransactionDrawer } from "@/features/admin/finance/components/finance-transaction-drawer";
 import { FinanceTransactionsTable } from "@/features/admin/finance/components/finance-transactions-table";
@@ -311,6 +310,7 @@ export function AdminReportsFinanceView({
         overview={reportsData.overview}
         activeFilter={bookingFilter}
         onFilterSelect={handleFilterSelect}
+        offlineCollectionsBreakdown={financeData.offlineCollectionsBreakdown}
       />
 
       <FinanceReconciliationCard reconciliation={financeData.reconciliation} />
@@ -389,10 +389,6 @@ export function AdminReportsFinanceView({
             <ReportBarChart data={paymentMethodSeries} valueFormat="currency" accentClassName="bg-chart-2" />
           </div>
         </AnalyticsCard>
-        <OfflineCollectionsBreakdownCard
-          breakdown={financeData.offlineCollectionsBreakdown}
-          total={financeData.overview.offlineCollections}
-        />
       </ReportsSection>
 
       <ReportsSection title="Booking Analytics" description="When and how customers book">

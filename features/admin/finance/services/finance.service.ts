@@ -77,7 +77,11 @@ export async function getFinanceDashboardData(
       periodBookings,
     }),
     paymentBreakdown: buildPaymentBreakdown(activePeriodPayments),
-    offlineCollectionsBreakdown: buildOfflineCollectionsBreakdown(activePeriodPayments),
+    // Must use the SAME payment population as overview.offlineCollections
+    // (booking-date scoped), not activePeriodPayments (payment-date scoped) -
+    // otherwise this breakdown's total silently disagrees with the card it's
+    // supposed to be explaining.
+    offlineCollectionsBreakdown: buildOfflineCollectionsBreakdown(activePeriodBookingPayments),
     pendingBookings,
     transactions: buildFinanceTransactions(periodPayments, bookingsById),
     dailyClosing: buildDailyClosing({
